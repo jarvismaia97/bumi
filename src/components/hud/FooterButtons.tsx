@@ -1,56 +1,48 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Eraser from 'lucide-react-native/icons/eraser';
+import Lightbulb from 'lucide-react-native/icons/lightbulb';
+import Undo2 from 'lucide-react-native/icons/undo-2';
+import type { LucideIcon } from 'lucide-react-native';
 import { useThemeTokens } from '@/state/themeStore';
 
 interface FooterButtonsProps {
   hintLabel: string;
   hintDisabled: boolean;
-  showNext: boolean;
-  nextLabel: string;
   onUndo: () => void;
   onClear: () => void;
   onHint: () => void;
-  onLevels: () => void;
-  onNext: () => void;
+  bottomInset?: number;
 }
 
 export function FooterButtons({
   hintLabel,
   hintDisabled,
-  showNext,
-  nextLabel,
   onUndo,
   onClear,
   onHint,
-  onLevels,
-  onNext,
+  bottomInset = 0,
 }: FooterButtonsProps) {
   const theme = useThemeTokens();
 
   return (
-    <View style={styles.footer}>
+    <View style={[styles.footer, { paddingBottom: Math.max(16, bottomInset) }]}>
       <View style={styles.row}>
-        <FooterBtn icon="↩" label="Undo" onPress={onUndo} theme={theme} />
-        <FooterBtn icon="✕" label="Clear" onPress={onClear} theme={theme} />
-        <FooterBtn icon="?" label={hintLabel} onPress={onHint} theme={theme} disabled={hintDisabled} />
-        <FooterBtn icon="⊞" label="Levels" onPress={onLevels} theme={theme} />
+        <FooterBtn Icon={Undo2} label="Desfazer" onPress={onUndo} theme={theme} />
+        <FooterBtn Icon={Eraser} label="Limpar" onPress={onClear} theme={theme} />
+        <FooterBtn Icon={Lightbulb} label={hintLabel} onPress={onHint} theme={theme} disabled={hintDisabled} />
       </View>
-      {showNext && (
-        <Pressable style={[styles.nextBtn, { backgroundColor: theme.accent }]} onPress={onNext}>
-          <Text style={styles.nextBtnText}>{nextLabel}</Text>
-        </Pressable>
-      )}
     </View>
   );
 }
 
 function FooterBtn({
-  icon,
+  Icon,
   label,
   onPress,
   theme,
   disabled,
 }: {
-  icon: string;
+  Icon: LucideIcon;
   label: string;
   onPress: () => void;
   theme: { text: string; surface: string; gridSep: string };
@@ -62,7 +54,7 @@ function FooterBtn({
       onPress={onPress}
       disabled={disabled}
     >
-      <Text style={styles.btnIcon}>{icon}</Text>
+      <Icon size={20} color={theme.text} strokeWidth={2.1} />
       <Text style={[styles.btnLabel, { color: theme.text }]} numberOfLines={1}>
         {label}
       </Text>
@@ -71,7 +63,7 @@ function FooterBtn({
 }
 
 const styles = StyleSheet.create({
-  footer: { width: '100%', maxWidth: 480, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 20, gap: 8 },
+  footer: { width: '100%', maxWidth: 480, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 },
   row: { flexDirection: 'row', gap: 8 },
   btn: {
     flex: 1,
@@ -81,8 +73,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
   },
-  btnIcon: { fontSize: 19, lineHeight: 19 },
   btnLabel: { fontSize: 11, fontWeight: '600' },
-  nextBtn: { borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  nextBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
 });

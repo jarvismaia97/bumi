@@ -1,18 +1,82 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Stack } from 'expo-router';
+import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
+import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { BootLogo } from '@/components/BootLogo';
+import { useAuthStore } from '@/state/authStore';
+import { initProgressSync } from '@/state/progressSync';
+import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
+import { LEVEL_META } from '@/game/levels';
+import { useChallengeStore } from '@/state/challengeStore';
+import { configureNotificationHandler } from '@/lib/dailyReminder';
 
 export default function RootLayout() {
+  const init = useAuthStore(s => s.init);
+  const loading = useAuthStore(s => s.loading);
+  const user = useAuthStore(s => s.user);
+  const linkingUrl = Linking.useLinkingURL();
+  const setPendingChallenge = useChallengeStore(s => s.setPendingChallenge);
+  const setPendingDailyChallenge = useChallengeStore(s => s.setPendingDailyChallenge);
+
+  useEffect(() => {
+    init();
+    initProgressSync();
+    configureNotificationHandler().catch(() => {});
+  }, [init]);
+
+  useEffect(() => {
+    if (!linkingUrl) return;
+    const params = Linking.parse(linkingUrl).queryParams;
+    const dailyChallenge = getDailyChallengeDateKey(params?.daily);
+    if (dailyChallenge) {
+      setPendingDailyChallenge(dailyChallenge);
+      return;
+    }
+    const challenge = getChallengeLevelIndex(params?.challenge, LEVEL_META.length);
+    if (challenge != null) setPendingChallenge(challenge);
+  }, [linkingUrl, setPendingChallenge, setPendingDailyChallenge]);
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <BottomSheetModalProvider>
-          <StatusBar style="auto" />
-          <Stack screenOptions={{ headerShown: false }} />
-        </BottomSheetModalProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <>
+      <Head>
+        <title>Bumi</title>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Bumi" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        <meta name="theme-color" content="#a8b9d8" />
+        <style>{`
+          html, body, #root {
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+          }
+        `}</style>
+      </Head>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <BottomSheetModalProvider>
+            <StatusBar style="auto" />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Protected guard={loading}>
+                <Stack.Screen name="loading" />
+              </Stack.Protected>
+              <Stack.Protected guard={!loading}>
+                <Stack.Screen name="index" />
+              </Stack.Protected>
+              <Stack.Protected guard={!loading && !user}>
+                <Stack.Screen name="login" />
+              </Stack.Protected>
+            </Stack>
+            <BootLogo />
+          </BottomSheetModalProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </>
   );
 }

@@ -1,20 +1,21 @@
 import { useEffect } from 'react';
 import { Gesture } from 'react-native-gesture-handler';
-import { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import type { PlacedRect, SolutionRect } from '@/game/types';
 
 // Drag-to-draw + tap-to-delete, proven in the standalone gesture spike (src/app/gesture-spike.tsx).
 // Row/col are derived from the pan gesture's view-local coordinates — no elementFromPoint
 // equivalent needed. `.minDistance(0)` is required or a zero-movement tap never fires at all.
 interface Options {
-  size: number;
+  rows: number;
+  columns: number;
   cellSize: number;
   placed: PlacedRect[];
   onPlace: (rect: SolutionRect) => void;
   onRemoveAt: (index: number) => void;
 }
 
-export function useDragToPlaceRect({ size, cellSize, placed, onPlace, onRemoveAt }: Options) {
+export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, onRemoveAt }: Options) {
   const placedShared = useSharedValue<PlacedRect[]>([]);
   useEffect(() => {
     placedShared.value = placed;
@@ -44,8 +45,8 @@ export function useDragToPlaceRect({ size, cellSize, placed, onPlace, onRemoveAt
   const gesture = Gesture.Pan()
     .minDistance(0)
     .onBegin(e => {
-      const row = Math.min(size - 1, Math.max(0, Math.floor(e.y / cellSize)));
-      const col = Math.min(size - 1, Math.max(0, Math.floor(e.x / cellSize)));
+      const row = Math.min(rows - 1, Math.max(0, Math.floor(e.y / cellSize)));
+      const col = Math.min(columns - 1, Math.max(0, Math.floor(e.x / cellSize)));
       startRow.value = row;
       startCol.value = col;
       curRow.value = row;
@@ -61,8 +62,8 @@ export function useDragToPlaceRect({ size, cellSize, placed, onPlace, onRemoveAt
       hitRectIndex.value = idx;
     })
     .onUpdate(e => {
-      curRow.value = Math.min(size - 1, Math.max(0, Math.floor(e.y / cellSize)));
-      curCol.value = Math.min(size - 1, Math.max(0, Math.floor(e.x / cellSize)));
+      curRow.value = Math.min(rows - 1, Math.max(0, Math.floor(e.y /cellSize)));
+      curCol.value = Math.min(columns - 1, Math.max(0, Math.floor(e.x / cellSize)));
     })
     .onEnd((_e, success) => {
       if (success) {
@@ -74,17 +75,17 @@ export function useDragToPlaceRect({ size, cellSize, placed, onPlace, onRemoveAt
     });
 
   const previewStyle = useAnimatedStyle(() => {
-    if (!dragging.value) return { opacity: 0 };
     const r1 = Math.min(startRow.value, curRow.value);
     const r2 = Math.max(startRow.value, curRow.value) + 1;
     const c1 = Math.min(startCol.value, curCol.value);
     const c2 = Math.max(startCol.value, curCol.value) + 1;
     return {
-      opacity: 1,
+      opacity: withTiming(dragging.value ? 1 : 0, { duration: dragging.value ? 90 : 130 }),
       top: r1 * cellSize,
       left: c1 * cellSize,
-      width: (c2 - c1) * cellSize,
-      height: (r2 - r1) * cellSize,
+      width: withTiming((c2 - c1) * cellSize, { duration: 90 }),
+      height: withTiming((r2 - r1) * cellSize, { duration: 90 }),
+      transform: [{ scale: withTiming(dragging.value ? 1 : 0.96, { duration: 110 }) }],
     };
   });
 

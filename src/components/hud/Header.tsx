@@ -1,4 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Map from 'lucide-react-native/icons/map';
+import Share2 from 'lucide-react-native/icons/share-2';
+import { Logo } from '@/components/Logo';
 import { useThemeTokens } from '@/state/themeStore';
 import type { Mode } from '@/state/uiStore';
 
@@ -7,7 +10,9 @@ interface HeaderProps {
   levelLabel: string;
   diffLabel: string;
   onMenu: () => void;
-  onLevels: () => void;
+  onLevels?: () => void;
+  onShare?: () => void;
+  topInset?: number;
 }
 
 const BADGES: Partial<Record<Mode, { label: string; bg: string; fg: string; border: string }>> = {
@@ -16,29 +21,43 @@ const BADGES: Partial<Record<Mode, { label: string; bg: string; fg: string; bord
   infinite: { label: 'Infinito', bg: '#e8d5ff', fg: '#6040a0', border: '#c0a8e8' },
 };
 
-export function Header({ mode, levelLabel, diffLabel, onMenu, onLevels }: HeaderProps) {
+export function Header({ mode, levelLabel, diffLabel, onMenu, onLevels, onShare, topInset = 0 }: HeaderProps) {
   const theme = useThemeTokens();
   const badge = BADGES[mode];
+  const { width } = useWindowDimensions();
+  const compact = width < 360;
+  const actionCount = (onLevels ? 1 : 0) + (onShare ? 1 : 0);
+  const contentWidth = Math.min(width, 480) - 32;
+  const actionWidth = actionCount ? actionCount * 36 + Math.max(0, actionCount - 1) * 6 + 6 : 0;
+  const levelWidth = Math.max(78, Math.min(130, contentWidth - actionWidth - (compact ? 80 : 94)));
 
   return (
-    <View style={styles.header}>
-      <View style={styles.left}>
-        <Pressable onPress={onMenu} hitSlop={8}>
-          <Text style={[styles.iconBtn, { color: theme.text }]}>⌂</Text>
-        </Pressable>
-        <Pressable onPress={onLevels} hitSlop={8}>
-          <Text style={[styles.iconBtn, { color: theme.text }]}>☰</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>Bumi 🌴</Text>
+    <View style={[styles.header, { paddingTop: Math.max(12, topInset) }]}>
+      <Pressable style={styles.brand} onPress={onMenu} accessibilityLabel="Voltar ao menu">
+        <Logo size={compact ? 23 : 28} />
+        <Text style={[styles.title, compact && styles.titleCompact, { color: theme.text }]} numberOfLines={1}>Bumi</Text>
         {badge && (
           <View style={[styles.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
             <Text style={[styles.badgeText, { color: badge.fg }]}>{badge.label}</Text>
           </View>
         )}
-      </View>
-      <View style={styles.right}>
-        <Text style={[styles.levelNum, { color: theme.text }]}>{levelLabel}</Text>
-        <Text style={[styles.levelDiff, { color: theme.sub }]}>{diffLabel}</Text>
+      </Pressable>
+
+      <View style={styles.actions}>
+        <View style={[styles.levelMeta, { width: levelWidth }]}>
+          <Text style={[styles.levelNum, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{levelLabel}</Text>
+          <Text style={[styles.levelDiff, { color: theme.sub }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{diffLabel}</Text>
+        </View>
+        {onLevels && (
+          <Pressable style={[styles.iconButton, { borderColor: theme.gridSep }]} onPress={onLevels} accessibilityLabel="Abrir mapa de níveis">
+            <Map size={18} color={theme.text} strokeWidth={2.2} />
+          </Pressable>
+        )}
+        {onShare && (
+          <Pressable style={[styles.iconButton, { borderColor: theme.gridSep }]} onPress={onShare} accessibilityLabel="Partilhar desafio">
+            <Share2 size={18} color={theme.text} strokeWidth={2.2} />
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -50,17 +69,18 @@ const styles = StyleSheet.create({
     maxWidth: 480,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     paddingBottom: 10,
   },
-  left: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  iconBtn: { fontSize: 20 },
-  title: { fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
+  iconButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderRadius: 8 },
+  brand: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 38 },
+  title: { fontSize: 22, fontWeight: '800', letterSpacing: -0.4 },
+  titleCompact: { fontSize: 20 },
   badge: { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
   badgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase' },
-  right: { alignItems: 'flex-end' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 6, flexShrink: 0 },
+  levelMeta: { alignItems: 'flex-end', minWidth: 0 },
   levelNum: { fontSize: 16, fontWeight: '700' },
-  levelDiff: { fontSize: 12 },
+  levelDiff: { fontSize: 10, alignSelf: 'stretch', textAlign: 'right' },
 });

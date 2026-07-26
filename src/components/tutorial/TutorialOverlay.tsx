@@ -1,67 +1,68 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import ArrowRight from 'lucide-react-native/icons/arrow-right';
 
-interface TutStep {
+interface TutorialLesson {
   title: string;
   body: string;
-  btn: string;
+  button: string;
 }
 
-const TUT_STEPS: TutStep[] = [
+const LESSONS: TutorialLesson[] = [
   {
-    title: 'Bem-vindo ao Bumi 🌴',
-    body: 'O objetivo é dividir toda a grelha em retângulos — sem sobrepor e sem deixar espaços vazios.',
-    btn: 'Continuar →',
+    title: 'Uma linha de cada vez',
+    body: 'O número diz quantas casas o retângulo ocupa. Arrasta sobre o 2 para criar uma linha de duas casas.',
+    button: 'Começar',
   },
   {
-    title: 'O número é uma pista',
-    body: 'Cada número indica quantas casas o retângulo deve ter. O "3" ocupa 3 casas, o "4" ocupa 4 casas.',
-    btn: 'Continuar →',
+    title: 'Agora um quadrado',
+    body: 'O 4 ocupa quatro casas. Arrasta de canto a canto para formar um quadrado 2 por 2.',
+    button: 'Continuar',
   },
   {
-    title: 'Arrasta para criar',
-    body: 'Toca e arrasta de um canto ao outro para criar um retângulo. Toca num retângulo já colocado para o apagar.',
-    btn: 'Resolver o puzzle →',
+    title: 'Constrói o Bumi',
+    body: 'Junta as três formas para montar o logótipo: 2 em linha no topo, 4 em quadrado e 3 em coluna.',
+    button: 'Construir',
   },
 ];
 
 interface TutorialOverlayProps {
   visible: boolean;
-  step: number;
+  lessonIndex: number;
+  readyToPlay: boolean;
   won: boolean;
-  onNext: () => void;
+  onStartLesson: () => void;
+  onNextLesson: () => void;
   onPlayLevel1: () => void;
 }
 
-export function TutorialOverlay({ visible, step, won, onNext, onPlayLevel1 }: TutorialOverlayProps) {
+export function TutorialOverlay({ visible, lessonIndex, readyToPlay, won, onStartLesson, onNextLesson, onPlayLevel1 }: TutorialOverlayProps) {
   if (!visible) return null;
 
-  if (won) {
-    return (
-      <View style={styles.card}>
-        <View style={styles.inner}>
-          <Text style={styles.title}>Fantástico! 🌴</Text>
-          <Text style={styles.body}>Dominaste o tutorial! Agora vamos ao Nível 1 — desta vez sem dicas!</Text>
-          <Pressable style={styles.btn} onPress={onPlayLevel1}>
-            <Text style={styles.btnText}>Jogar Nível 1 →</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
+  const lesson = LESSONS[lessonIndex] ?? LESSONS.at(-1)!;
+  const finalLesson = lessonIndex === LESSONS.length - 1;
+  const title = won ? (finalLesson ? 'O Bumi está construído!' : 'Muito bem!') : lesson.title;
+  const body = won
+    ? finalLesson
+      ? 'Já conheces as formas. A campanha começa agora no Nível 1.'
+      : 'A forma ficou perfeita. Vamos avançar para a próxima peça.'
+    : lesson.body;
+  const button = won ? (finalLesson ? 'Jogar nível 1' : 'Próxima forma') : lesson.button;
+  const onPress = won ? (finalLesson ? onPlayLevel1 : onNextLesson) : onStartLesson;
 
-  const s = TUT_STEPS[step];
+  if (readyToPlay && !won) return null;
+
   return (
-    <View style={styles.card}>
+    <View style={styles.card} pointerEvents="box-none">
       <View style={styles.inner}>
-        <View style={styles.dots}>
-          {TUT_STEPS.map((_, i) => (
-            <View key={i} style={[styles.dot, { width: i === step ? 18 : 6, backgroundColor: i === step ? '#9b7bb8' : 'rgba(255,255,255,0.3)' }]} />
-          ))}
+        <View style={styles.progress}>
+          {LESSONS.map((_, index) => <View key={index} style={[styles.dot, { backgroundColor: index <= lessonIndex ? '#a8b9d8' : 'rgba(255,255,255,0.3)' }]} />)}
+          <Text style={styles.progressText}>{lessonIndex + 1} / {LESSONS.length}</Text>
         </View>
-        <Text style={styles.title}>{s.title}</Text>
-        <Text style={styles.body}>{s.body}</Text>
-        <Pressable style={styles.btn} onPress={onNext}>
-          <Text style={styles.btnText}>{s.btn}</Text>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.body}>{body}</Text>
+        <Pressable style={styles.button} onPress={onPress}>
+          <Text style={styles.buttonText}>{button}</Text>
+          <ArrowRight size={18} color="#fff" strokeWidth={2.4} />
         </Pressable>
       </View>
     </View>
@@ -70,11 +71,12 @@ export function TutorialOverlay({ visible, step, won, onNext, onPlayLevel1 }: Tu
 
 const styles = StyleSheet.create({
   card: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 300 },
-  inner: { backgroundColor: '#3a2d45', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, paddingBottom: 32, maxWidth: 480, width: '100%', alignSelf: 'center' },
-  dots: { flexDirection: 'row', gap: 5, justifyContent: 'center', marginBottom: 16 },
-  dot: { height: 6, borderRadius: 3 },
-  title: { fontSize: 17, fontWeight: '800', color: '#faf4fb', marginBottom: 8 },
-  body: { fontSize: 14, color: '#faf4fb', opacity: 0.82, lineHeight: 21, marginBottom: 18 },
-  btn: { backgroundColor: '#9b7bb8', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  btnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  inner: { backgroundColor: '#3a2d45', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, paddingBottom: 32, maxWidth: 480, width: '100%', alignSelf: 'center' },
+  progress: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  progressText: { marginLeft: 'auto', fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.72)' },
+  title: { fontSize: 17, fontWeight: '800', color: '#fffefd', marginBottom: 8 },
+  body: { fontSize: 14, color: '#fffefd', opacity: 0.82, lineHeight: 21, marginBottom: 18 },
+  button: { backgroundColor: '#718cc3', borderRadius: 8, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  buttonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

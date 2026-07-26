@@ -1,111 +1,208 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { THEME_NAMES, THEMES, type ThemeName } from '@/theme/themes';
-import { useThemeStore, useThemeTokens } from '@/state/themeStore';
+import { useRef } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import ArrowRight from 'lucide-react-native/icons/arrow-right';
+import Check from 'lucide-react-native/icons/check';
+import Flame from 'lucide-react-native/icons/flame';
+import MapPinned from 'lucide-react-native/icons/map-pinned';
+import Settings from 'lucide-react-native/icons/settings';
+import Trophy from 'lucide-react-native/icons/trophy';
+import { GoogleMark } from '@/components/GoogleMark';
+import { Logo } from '@/components/Logo';
+import { ThemePickerSheet, type ThemePickerSheetHandle } from '@/components/overlays/ThemePickerSheet';
+import { SettingsSheet, type SettingsSheetHandle } from '@/components/overlays/SettingsSheet';
+import { AchievementsSheet, type AchievementsSheetHandle } from '@/components/overlays/AchievementsSheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/state/authStore';
+import { useThemeTokens } from '@/state/themeStore';
+import { useI18n } from '@/i18n';
 
 interface MenuScreenProps {
   dailyDone: boolean;
+  dailyStreak: number;
+  weeklyDailyCount: number;
+  weeklyDailyTarget: number;
+  solvedCount: number;
+  goldMedalCount: number;
+  completedIslandCount: number;
+  islandTotal: number;
+  campaignLevel: number;
+  campaignTotal: number;
+  campaignComplete: boolean;
   onStartGame: () => void;
   onStartDaily: () => void;
-  onStartInfinite: () => void;
-  onStartTraining: () => void;
 }
 
-const THEME_SWATCH_COLORS: Record<ThemeName, string> = {
-  roxo:       '#9b7bb8',
-  agua:       '#72cfa0',
-  azulescuro: '#1a3a6a',
-  rosa:       '#f4b8c8',
-  amarelo:    '#f5c842',
-};
-
-const HOW_TO = [
-  { strong: 'Desenha', rest: 'retângulos arrastando o dedo' },
-  { strong: 'Cada número', rest: 'indica a área do retângulo' },
-  { strong: 'Completa níveis', rest: 'para ganhar hints' },
-];
-
-export function MenuScreen({ dailyDone, onStartGame, onStartDaily, onStartInfinite, onStartTraining }: MenuScreenProps) {
+function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
   const theme = useThemeTokens();
-  const { themeName, setTheme } = useThemeStore();
+  const { t } = useI18n();
+  const { user, loading, signInWithGoogle } = useAuthStore();
+
+  if (loading) return null;
+
+  if (!user) {
+    return (
+      <Pressable style={[styles.authPill, { borderColor: theme.gridSep }]} onPress={() => signInWithGoogle().catch(() => {})}>
+        <GoogleMark size={16} />
+        <Text style={[styles.authPillText, { color: theme.text }]}>{t('auth.signInGoogle')}</Text>
+      </Pressable>
+    );
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      <Text style={[styles.title, { color: theme.text }]}>Bumi 🌴</Text>
-      <Text style={[styles.sub, { color: theme.sub }]}>Divide a grelha em retângulos com os números.</Text>
+    <Pressable style={[styles.accountButton, { backgroundColor: theme.surface, borderColor: theme.gridSep }]} onPress={onOpenSettings} accessibilityLabel={t('menu.settings')}>
+      <View style={styles.accountCopy}>
+        <Text style={[styles.accountName, { color: theme.text }]} numberOfLines={1}>{user.name || user.email || t('settings.player')}</Text>
+        <Text style={[styles.accountDetail, { color: theme.sub }]}>{t('menu.settings')}</Text>
+      </View>
+      <Settings size={20} color={theme.sub} strokeWidth={2.2} />
+    </Pressable>
+  );
+}
 
-      <View style={styles.howTo}>
-        {HOW_TO.map((h, i) => (
-          <View key={i} style={[styles.howToItem, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
-            <Text style={[styles.howToText, { color: theme.text }]}>
-              <Text style={styles.strong}>{h.strong}</Text> {h.rest}
-            </Text>
+export function MenuScreen({
+  dailyDone,
+  dailyStreak,
+  weeklyDailyCount,
+  weeklyDailyTarget,
+  solvedCount,
+  goldMedalCount,
+  completedIslandCount,
+  islandTotal,
+  campaignLevel,
+  campaignTotal,
+  campaignComplete,
+  onStartGame,
+  onStartDaily,
+}: MenuScreenProps) {
+  const theme = useThemeTokens();
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
+  const themePickerRef = useRef<ThemePickerSheetHandle>(null);
+  const settingsRef = useRef<SettingsSheetHandle>(null);
+  const achievementsRef = useRef<AchievementsSheetHandle>(null);
+  const weeklyProgress = Math.min(weeklyDailyCount / weeklyDailyTarget, 1);
+  const remainingWeekly = Math.max(weeklyDailyTarget - weeklyDailyCount, 0);
+
+  return (
+    <>
+      <ScrollView
+        style={[styles.screen, { backgroundColor: theme.bg }]}
+        contentContainerStyle={[styles.container, { paddingTop: Math.max(32, insets.top + 16), paddingBottom: Math.max(32, insets.bottom + 20) }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.brandRow}>
+          <View style={styles.brandBlock}>
+            <Logo size={48} />
+            <Text style={[styles.title, { color: theme.text }]}>Bumi</Text>
           </View>
-        ))}
+        </View>
+
+      <View style={styles.statsRow}>
+        <View style={[styles.stat, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
+          <Text style={[styles.statValue, { color: theme.text }]}>{solvedCount}</Text>
+          <Text style={[styles.statLabel, { color: theme.sub }]}>{t('menu.solved')}</Text>
+        </View>
+        <View style={[styles.stat, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
+          <Trophy size={17} color="#d6a72f" strokeWidth={2.3} />
+          <Text style={[styles.statValue, { color: theme.text }]}>{goldMedalCount}</Text>
+          <Text style={[styles.statLabel, { color: theme.sub }]}>{t('menu.gold')}</Text>
+        </View>
       </View>
 
-      <View style={styles.themeRow}>
-        {THEME_NAMES.map(name => (
-          <Pressable
-            key={name}
-            onPress={() => setTheme(name)}
-            style={[
-              styles.swatch,
-              { backgroundColor: THEME_SWATCH_COLORS[name] },
-              themeName === name && [styles.swatchActive, { borderColor: theme.text }],
-            ]}
-          />
-        ))}
+      <View style={styles.islandProgress}>
+        <MapPinned size={15} color={theme.accent} strokeWidth={2.3} />
+        <Text style={[styles.islandProgressText, { color: theme.sub }]}>{t('menu.islands', { completed: completedIslandCount, total: islandTotal })}</Text>
+      </View>
+
+      <View style={[styles.weeklyGoal, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
+        <View style={styles.weeklyTopRow}>
+          <View style={styles.weeklyTitleRow}>
+            <Flame size={17} color="#d58f5a" strokeWidth={2.3} />
+            <Text style={[styles.weeklyTitle, { color: theme.text }]}>{t('menu.weeklyGoal')}</Text>
+          </View>
+          <Text style={[styles.weeklyCount, { color: theme.text }]}>{Math.min(weeklyDailyCount, weeklyDailyTarget)} / {weeklyDailyTarget}</Text>
+        </View>
+        <View style={[styles.weeklyBar, { backgroundColor: theme.gridSep }]}>
+          <View style={[styles.weeklyBarFill, { width: `${weeklyProgress * 100}%` }]} />
+        </View>
+        <Text style={[styles.weeklyDetail, { color: theme.sub }]}>
+          {remainingWeekly
+            ? t('menu.remainingDaily', { count: remainingWeekly, label: t(remainingWeekly === 1 ? 'menu.dailyChallenge' : 'menu.dailyChallenges') })
+            : t('menu.weeklyDone')}
+        </Text>
       </View>
 
       <View style={styles.menuBtns}>
-        <Pressable
-          style={[styles.dailyBtn, dailyDone && styles.dailyBtnDone]}
-          onPress={onStartDaily}
-        >
-          <Text style={[styles.dailyBtnText, dailyDone && styles.dailyBtnTextDone]}>
-            {dailyDone ? '✓ Desafio feito hoje' : '☀️ Desafio Diário'}
-          </Text>
-        </Pressable>
         <Pressable style={[styles.playBtn, { backgroundColor: theme.accent }]} onPress={onStartGame}>
-          <Text style={styles.playBtnText}>Jogar →</Text>
+          <View style={styles.campaignCopy}>
+            <Text style={styles.campaignLabel}>{t('menu.campaign')}</Text>
+            <Text style={styles.playBtnText}>{campaignComplete ? t('menu.playAgain') : solvedCount === 0 ? t('menu.startCampaign') : t('menu.continueLevel', { level: campaignLevel })}</Text>
+            <Text style={styles.campaignDetail}>{campaignComplete ? t('menu.levelsComplete', { count: campaignTotal }) : t('menu.levelsExplore', { count: campaignTotal - campaignLevel + 1 })}</Text>
+          </View>
+          <ArrowRight size={20} color="#fff" strokeWidth={2.4} />
+        </Pressable>
+
+        <Pressable style={[styles.dailyBtn, dailyDone && styles.dailyBtnDone]} onPress={onStartDaily}>
+          <View style={styles.dailyTitleRow}>
+            {dailyDone && <Check size={16} color="#2e8a50" strokeWidth={2.8} />}
+            <Text style={[styles.dailyBtnText, dailyDone && styles.dailyBtnTextDone]}>{dailyDone ? t('menu.dailyDone') : t('menu.daily')}</Text>
+          </View>
+          <Text style={[styles.dailyStreak, dailyDone && styles.dailyStreakDone]}>
+            {dailyStreak ? t('menu.streak', { count: dailyStreak, label: t(dailyStreak === 1 ? 'menu.day' : 'menu.days') }) : t('menu.startStreak')}
+          </Text>
         </Pressable>
       </View>
 
-      <View style={styles.row2}>
-        <Pressable style={styles.halfBtnBlue} onPress={onStartInfinite}>
-          <Text style={styles.halfBtnBlueText}>∞ Modo Infinito</Text>
-        </Pressable>
-        <Pressable style={styles.halfBtnPink} onPress={onStartTraining}>
-          <Text style={styles.halfBtnPinkText}>Modo Treino</Text>
-        </Pressable>
-      </View>
-    </View>
+        <AuthPill onOpenSettings={() => settingsRef.current?.present()} />
+      </ScrollView>
+      <ThemePickerSheet ref={themePickerRef} onBack={() => settingsRef.current?.present()} />
+      <SettingsSheet
+        ref={settingsRef}
+        onOpenAchievements={() => achievementsRef.current?.present()}
+        onOpenThemes={() => themePickerRef.current?.present()}
+      />
+      <AchievementsSheet ref={achievementsRef} onBack={() => settingsRef.current?.present()} />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 24, paddingBottom: 16 },
+  screen: { flex: 1 },
+  container: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 24, paddingVertical: 32 },
+  brandRow: { width: '100%', maxWidth: 320, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  brandBlock: { alignItems: 'center', gap: 4 },
   title: { fontSize: 34, fontWeight: '800', letterSpacing: -1 },
-  sub: { fontSize: 12, textAlign: 'center', lineHeight: 17, maxWidth: 260, marginBottom: 8 },
-  howTo: { gap: 6, width: '100%', maxWidth: 300, marginBottom: 8 },
-  howToItem: { borderRadius: 12, paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1.5 },
-  howToText: { fontSize: 12, lineHeight: 17 },
-  strong: { fontWeight: '700' },
-  themeRow: { flexDirection: 'row', gap: 10, marginBottom: 20, justifyContent: 'center' },
-  swatch: { width: 30, height: 30, borderRadius: 15, borderWidth: 3, borderColor: 'transparent' },
-  swatchActive: { transform: [{ scale: 1.15 }] },
-  cbSwatch: { alignItems: 'center', justifyContent: 'center' },
-  cbSwatchText: { fontSize: 9, fontWeight: '800' },
-  menuBtns: { gap: 7, width: '100%', maxWidth: 300 },
-  dailyBtn: { backgroundColor: '#ffe870', borderWidth: 1.5, borderColor: '#f0c820', borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
+  statsRow: { flexDirection: 'row', width: '100%', maxWidth: 320, gap: 8 },
+  stat: { flex: 1, minHeight: 70, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, justifyContent: 'center' },
+  statValue: { fontSize: 20, fontWeight: '800', marginTop: 1 },
+  statLabel: { fontSize: 10, fontWeight: '600', marginTop: 2 },
+  islandProgress: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 20 },
+  islandProgressText: { fontSize: 12, fontWeight: '700' },
+  weeklyGoal: { width: '100%', maxWidth: 320, borderWidth: 1.5, borderRadius: 8, padding: 13 },
+  weeklyTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  weeklyTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  weeklyTitle: { fontSize: 13, fontWeight: '700' },
+  weeklyCount: { fontSize: 13, fontWeight: '800' },
+  weeklyBar: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 10 },
+  weeklyBarFill: { height: '100%', backgroundColor: '#d58f5a', borderRadius: 3 },
+  weeklyDetail: { fontSize: 11, marginTop: 7 },
+  menuBtns: { gap: 8, width: '100%', maxWidth: 320 },
+  playBtn: { borderRadius: 8, paddingVertical: 13, paddingHorizontal: 15, alignItems: 'center', flexDirection: 'row', gap: 8 },
+  campaignCopy: { flex: 1 },
+  campaignLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: 'rgba(255,255,255,0.72)' },
+  playBtnText: { color: '#fff', fontSize: 15, fontWeight: '700', marginTop: 2 },
+  campaignDetail: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)', marginTop: 3 },
+  dailyBtn: { backgroundColor: '#ffe870', borderWidth: 1.5, borderColor: '#f0c820', borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
+  dailyTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   dailyBtnDone: { backgroundColor: '#e8f5ee', borderColor: '#90d0a0' },
   dailyBtnText: { fontSize: 15, fontWeight: '700', color: '#8a6000' },
   dailyBtnTextDone: { color: '#2e8a50' },
-  playBtn: { borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
-  playBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  row2: { flexDirection: 'row', gap: 7, width: '100%', maxWidth: 300, marginTop: 7 },
-  halfBtnBlue: { flex: 1, backgroundColor: '#c5e3ff', borderWidth: 1.5, borderColor: '#c0b8e8', borderRadius: 14, paddingVertical: 10, alignItems: 'center' },
-  halfBtnBlueText: { fontSize: 13, fontWeight: '600', color: '#5060a0' },
-  halfBtnPink: { flex: 1, backgroundColor: '#ffd6e0', borderWidth: 1.5, borderColor: '#ffb3c6', borderRadius: 14, paddingVertical: 10, alignItems: 'center' },
-  halfBtnPinkText: { fontSize: 13, fontWeight: '600', color: '#b03060' },
+  dailyStreak: { fontSize: 11, fontWeight: '600', color: '#8a6000', marginTop: 2 },
+  dailyStreakDone: { color: '#2e8a50' },
+  authPill: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 14, marginTop: 6, maxWidth: 260 },
+  authPillText: { fontSize: 12, fontWeight: '600' },
+  accountButton: { width: '100%', maxWidth: 320, minHeight: 58, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
+  accountCopy: { flex: 1, minWidth: 0, marginRight: 12 },
+  accountName: { fontSize: 14, fontWeight: '800' },
+  accountDetail: { fontSize: 11, fontWeight: '600', marginTop: 3 },
 });

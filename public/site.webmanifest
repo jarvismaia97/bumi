@@ -1,0 +1,16 @@
+{
+  "name": "Bumi",
+  "short_name": "Bumi",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#a8b9d8",
+  "theme_color": "#a8b9d8",
+  "icons": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

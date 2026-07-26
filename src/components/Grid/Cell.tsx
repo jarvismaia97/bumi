@@ -17,13 +17,15 @@ interface CellProps {
   edges: CellEdges;
   fillColor?: string;
   borderColor?: string;
+  emptyColor?: string;
 }
 
-const BORDER_W = 2.5;
-const GAP_COLOR = '#f0eaf5';
+const BORDER_W = 3;
+const GAP_COLOR = '#eee8e3';
 
-export function Cell({ size, clueValue, clueColor, state, edges, fillColor, borderColor }: CellProps) {
-  const bg = state === 'empty' ? '#ffffff' : state === 'correct' ? (fillColor ?? '#f5f0e8') : 'rgba(120,100,160,0.06)';
+export function Cell({ size, clueValue, clueColor, state, edges, fillColor, borderColor, emptyColor }: CellProps) {
+  const isFilled = state !== 'empty';
+  const bg = state === 'empty' ? (emptyColor ?? '#fffefd') : state === 'correct' ? (fillColor ?? '#f2eee9') : 'rgba(113,140,195,0.12)';
   const fontSize = size >= 40 ? 17 : size >= 34 ? 14 : size >= 28 ? 12 : 10;
 
   return (
@@ -34,14 +36,18 @@ export function Cell({ size, clueValue, clueColor, state, edges, fillColor, bord
           width: size,
           height: size,
           backgroundColor: bg,
-          borderTopWidth: edges.top ? BORDER_W : 0.5,
-          borderBottomWidth: edges.bottom ? BORDER_W : 0.5,
-          borderLeftWidth: edges.left ? BORDER_W : 0.5,
-          borderRightWidth: edges.right ? BORDER_W : 0.5,
+          borderTopWidth: edges.top ? BORDER_W : isFilled ? 0 : 0.75,
+          borderBottomWidth: edges.bottom ? BORDER_W : isFilled ? 0 : 0.75,
+          borderLeftWidth: edges.left ? BORDER_W : isFilled ? 0 : 0.75,
+          borderRightWidth: edges.right ? BORDER_W : isFilled ? 0 : 0.75,
           borderTopColor: edges.top && borderColor ? borderColor : GAP_COLOR,
           borderBottomColor: edges.bottom && borderColor ? borderColor : GAP_COLOR,
           borderLeftColor: edges.left && borderColor ? borderColor : GAP_COLOR,
           borderRightColor: edges.right && borderColor ? borderColor : GAP_COLOR,
+          borderTopLeftRadius: edges.top && edges.left ? 10 : 0,
+          borderTopRightRadius: edges.top && edges.right ? 10 : 0,
+          borderBottomLeftRadius: edges.bottom && edges.left ? 10 : 0,
+          borderBottomRightRadius: edges.bottom && edges.right ? 10 : 0,
         },
       ]}
     >
