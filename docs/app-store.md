@@ -53,6 +53,22 @@ subject identifiers, so `sub` is stable per Google account across projects and e
 users keep their accounts — but confirm that on first login after the switch rather
 than assuming it.
 
+## Sign in with Apple is iOS-only by design
+
+The button is gated on `Platform.OS === 'ios'` in `src/app/login.tsx`, so it never
+renders on the web build — including the PWA on an iPhone, which still reports
+`Platform.OS === 'web'`. It appears only in a real iOS build, where
+`EXPO_PUBLIC_APPLE_SIGN_IN_ENABLED=true` comes from `eas.json`. That variable is
+deliberately absent from Vercel; setting it there would change nothing.
+
+This is why no Services ID exists. Apple rejects App IDs as the `client_id` for web
+OAuth, so `/api/auth/sign-in/social` with `provider: apple` returns a URL Apple will
+refuse. Nothing in the UI can reach that path. Offering Apple sign-in on the web would
+require a Services ID, domain verification of `jogarbumi.pt`, a client secret re-signed
+with the Services ID as `sub`, an `audience` array covering both it and the bundle id,
+and a hand-built web button. App Store guideline 4.8 governs only the iOS app, so none
+of that is needed to ship.
+
 ## Blocked on
 
 1. **Rotate the web client secret.** The original was pasted into a chat transcript.
