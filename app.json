@@ -1,14 +1,21 @@
 {
   "expo": {
-    "name": "bumi",
+    "name": "Bumi",
     "slug": "bumi",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/bumi-icon.png",
     "scheme": "bumi",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "pt.jogarbumi.app",
+      "buildNumber": "1",
+      "icon": "./assets/images/bumi-icon.png",
+      "supportsTablet": false,
+      "usesAppleSignIn": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -34,6 +41,28 @@
           "backgroundColor": "#208AEF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-localization",
+        {
+          "supportedLocales": {
+            "ios": [
+              "pt-PT",
+              "en"
+            ],
+            "android": [
+              "pt-PT",
+              "en"
+            ]
+          }
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.606345526586-tg7hsb94esepmg0sivm4hdkckjssmj19"
         }
       ]
     ],

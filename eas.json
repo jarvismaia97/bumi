@@ -1,0 +1,48 @@
+{
+  "cli": {
+    "version": ">= 21.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_AUTH_API_URL": "https://www.jogarbumi.pt",
+        "EXPO_PUBLIC_API_BASE_URL": "https://www.jogarbumi.pt",
+        "EXPO_PUBLIC_APPLE_SIGN_IN_ENABLED": "true",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "606345526586-sjfscet3ehk2i9guth0cnjv7sg05vh1m.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "606345526586-tg7hsb94esepmg0sivm4hdkckjssmj19.apps.googleusercontent.com"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_AUTH_API_URL": "https://www.jogarbumi.pt",
+        "EXPO_PUBLIC_API_BASE_URL": "https://www.jogarbumi.pt",
+        "EXPO_PUBLIC_APPLE_SIGN_IN_ENABLED": "true",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "606345526586-sjfscet3ehk2i9guth0cnjv7sg05vh1m.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "606345526586-tg7hsb94esepmg0sivm4hdkckjssmj19.apps.googleusercontent.com"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_AUTH_API_URL": "https://www.jogarbumi.pt",
+        "EXPO_PUBLIC_API_BASE_URL": "https://www.jogarbumi.pt",
+        "EXPO_PUBLIC_APPLE_SIGN_IN_ENABLED": "true",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "606345526586-sjfscet3ehk2i9guth0cnjv7sg05vh1m.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "606345526586-tg7hsb94esepmg0sivm4hdkckjssmj19.apps.googleusercontent.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleTeamId": "UTCM3TBG22",
+        "ascAppId": "6794318786"
+      }
+    }
+  }
+}
