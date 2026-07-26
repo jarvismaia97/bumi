@@ -18,6 +18,13 @@ let solvableByLogic = 0;
 const deepestHistogram = new Map<number, number>();
 const usedSolutionFingerprints = new Set(Object.values(HARDCODED_LEVELS).map(getSolutionFingerprint));
 
+// Clue-position refinement is the single largest difficulty gain in the pipeline, which is
+// exactly why the opening levels don't get it. Ungated it took levels 51-100 from depth 1.70
+// to 3.20 — the third and fourth tier a new player ever meets, playing harder than the old
+// campaign's endgame. Levels 1-100 (all of Fácil plus the first Médio tier) keep the clue
+// positions the generator picked; everything past that gets the full hill climb.
+const REFINE_FROM_INDEX = 100;
+
 function generateDistinctLevel(index: number, meta: LevelMeta): Level {
   const seed = index * 1031 + 7;
   const maxVariants = 240;
@@ -27,9 +34,8 @@ function generateDistinctLevel(index: number, meta: LevelMeta): Level {
     const level = genUniqueLevel(seed + variant * 104_729, meta.size, meta.maxArea, meta.hard, meta.challenge, {
       clueTarget: meta.clueTarget,
       clueRange: meta.clueRange,
-      // Worth the ~80ms per level here: this is a one-off bake, and the hill climb is the
-      // single largest difficulty gain in the pipeline. The on-device modes leave it off.
-      refine: true,
+      // Worth the ~80ms per level here: this is a one-off bake. See REFINE_FROM_INDEX.
+      refine: index >= REFINE_FROM_INDEX,
     });
     const fingerprint = getSolutionFingerprint(level);
     if (usedSolutionFingerprints.has(fingerprint)) continue;
