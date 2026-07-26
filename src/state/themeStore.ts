@@ -5,18 +5,14 @@ import { THEMES, type ThemeName, type ThemeTokens } from '@/theme/themes';
 
 interface ThemeState {
   themeName: ThemeName;
-  colorblind: boolean;
-  setTheme: (name: ThemeName) => void;
-  toggleColorblind: () => void;
+  setThemeName: (themeName: ThemeName) => void;
 }
 
 export const useThemeStore = create<ThemeState>()(
   persist(
     set => ({
-      themeName: 'roxo',
-      colorblind: false,
-      setTheme: name => set({ themeName: name }),
-      toggleColorblind: () => set(s => ({ colorblind: !s.colorblind })),
+      themeName: 'classic',
+      setThemeName: themeName => set({ themeName }),
     }),
     {
       name: 'bumi-theme-store-v2',
@@ -26,5 +22,5 @@ export const useThemeStore = create<ThemeState>()(
 );
 
 export function useThemeTokens(): ThemeTokens {
-  return useThemeStore(s => THEMES[s.themeName] ?? THEMES['roxo']);
+  return useThemeStore(s => THEMES[s.themeName] ?? THEMES.classic);
 }
