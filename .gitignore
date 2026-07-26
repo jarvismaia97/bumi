@@ -34,13 +34,25 @@ yarn-error.*
 .claude/settings.local.json
 
 # local env files
-.env*.local
+.env
+.env.*
+!.env.example
+
+# Apple / Google credentials — never commit
+AuthKey_*.p8
+google-services.json
+GoogleService-Info.plist
 
 # typescript
 *.tsbuildinfo
 
 example
 
+# local browser-automation debug output
+.playwright-cli/
+
 # generated native folders
 /ios
 /android
+.vercel
+content/social/
