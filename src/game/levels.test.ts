@@ -76,9 +76,21 @@ describe('getLevel', () => {
     expect(Math.max(...LEVEL_META.map(level => level.size))).toBe(12);
   });
 
-  it('includes the 15 and 16 clue values in the late campaign', () => {
-    const values = new Set(Array.from({ length: LEVEL_META.length }, (_, idx) => getLevel(idx)).flatMap(level => level.clues.map(clue => clue.v)));
-    expect(values.has(15)).toBe(true);
-    expect(values.has(16)).toBe(true);
+  // The campaign used to reach for 15s and 16s in the Lenda tiers on the assumption that a
+  // bigger number is a harder clue. Measured against every other setting at that board size
+  // and density, maxArea 16 graded worst in all eight upper tiers: a 16 has only three legal
+  // shapes on a 12-wide board (2x8, 8x2, 4x4), so it pins itself down instead of opening
+  // choices. Divisor-rich mid values do the real work — 12 alone has six shapes.
+  it('spans the divisor-rich clue values and stops short of the self-pinning ones', () => {
+    const values = new Set(
+      Array.from({ length: LEVEL_META.length }, (_, idx) => getLevel(idx)).flatMap(level =>
+        level.clues.map(clue => clue.v),
+      ),
+    );
+    expect(values.has(12)).toBe(true);
+    expect(values.has(10)).toBe(true);
+    expect(values.has(8)).toBe(true);
+    expect(values.has(6)).toBe(true);
+    expect(Math.max(...values)).toBeLessThanOrEqual(12);
   });
 });
