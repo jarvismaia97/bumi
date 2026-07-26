@@ -12,7 +12,8 @@ export function rectOk(rect: SolutionRect, lvl: Level): boolean {
       v = cl.v;
     }
   }
-  return n === 1 && area === v;
+  const basicMatch = n === 1 && area === v;
+  return basicMatch && (!lvl.requiresExactSolution || lvl.solution.some(solution => sameRect(rect, solution)));
 }
 
 export function rectsOverlap(a: SolutionRect, b: SolutionRect): boolean {
@@ -21,8 +22,13 @@ export function rectsOverlap(a: SolutionRect, b: SolutionRect): boolean {
 
 export function checkWin(placed: PlacedRect[], lvl: Level): boolean {
   if (!placed.length) return false;
-  const { size } = lvl;
-  const cov: boolean[][] = Array.from({ length: size }, () => Array(size).fill(false));
+  if (lvl.solutionOnlyWin) {
+    return lvl.solution.every(solution => placed.some(rect => sameRect(rect, solution)));
+  }
+
+  const rows = lvl.rows ?? lvl.size;
+  const columns = lvl.columns ?? lvl.size;
+  const cov: boolean[][] = Array.from({ length: rows }, () => Array(columns).fill(false));
 
   for (const rect of placed) {
     if (!rectOk(rect, lvl)) return false;
@@ -34,10 +40,14 @@ export function checkWin(placed: PlacedRect[], lvl: Level): boolean {
     }
   }
 
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < columns; c++) {
       if (!cov[r][c]) return false;
     }
   }
   return true;
+}
+
+function sameRect(a: SolutionRect, b: SolutionRect): boolean {
+  return a.r1 === b.r1 && a.c1 === b.c1 && a.r2 === b.r2 && a.c2 === b.c2;
 }

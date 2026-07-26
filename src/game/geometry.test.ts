@@ -1,27 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { checkWin, rectOk, rectsOverlap } from './geometry';
-import { TUTORIAL_LEVEL } from './levels';
+import { TUTORIAL_LEVELS } from './levels';
 import type { PlacedRect } from './types';
 
 describe('rectOk', () => {
   it('is true for a rect containing exactly one clue matching its area', () => {
-    const rect = { r1: 0, c1: 0, r2: 1, c2: 3 }; // area 3, contains clue v=3 at (0,1)
-    expect(rectOk(rect, TUTORIAL_LEVEL)).toBe(true);
+    const rect = { r1: 0, c1: 0, r2: 1, c2: 2 };
+    expect(rectOk(rect, TUTORIAL_LEVELS[0])).toBe(true);
   });
 
   it('is false when area does not match the clue value', () => {
-    const rect = { r1: 0, c1: 0, r2: 1, c2: 2 }; // area 2, but clue at (0,1) is v=3
-    expect(rectOk(rect, TUTORIAL_LEVEL)).toBe(false);
+    const rect = { r1: 0, c1: 0, r2: 1, c2: 1 };
+    expect(rectOk(rect, TUTORIAL_LEVELS[0])).toBe(false);
   });
 
   it('is false when the rect contains no clue', () => {
     const rect = { r1: 2, c1: 2, r2: 3, c2: 3 };
-    expect(rectOk(rect, TUTORIAL_LEVEL)).toBe(false);
+    expect(rectOk(rect, TUTORIAL_LEVELS[2])).toBe(false);
   });
 
-  it('is false when the rect contains more than one clue', () => {
-    const rect = { r1: 0, c1: 0, r2: 3, c2: 3 }; // area 9, contains all 3 clues
-    expect(rectOk(rect, TUTORIAL_LEVEL)).toBe(false);
+  it('requires the taught orientation in tutorial levels', () => {
+    const rect = { r1: 0, c1: 0, r2: 2, c2: 1 };
+    expect(rectOk(rect, TUTORIAL_LEVELS[0])).toBe(false);
   });
 });
 
@@ -41,25 +41,30 @@ describe('rectsOverlap', () => {
 
 describe('checkWin', () => {
   it('is true when the solution rects are placed', () => {
-    const placed: PlacedRect[] = TUTORIAL_LEVEL.solution.map((r, i) => ({ ...r, ci: i }));
-    expect(checkWin(placed, TUTORIAL_LEVEL)).toBe(true);
+    const placed: PlacedRect[] = TUTORIAL_LEVELS[0].solution.map((r, i) => ({ ...r, ci: i }));
+    expect(checkWin(placed, TUTORIAL_LEVELS[0])).toBe(true);
   });
 
   it('is false with no placed rects', () => {
-    expect(checkWin([], TUTORIAL_LEVEL)).toBe(false);
+    expect(checkWin([], TUTORIAL_LEVELS[0])).toBe(false);
   });
 
   it('is false when the grid is only partially covered', () => {
-    const placed: PlacedRect[] = [{ ...TUTORIAL_LEVEL.solution[0], ci: 0 }];
-    expect(checkWin(placed, TUTORIAL_LEVEL)).toBe(false);
+    const placed: PlacedRect[] = [{ ...TUTORIAL_LEVELS[2].solution[0], ci: 0 }];
+    expect(checkWin(placed, TUTORIAL_LEVELS[2])).toBe(false);
   });
 
   it('is false when a placed rect does not satisfy its clue', () => {
     const placed: PlacedRect[] = [
-      { r1: 0, c1: 0, r2: 1, c2: 2, ci: 0 }, // wrong area for the v=3 clue
-      { r1: 1, c1: 0, r2: 3, c2: 2, ci: 1 },
-      { r1: 1, c1: 2, r2: 3, c2: 3, ci: 2 },
+      { r1: 0, c1: 0, r2: 1, c2: 1, ci: 0 },
+      { ...TUTORIAL_LEVELS[0].solution[1], ci: 1 },
     ];
-    expect(checkWin(placed, TUTORIAL_LEVEL)).toBe(false);
+    expect(checkWin(placed, TUTORIAL_LEVELS[0])).toBe(false);
+  });
+
+  it('completes the logo tutorial by covering its 3 by 3 board', () => {
+    const logo = TUTORIAL_LEVELS[2];
+    const placed: PlacedRect[] = logo.solution.map((rect, ci) => ({ ...rect, ci }));
+    expect(checkWin(placed, logo)).toBe(true);
   });
 });
