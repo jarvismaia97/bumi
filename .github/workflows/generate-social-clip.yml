@@ -1,0 +1,47 @@
+name: Generate daily social clip
+
+on:
+  schedule:
+    - cron: '5 9 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Data do desafio (AAAAMMDD ou AAAA-MM-DD). Vazio usa hoje.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate today's clip
+        if: ${{ inputs.date == '' }}
+        run: npm run generate-social-clip -- --output content/social
+
+      - name: Generate selected clip
+        if: ${{ inputs.date != '' }}
+        run: npm run generate-social-clip -- --date "${{ inputs.date }}" --output content/social
+
+      - name: Upload review package
+        uses: actions/upload-artifact@v4
+        with:
+          name: bumi-social-${{ github.run_id }}
+          path: content/social/
+          retention-days: 14

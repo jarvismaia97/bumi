@@ -1,6 +1,17 @@
 {
   "framework": null,
-  "buildCommand": "npx expo export -p web",
+  "cleanUrls": true,
+  "buildCommand": "npm run generate-levels && npx expo export -p web",
   "outputDirectory": "dist",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "rewrites": [
+    {
+      "source": "/partilha/:kind/:value",
+      "destination": "/api/share?kind=:kind&value=:value"
+    },
+    {
+      "source": "/api/auth/:path*",
+      "destination": "/api/auth/[...all]"
+    }
+  ]
 }
