@@ -9,7 +9,6 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "pt.jogarbumi.app",
-      "buildNumber": "1",
       "icon": "./assets/images/bumi-icon.png",
       "supportsTablet": false,
       "usesAppleSignIn": true,
