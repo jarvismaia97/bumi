@@ -8,6 +8,8 @@ import Settings from 'lucide-react-native/icons/settings';
 import Trophy from 'lucide-react-native/icons/trophy';
 import { GoogleMark } from '@/components/GoogleMark';
 import { Logo } from '@/components/Logo';
+import { PlayerAvatarTile } from '@/components/PlayerAvatar';
+import { playerName } from '@/lib/identity';
 import { ThemePickerSheet, type ThemePickerSheetHandle } from '@/components/overlays/ThemePickerSheet';
 import { SettingsSheet, type SettingsSheetHandle } from '@/components/overlays/SettingsSheet';
 import { AchievementsSheet, type AchievementsSheetHandle } from '@/components/overlays/AchievementsSheet';
@@ -34,7 +36,7 @@ interface MenuScreenProps {
 
 function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
   const theme = useThemeTokens();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { user, loading, signInWithGoogle } = useAuthStore();
 
   if (loading) return null;
@@ -50,8 +52,9 @@ function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
 
   return (
     <Pressable style={[styles.accountButton, { backgroundColor: theme.surface, borderColor: theme.gridSep }]} onPress={onOpenSettings} accessibilityLabel={t('menu.settings')}>
+      <PlayerAvatarTile userId={user.id} size={38} />
       <View style={styles.accountCopy}>
-        <Text style={[styles.accountName, { color: theme.text }]} numberOfLines={1}>{user.name || user.email || t('settings.player')}</Text>
+        <Text style={[styles.accountName, { color: theme.text }]} numberOfLines={1}>{playerName(user.id, language)}</Text>
         <Text style={[styles.accountDetail, { color: theme.sub }]}>{t('menu.settings')}</Text>
       </View>
       <Settings size={20} color={theme.sub} strokeWidth={2.2} />
@@ -202,7 +205,7 @@ const styles = StyleSheet.create({
   authPill: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 14, marginTop: 6, maxWidth: 260 },
   authPillText: { fontSize: 12, fontWeight: '600' },
   accountButton: { width: '100%', maxWidth: 320, minHeight: 58, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
-  accountCopy: { flex: 1, minWidth: 0, marginRight: 12 },
+  accountCopy: { flex: 1, minWidth: 0, marginLeft: 12, marginRight: 12 },
   accountName: { fontSize: 14, fontWeight: '800' },
   accountDetail: { fontSize: 11, fontWeight: '600', marginTop: 3 },
 });

@@ -10,6 +10,8 @@ import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import Trash2 from 'lucide-react-native/icons/trash-2';
 import Trophy from 'lucide-react-native/icons/trophy';
 import { router } from 'expo-router';
+import { PlayerAvatarTile } from '@/components/PlayerAvatar';
+import { playerName } from '@/lib/identity';
 import { useAuthStore } from '@/state/authStore';
 import { useSyncStore } from '@/state/syncStore';
 import { useThemeTokens } from '@/state/themeStore';
@@ -33,7 +35,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
   const { status, hasPendingChanges } = useSyncStore();
   const dailyReminderEnabled = useProgressStore(state => state.dailyReminderEnabled);
   const setDailyReminderEnabled = useProgressStore(state => state.setDailyReminderEnabled);
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   useImperativeHandle(ref, () => ({
     present: () => sheetRef.current?.present(),
@@ -93,8 +95,13 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         {user ? (
           <>
             <View style={[styles.account, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}> 
-              <Text style={[styles.accountName, { color: theme.text }]} numberOfLines={1}>{user.name || t('settings.player')}</Text>
-              <Text style={[styles.accountEmail, { color: theme.sub }]} numberOfLines={1}>{user.email}</Text>
+              <View style={styles.accountIdentity}>
+                <PlayerAvatarTile userId={user.id} size={44} />
+                <View style={styles.accountIdentityCopy}>
+                  <Text style={[styles.accountName, { color: theme.text }]} numberOfLines={1}>{playerName(user.id, language)}</Text>
+                  <Text style={[styles.accountDetail, { color: theme.sub }]} numberOfLines={1}>{t('settings.playerHint')}</Text>
+                </View>
+              </View>
               <Pressable style={[styles.accountSignOut, { borderColor: theme.gridSep }]} onPress={() => signOut().then(() => sheetRef.current?.dismiss()).catch(() => {})}>
                 <LogOut size={17} color={theme.text} strokeWidth={2.2} />
                 <Text style={[styles.accountSignOutText, { color: theme.text }]}>{t('settings.signOut')}</Text>
@@ -162,8 +169,10 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 34, gap: 8 },
   title: { fontSize: 20, fontWeight: '800', marginBottom: 8 },
   account: { borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 5 },
+  accountIdentity: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  accountIdentityCopy: { flex: 1, minWidth: 0 },
   accountName: { fontSize: 15, fontWeight: '800' },
-  accountEmail: { fontSize: 12, marginTop: 3 },
+  accountDetail: { fontSize: 12, marginTop: 3 },
   accountSignOut: { minHeight: 38, marginTop: 10, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   accountSignOutText: { fontSize: 13, fontWeight: '700' },
   syncRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 3, paddingVertical: 7 },

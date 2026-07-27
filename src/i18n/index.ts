@@ -51,6 +51,7 @@ const messages: Record<SupportedLanguage, Record<string, string>> = {
     'settings.permissionTitle': 'Permissão necessária',
     'settings.permissionBody': 'Ativa as notificações do Bumi nas definições do dispositivo para receberes o lembrete diário.',
     'settings.player': 'Jogador',
+    'settings.playerHint': 'O teu nome de jogador no Bumi',
   },
   en: {
     'auth.signInGoogle': 'Continue with Google',
@@ -99,6 +100,7 @@ const messages: Record<SupportedLanguage, Record<string, string>> = {
     'settings.permissionTitle': 'Permission needed',
     'settings.permissionBody': 'Enable Bumi notifications in device settings to receive the daily reminder.',
     'settings.player': 'Player',
+    'settings.playerHint': 'Your Bumi player name',
   },
 };
 
