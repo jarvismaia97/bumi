@@ -15,6 +15,20 @@ export const IOSInstallPromptSheet = forwardRef<IOSInstallPromptSheetHandle>(fun
   const sheetRef = useRef<BottomSheetModal>(null);
   const theme = useThemeTokens();
 
+  async function openShareMenu() {
+    if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return;
+
+    try {
+      await navigator.share({
+        title: 'Bumi',
+        text: 'Joga Bumi, um puzzle de retangulos.',
+        url: window.location.href,
+      });
+    } catch {
+      // Closing the native share menu is not an error for the player.
+    }
+  }
+
   useImperativeHandle(ref, () => ({
     present: () => sheetRef.current?.present(),
   }));
@@ -35,13 +49,18 @@ export const IOSInstallPromptSheet = forwardRef<IOSInstallPromptSheetHandle>(fun
         <Text style={[styles.title, { color: theme.text }]}>Joga como uma app</Text>
         <Text style={[styles.subtitle, { color: theme.sub }]}>Adiciona Bumi ao ecrã principal para abrir mais depressa.</Text>
         <View style={styles.steps}>
-          <View style={[styles.step, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
+          <Pressable
+            style={({ pressed }) => [styles.step, styles.shareAction, { backgroundColor: theme.surface, borderColor: theme.gridSep, opacity: pressed ? 0.72 : 1 }]}
+            onPress={openShareMenu}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir o menu Partilhar do Safari"
+          >
             <Share size={19} color={theme.accent} strokeWidth={2.4} />
-            <Text style={[styles.stepText, { color: theme.text }]}>Toca em Partilhar</Text>
-          </View>
+            <Text style={[styles.stepText, { color: theme.text }]}>1. Abrir Partilhar</Text>
+          </Pressable>
           <View style={[styles.step, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
             <SquarePlus size={19} color={theme.accent} strokeWidth={2.4} />
-            <Text style={[styles.stepText, { color: theme.text }]}>Adicionar ao ecrã principal</Text>
+            <Text style={[styles.stepText, { color: theme.text }]}>2. Escolher “Adicionar ao ecrã principal”</Text>
           </View>
         </View>
       </BottomSheetView>
@@ -58,5 +77,6 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, lineHeight: 20, textAlign: 'center', marginTop: 7, maxWidth: 290 },
   steps: { width: '100%', gap: 8, marginTop: 20 },
   step: { minHeight: 50, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  shareAction: { justifyContent: 'flex-start' },
   stepText: { fontSize: 14, fontWeight: '700' },
 });
