@@ -1,7 +1,8 @@
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import Check from 'lucide-react-native/icons/check';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Cloud from 'lucide-react-native/icons/cloud';
 import CloudOff from 'lucide-react-native/icons/cloud-off';
@@ -11,6 +12,7 @@ import Palette from 'lucide-react-native/icons/palette';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import Trash2 from 'lucide-react-native/icons/trash-2';
 import Trophy from 'lucide-react-native/icons/trophy';
+import Animated, { FadeIn, FadeOut, ReduceMotion, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { PlayerAvatarTile } from '@/components/PlayerAvatar';
 import { playerName } from '@/lib/identity';
@@ -33,10 +35,24 @@ interface SettingsSheetProps {
 
 /** Native names, so a player who lands in the wrong language can still find their own. */
 const LANGUAGE_OPTIONS: { value: LanguagePreference; label: string; flag: string }[] = [
-  { value: 'auto', label: 'Auto', flag: '' },
+  { value: 'auto', label: 'Auto', flag: '🌐' },
   { value: 'pt-PT', label: 'Português', flag: '🇵🇹' },
   { value: 'en', label: 'English', flag: '🇬🇧' },
 ];
+
+/** Points at the list it reveals. Rotation only — transform is the cheap property. */
+function DisclosureChevron({ open, color }: { open: boolean; color: string }) {
+  const style = useAnimatedStyle(() => ({
+    transform: [
+      { rotate: withTiming(open ? '180deg' : '0deg', { duration: 180, reduceMotion: ReduceMotion.System }) },
+    ],
+  }));
+  return (
+    <Animated.View style={style}>
+      <ChevronDown size={18} color={color} strokeWidth={2.2} />
+    </Animated.View>
+  );
+}
 
 export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>(function SettingsSheet({ onOpenAchievements, onOpenThemes }, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
@@ -52,6 +68,12 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
   const dailyReminderEnabled = useProgressStore(state => state.dailyReminderEnabled);
   const setDailyReminderEnabled = useProgressStore(state => state.setDailyReminderEnabled);
   const { t, language } = useI18n();
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const optionLabel = (option: (typeof LANGUAGE_OPTIONS)[number]) =>
+    option.value === 'auto' ? t('settings.languageAuto') : option.label;
+  const languageValueLabel = optionLabel(
+    LANGUAGE_OPTIONS.find(option => option.value === languagePreference) ?? LANGUAGE_OPTIONS[0],
+  );
 
   useImperativeHandle(ref, () => ({
     present: () => sheetRef.current?.present(),
@@ -124,7 +146,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
               </Pressable>
             </View>
 
-            <View style={[styles.syncRow, { borderColor: theme.gridSep }]}>
+            <View style={styles.syncRow}>
               <SyncIcon size={18} color={hasPendingChanges ? '#b07a24' : theme.accent} strokeWidth={2.2} />
               <Text style={[styles.syncCopy, { color: theme.sub }]}>{syncCopy}</Text>
             </View>
@@ -144,30 +166,58 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
           <ChevronRight size={18} color={theme.sub} />
         </Pressable>
 
-        <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.language')}</Text>
-        {LANGUAGE_OPTIONS.map(option => {
-          const selected = option.value === languagePreference;
-          return (
-            <Pressable
-              accessibilityRole="button"
-              key={option.value}
-              style={[styles.row, { borderColor: selected ? theme.accent : theme.gridSep }]}
-              onPress={() => setLanguagePreference(option.value)}
-              accessibilityState={{ selected }}
+        <View style={[styles.group, { borderColor: languageOpen ? theme.accent : theme.gridSep }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: languageOpen }}
+            style={styles.groupTrigger}
+            onPress={() => setLanguageOpen(open => !open)}
+          >
+            <View style={styles.rowCopy}>
+              <Languages size={18} color={theme.accent} strokeWidth={2.2} />
+              <Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.language')}</Text>
+            </View>
+            <View style={styles.groupValue}>
+              <Text style={[styles.groupValueText, { color: theme.sub }]}>{languageValueLabel}</Text>
+              <DisclosureChevron open={languageOpen} color={theme.sub} />
+            </View>
+          </Pressable>
+
+          {languageOpen && (
+            <Animated.View
+              entering={FadeIn.duration(140).reduceMotion(ReduceMotion.System)}
+              exiting={FadeOut.duration(100).reduceMotion(ReduceMotion.System)}
             >
-              <View style={styles.rowCopy}>
-                {option.value === 'auto'
-                  ? <Languages size={18} color={theme.accent} strokeWidth={2.2} />
-                  : <Text style={styles.flag}>{option.flag}</Text>}
-                <View>
-                  <Text style={[styles.rowLabel, { color: theme.text }]}>{option.value === 'auto' ? t('settings.languageAuto') : option.label}</Text>
-                  {option.value === 'auto' && <Text style={[styles.rowDetail, { color: theme.sub }]}>{t('settings.languageAutoDetail')}</Text>}
-                </View>
-              </View>
-              {selected && <Check size={18} color={theme.accent} strokeWidth={2.8} />}
-            </Pressable>
-          );
-        })}
+              {LANGUAGE_OPTIONS.map(option => {
+                const selected = option.value === languagePreference;
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={option.value}
+                    style={[styles.groupOption, { borderTopColor: theme.gridSep }]}
+                    onPress={() => {
+                      setLanguagePreference(option.value);
+                      setLanguageOpen(false);
+                    }}
+                    accessibilityState={{ selected }}
+                  >
+                    <View style={styles.rowCopy}>
+                      <Text style={styles.flag}>{option.flag}</Text>
+                      <View style={styles.groupOptionCopy}>
+                        <Text style={[styles.rowLabel, { color: theme.text }]}>{optionLabel(option)}</Text>
+                        {option.value === 'auto' && (
+                          <Text style={[styles.rowDetail, { color: theme.sub }]}>{t('settings.languageAutoDetail')}</Text>
+                        )}
+                      </View>
+                    </View>
+                    {selected && <Check size={18} color={theme.accent} strokeWidth={2.8} />}
+                  </Pressable>
+                );
+              })}
+            </Animated.View>
+          )}
+        </View>
+
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.privacySupport')}</Text>
         <Pressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={closeAndOpenPrivacy}>
@@ -194,7 +244,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         {user ? (
           <>
             <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.account')}</Text>
-            <Pressable accessibilityRole="button" style={[styles.dangerRow, { borderColor: theme.gridSep }]} onPress={confirmDeleteAccount}>
+            <Pressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={confirmDeleteAccount}>
               <View style={styles.rowCopy}><Trash2 size={18} color="#b03060" strokeWidth={2.2} /><Text style={styles.dangerText}>{t('settings.delete')}</Text></View>
               <ChevronRight size={18} color="#b03060" />
             </Pressable>
@@ -207,24 +257,41 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
 });
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 34, gap: 8 },
-  title: { fontSize: 20, fontWeight: '800', marginBottom: 8 },
-  account: { borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 5 },
+  // One 4px scale throughout: 4 / 8 / 12 / 14 / 20 / 28.
+  content: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32, gap: 8 },
+  title: { fontSize: 20, fontWeight: '800', marginBottom: 12 },
+  account: { borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, paddingTop: 14 },
   accountIdentity: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   accountIdentityCopy: { flex: 1, minWidth: 0 },
   accountName: { fontSize: 15, fontWeight: '800' },
-  accountDetail: { fontSize: 12, marginTop: 3 },
-  accountSignOut: { minHeight: 38, marginTop: 10, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  accountDetail: { fontSize: 12, marginTop: 4 },
+  // Negative margin pulls the divider out to the card edges instead of stopping at the padding.
+  accountSignOut: {
+    minHeight: 44,
+    marginTop: 14,
+    marginHorizontal: -14,
+    paddingHorizontal: 14,
+    borderTopWidth: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   accountSignOutText: { fontSize: 13, fontWeight: '700' },
-  syncRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 3, paddingVertical: 7 },
+  syncRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 2, paddingVertical: 4 },
   syncCopy: { flex: 1, fontSize: 12, lineHeight: 17 },
-  sectionLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8, marginTop: 12, marginBottom: 2 },
-  row: { minHeight: 52, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  rowCopy: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 },
+  // Binds to the rows below it: 8 down (the container gap), 28 up from the previous group.
+  sectionLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8, marginTop: 20, marginBottom: 0 },
+  row: { minHeight: 52, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rowCopy: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 },
   rowLabel: { fontSize: 14, fontWeight: '700' },
-  rowDetail: { fontSize: 11, marginTop: 2 },
-  flag: { fontSize: 18 },
-  dangerRow: { minHeight: 52, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rowDetail: { fontSize: 11, lineHeight: 15, marginTop: 2 },
+  flag: { fontSize: 18, width: 18, textAlign: 'center' },
+  group: { borderWidth: 1.5, borderRadius: 8, overflow: 'hidden' },
+  groupTrigger: { minHeight: 52, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  groupValue: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
+  groupValueText: { fontSize: 13, fontWeight: '600' },
+  groupOption: { minHeight: 52, paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  groupOptionCopy: { flex: 1, minWidth: 0 },
   dangerText: { color: '#b03060', fontSize: 14, fontWeight: '700' },
-  error: { color: '#b03060', fontSize: 12, lineHeight: 17, marginTop: 2 },
+  error: { color: '#b03060', fontSize: 12, lineHeight: 17, marginTop: 4 },
 });
