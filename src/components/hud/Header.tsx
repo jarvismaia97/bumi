@@ -35,7 +35,7 @@ export function Header({ mode, levelLabel, diffLabel, onMenu, onLevels, onShare,
 
   return (
     <View style={[styles.header, { paddingTop: Math.max(12, topInset) }]}>
-      <Pressable style={styles.brand} onPress={onMenu} accessibilityLabel={t('a11y.backToMenu')}>
+      <Pressable accessibilityRole="button" style={styles.brand} onPress={onMenu} accessibilityLabel={t('a11y.backToMenu')}>
         <Logo size={compact ? 23 : 28} />
         <Text style={[styles.title, compact && styles.titleCompact, { color: theme.text }]} numberOfLines={1}>Bumi</Text>
         {badge && (
@@ -51,12 +51,12 @@ export function Header({ mode, levelLabel, diffLabel, onMenu, onLevels, onShare,
           <Text style={[styles.levelDiff, { color: theme.sub }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{diffLabel}</Text>
         </View>
         {onLevels && (
-          <Pressable style={[styles.iconButton, { borderColor: theme.gridSep }]} onPress={onLevels} accessibilityLabel={t('a11y.openLevels')}>
+          <Pressable accessibilityRole="button" style={[styles.iconButton, { borderColor: theme.gridSep }]} onPress={onLevels} accessibilityLabel={t('a11y.openLevels')}>
             <Map size={18} color={theme.text} strokeWidth={2.2} />
           </Pressable>
         )}
         {onShare && (
-          <Pressable style={[styles.iconButton, { borderColor: theme.gridSep }]} onPress={onShare} accessibilityLabel={t('a11y.shareChallenge')}>
+          <Pressable accessibilityRole="button" style={[styles.iconButton, { borderColor: theme.gridSep }]} onPress={onShare} accessibilityLabel={t('a11y.shareChallenge')}>
             <Share2 size={18} color={theme.text} strokeWidth={2.2} />
           </Pressable>
         )}

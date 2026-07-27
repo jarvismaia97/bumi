@@ -82,14 +82,14 @@ export const WinSheet = forwardRef<WinSheetHandle, WinSheetProps>(function WinSh
 
         <View style={styles.actions}>
           {onShareDailyResult && (
-            <Pressable style={styles.shareBtn} onPress={onShareDailyResult} accessibilityLabel={t('a11y.shareResult')}>
+            <Pressable accessibilityRole="button" style={styles.shareBtn} onPress={onShareDailyResult} accessibilityLabel={t('a11y.shareResult')}>
               <Share2 size={19} color="#3a2d45" strokeWidth={2.3} />
             </Pressable>
           )}
-          <Pressable style={styles.secondaryBtn} onPress={onReview}>
+          <Pressable accessibilityRole="button" style={styles.secondaryBtn} onPress={onReview}>
             <Text style={styles.secondaryBtnText}>{t('win.review')}</Text>
           </Pressable>
-          <Pressable style={styles.primaryBtn} onPress={onNext}>
+          <Pressable accessibilityRole="button" style={styles.primaryBtn} onPress={onNext}>
             <Text style={styles.primaryBtnText}>{nextLabel}</Text>
           </Pressable>
         </View>

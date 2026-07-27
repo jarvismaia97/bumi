@@ -47,7 +47,7 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle, ThemePickerSh
     >
       <BottomSheetView style={styles.content}>
         <View style={styles.header}>
-          <Pressable style={[styles.backButton, { borderColor: theme.gridSep }]} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
+          <Pressable accessibilityRole="button" style={[styles.backButton, { borderColor: theme.gridSep }]} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
             <ArrowLeft size={18} color={theme.text} strokeWidth={2.3} />
           </Pressable>
           <Text style={[styles.title, { color: theme.text }]}>{t('theme.title')}</Text>
@@ -60,6 +60,7 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle, ThemePickerSh
             const optionTheme = THEMES[option.name];
             return (
               <Pressable
+                accessibilityRole="button"
                 key={option.name}
                 style={[
                   styles.option,

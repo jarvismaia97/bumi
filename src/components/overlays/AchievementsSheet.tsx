@@ -71,7 +71,7 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle, Achievement
     >
       <BottomSheetScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Pressable style={[styles.backButton, { borderColor: theme.gridSep }]} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
+          <Pressable accessibilityRole="button" style={[styles.backButton, { borderColor: theme.gridSep }]} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
             <ArrowLeft size={18} color={theme.text} strokeWidth={2.3} />
           </Pressable>
           <View style={styles.headerCopy}>

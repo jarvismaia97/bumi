@@ -77,6 +77,7 @@ function LevelButton({ idx, active, done, medal, locked, progressionLocked, isla
   return (
     <Animated.View style={animatedStyle}>
       <Pressable
+        accessibilityRole="button"
         style={[
           styles.lvlBtn,
           active && { backgroundColor: islandColor, borderColor: islandColor },
@@ -163,6 +164,7 @@ export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSh
         <View style={styles.topRow}>
           <Text style={styles.h2}>{t('levels.path')}</Text>
           <Pressable
+            accessibilityRole="button"
             style={styles.backMenuBtn}
             onPress={() => {
               sheetRef.current?.dismiss();

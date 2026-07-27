@@ -52,9 +52,11 @@ function FooterBtn({
 }) {
   return (
     <Pressable
+      accessibilityRole="button"
       style={[styles.btn, { backgroundColor: theme.surface, borderColor: theme.gridSep, opacity: disabled ? 0.4 : 1 }]}
       onPress={onPress}
       disabled={disabled}
+      accessibilityState={{ disabled: !!disabled }}
     >
       <Icon size={20} color={theme.text} strokeWidth={2.1} />
       <Text style={[styles.btnLabel, { color: theme.text }]} numberOfLines={1}>

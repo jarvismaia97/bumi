@@ -37,13 +37,15 @@ interface MenuScreenProps {
 function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
   const theme = useThemeTokens();
   const { t, language } = useI18n();
-  const { user, loading, signInWithGoogle } = useAuthStore();
+  const user = useAuthStore(s => s.user);
+  const loading = useAuthStore(s => s.loading);
+  const signInWithGoogle = useAuthStore(s => s.signInWithGoogle);
 
   if (loading) return null;
 
   if (!user) {
     return (
-      <Pressable style={[styles.authPill, { borderColor: theme.gridSep }]} onPress={() => signInWithGoogle().catch(() => {})}>
+      <Pressable accessibilityRole="button" style={[styles.authPill, { borderColor: theme.gridSep }]} onPress={() => signInWithGoogle().catch(() => {})}>
         <GoogleMark size={16} />
         <Text style={[styles.authPillText, { color: theme.text }]}>{t('auth.signInGoogle')}</Text>
       </Pressable>
@@ -51,7 +53,7 @@ function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
   }
 
   return (
-    <Pressable style={[styles.accountButton, { backgroundColor: theme.surface, borderColor: theme.gridSep }]} onPress={onOpenSettings} accessibilityLabel={t('menu.settings')}>
+    <Pressable accessibilityRole="button" style={[styles.accountButton, { backgroundColor: theme.surface, borderColor: theme.gridSep }]} onPress={onOpenSettings} accessibilityLabel={t('menu.settings')}>
       <PlayerAvatarTile userId={user.id} size={38} />
       <View style={styles.accountCopy}>
         <Text style={[styles.accountName, { color: theme.text }]} numberOfLines={2}>{playerName(user.id, language)}</Text>
@@ -136,7 +138,7 @@ export function MenuScreen({
       </View>
 
       <View style={styles.menuBtns}>
-        <Pressable style={[styles.playBtn, { backgroundColor: theme.accent }]} onPress={onStartGame}>
+        <Pressable accessibilityRole="button" style={[styles.playBtn, { backgroundColor: theme.accent }]} onPress={onStartGame}>
           <View style={styles.campaignCopy}>
             <Text style={styles.campaignLabel}>{t('menu.campaign')}</Text>
             <Text style={styles.playBtnText}>{campaignComplete ? t('menu.playAgain') : solvedCount === 0 ? t('menu.startCampaign') : t('menu.continueLevel', { level: campaignLevel })}</Text>
@@ -145,7 +147,7 @@ export function MenuScreen({
           <ArrowRight size={20} color="#fff" strokeWidth={2.4} />
         </Pressable>
 
-        <Pressable style={[styles.dailyBtn, dailyDone && styles.dailyBtnDone]} onPress={onStartDaily}>
+        <Pressable accessibilityRole="button" style={[styles.dailyBtn, dailyDone && styles.dailyBtnDone]} onPress={onStartDaily}>
           <View style={styles.dailyTitleRow}>
             {dailyDone && <Check size={16} color="#2e8a50" strokeWidth={2.8} />}
             <Text style={[styles.dailyBtnText, dailyDone && styles.dailyBtnTextDone]}>{dailyDone ? t('menu.dailyDone') : t('menu.daily')}</Text>

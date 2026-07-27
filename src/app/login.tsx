@@ -53,6 +53,7 @@ export default function LoginScreen() {
       </Text>
 
       <Pressable
+        accessibilityRole="button"
         disabled={submitting}
         style={({ pressed }) => [
           styles.signInButton,

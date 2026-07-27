@@ -37,7 +37,7 @@ export function TutorialOverlay({ visible, lessonIndex, readyToPlay, won, onStar
         </View>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.body}>{body}</Text>
-        <Pressable style={styles.button} onPress={onPress}>
+        <Pressable accessibilityRole="button" style={styles.button} onPress={onPress}>
           <Text style={styles.buttonText}>{button}</Text>
           <ArrowRight size={18} color="#fff" strokeWidth={2.4} />
         </Pressable>

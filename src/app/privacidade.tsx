@@ -14,7 +14,7 @@ export default function PrivacyScreen() {
 
   return (
     <ScrollView style={[styles.screen, { backgroundColor: theme.bg }]} contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}>
-      <Pressable style={[styles.back, { borderColor: theme.gridSep, backgroundColor: theme.surface }]} onPress={() => router.back()} accessibilityLabel={t('a11y.back')}>
+      <Pressable accessibilityRole="button" style={[styles.back, { borderColor: theme.gridSep, backgroundColor: theme.surface }]} onPress={() => router.back()} accessibilityLabel={t('a11y.back')}>
         <ArrowLeft size={19} color={theme.text} strokeWidth={2.3} />
       </Pressable>
       <Text style={[styles.title, { color: theme.text }]}>{t('privacy.title')}</Text>

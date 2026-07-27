@@ -41,8 +41,12 @@ const LANGUAGE_OPTIONS: { value: LanguagePreference; label: string; flag: string
 export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>(function SettingsSheet({ onOpenAchievements, onOpenThemes }, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const theme = useThemeTokens();
-  const { user, signOut, deleteAccount, error } = useAuthStore();
-  const { status, hasPendingChanges } = useSyncStore();
+  const user = useAuthStore(s => s.user);
+  const error = useAuthStore(s => s.error);
+  const signOut = useAuthStore(s => s.signOut);
+  const deleteAccount = useAuthStore(s => s.deleteAccount);
+  const status = useSyncStore(s => s.status);
+  const hasPendingChanges = useSyncStore(s => s.hasPendingChanges);
   const languagePreference = useLanguageStore(state => state.preference);
   const setLanguagePreference = useLanguageStore(state => state.setPreference);
   const dailyReminderEnabled = useProgressStore(state => state.dailyReminderEnabled);
@@ -114,7 +118,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
                   <Text style={[styles.accountDetail, { color: theme.sub }]} numberOfLines={1}>{t('settings.playerHint')}</Text>
                 </View>
               </View>
-              <Pressable style={[styles.accountSignOut, { borderColor: theme.gridSep }]} onPress={() => signOut().then(() => sheetRef.current?.dismiss()).catch(() => {})}>
+              <Pressable accessibilityRole="button" style={[styles.accountSignOut, { borderColor: theme.gridSep }]} onPress={() => signOut().then(() => sheetRef.current?.dismiss()).catch(() => {})}>
                 <LogOut size={17} color={theme.text} strokeWidth={2.2} />
                 <Text style={[styles.accountSignOutText, { color: theme.text }]}>{t('settings.signOut')}</Text>
               </Pressable>
@@ -129,13 +133,13 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         ) : null}
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.game')}</Text>
-        <Pressable style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => closeAndOpen(onOpenAchievements)}>
+        <Pressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => closeAndOpen(onOpenAchievements)}>
           <View style={styles.rowCopy}><Trophy size={18} color="#c39828" strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.achievements')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
         </Pressable>
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.appearance')}</Text>
-        <Pressable style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => closeAndOpen(onOpenThemes)}>
+        <Pressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => closeAndOpen(onOpenThemes)}>
           <View style={styles.rowCopy}><Palette size={18} color={theme.accent} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.themes')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
         </Pressable>
@@ -145,6 +149,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
           const selected = option.value === languagePreference;
           return (
             <Pressable
+              accessibilityRole="button"
               key={option.value}
               style={[styles.row, { borderColor: selected ? theme.accent : theme.gridSep }]}
               onPress={() => setLanguagePreference(option.value)}
@@ -165,11 +170,11 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         })}
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.privacySupport')}</Text>
-        <Pressable style={[styles.row, { borderColor: theme.gridSep }]} onPress={closeAndOpenPrivacy}>
+        <Pressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={closeAndOpenPrivacy}>
           <View style={styles.rowCopy}><ShieldCheck size={18} color={theme.text} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.privacy')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
         </Pressable>
-        <Pressable style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => Linking.openURL('mailto:suporte@jogarbumi.pt')}>
+        <Pressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => Linking.openURL('mailto:suporte@jogarbumi.pt')}>
           <View style={styles.rowCopy}><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.support')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
         </Pressable>
@@ -189,7 +194,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         {user ? (
           <>
             <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.account')}</Text>
-            <Pressable style={[styles.dangerRow, { borderColor: theme.gridSep }]} onPress={confirmDeleteAccount}>
+            <Pressable accessibilityRole="button" style={[styles.dangerRow, { borderColor: theme.gridSep }]} onPress={confirmDeleteAccount}>
               <View style={styles.rowCopy}><Trash2 size={18} color="#b03060" strokeWidth={2.2} /><Text style={styles.dangerText}>{t('settings.delete')}</Text></View>
               <ChevronRight size={18} color="#b03060" />
             </Pressable>

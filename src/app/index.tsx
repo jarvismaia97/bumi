@@ -47,8 +47,15 @@ export default function GameScreen() {
   const insets = useSafeAreaInsets();
   const { t, language } = useI18n();
 
-  const { screen, mode, curLvl, infiniteCount, goToMenu, enterGame, setCurLvl, tutorialStep, setTutorialStep } =
-    useUIStore();
+  const screen = useUIStore(s => s.screen);
+  const mode = useUIStore(s => s.mode);
+  const curLvl = useUIStore(s => s.curLvl);
+  const infiniteCount = useUIStore(s => s.infiniteCount);
+  const goToMenu = useUIStore(s => s.goToMenu);
+  const enterGame = useUIStore(s => s.enterGame);
+  const setCurLvl = useUIStore(s => s.setCurLvl);
+  const tutorialStep = useUIStore(s => s.tutorialStep);
+  const setTutorialStep = useUIStore(s => s.setTutorialStep);
   const { level, placed, won, startedAt, hintsUsed, mistakes, loadLevel, placeRect, removeRectAt, undo, clear, hint } = useGameStore();
   const progress = useProgressStore();
   const user = useAuthStore(s => s.user);
