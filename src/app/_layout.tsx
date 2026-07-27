@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -42,22 +43,26 @@ export default function RootLayout() {
 
   return (
     <>
-      <Head>
-        <title>Bumi</title>
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Bumi" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="manifest" href="/site.webmanifest" />
-        <meta name="theme-color" content="#a8b9d8" />
-        <style>{`
-          html, body, #root {
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-touch-callout: none;
-          }
-        `}</style>
-      </Head>
+      {/* Web-only PWA metadata. On iOS this renders a Handoff activity that needs
+          `extra.router.origin`, which we do not want to advertise from the app. */}
+      {Platform.OS === 'web' && (
+        <Head>
+          <title>Bumi</title>
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+          <meta name="apple-mobile-web-app-title" content="Bumi" />
+          <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+          <link rel="manifest" href="/site.webmanifest" />
+          <meta name="theme-color" content="#a8b9d8" />
+          <style>{`
+            html, body, #root {
+              -webkit-user-select: none;
+              user-select: none;
+              -webkit-touch-callout: none;
+            }
+          `}</style>
+        </Head>
+      )}
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <BottomSheetModalProvider>

@@ -88,7 +88,9 @@
       "reactCompiler": true
     },
     "extra": {
-      "router": {},
+      "router": {
+        "origin": "https://www.jogarbumi.pt"
+      },
       "eas": {
         "projectId": "3bf458e7-227b-4e48-b22e-b831cf632207"
       }
