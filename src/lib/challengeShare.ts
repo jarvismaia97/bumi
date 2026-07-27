@@ -1,9 +1,10 @@
 import { Platform, Share } from 'react-native';
 import { createChallengeUrl, createDailyChallengeUrl, createDailyResultMessage } from '@/game/challenge';
 
-// See auth-client.ts: window exists on native but window.location does not.
+// See auth-client.ts: native has a window without location, node static
+// rendering is 'web' with no window at all. Both guards are required.
 const productionUrl =
-  Platform.OS === 'web'
+  Platform.OS === 'web' && typeof window !== 'undefined'
     ? window.location.origin
     : process.env.EXPO_PUBLIC_SHARE_URL ?? process.env.EXPO_PUBLIC_AUTH_API_URL ?? 'https://www.jogarbumi.pt';
 
