@@ -7,6 +7,7 @@ import Flame from 'lucide-react-native/icons/flame';
 import House from 'lucide-react-native/icons/house';
 import Lock from 'lucide-react-native/icons/lock';
 import { DIFFS } from '@/game/difficulty';
+import { useI18n } from '@/i18n';
 import { ISLANDS } from '@/game/islands';
 import { LEVEL_META } from '@/game/levels';
 import type { Medal } from '@/game/medals';
@@ -67,6 +68,7 @@ interface LevelButtonProps {
 }
 
 function LevelButton({ idx, active, done, medal, locked, progressionLocked, islandColor, milestone, onPress }: LevelButtonProps) {
+  const { t } = useI18n();
   const press = useSharedValue(0);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: interpolate(press.value, [0, 1], [1, 0.91]) }],
@@ -92,7 +94,16 @@ function LevelButton({ idx, active, done, medal, locked, progressionLocked, isla
           press.value = withTiming(0, { duration: 150, easing: Easing.out(Easing.back(1.5)) });
         }}
         onPress={onPress}
-        accessibilityLabel={`Nível ${idx + 1}${locked ? progressionLocked ? ', bloqueado' : ', requer login' : milestone ? ', desafio extra difícil' : ''}`}
+        accessibilityLabel={t(
+          progressionLocked
+            ? 'a11y.levelLocked'
+            : locked
+              ? 'a11y.levelLoginRequired'
+              : milestone
+                ? 'a11y.levelMilestone'
+                : 'a11y.levelButton',
+          { level: idx + 1 },
+        )}
       >
         {locked ? (
           <Lock size={13} color="#827d78" strokeWidth={2.4} />
@@ -114,6 +125,7 @@ export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSh
 ) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const [entranceKey, setEntranceKey] = useState(0);
+  const { t } = useI18n();
 
   useImperativeHandle(ref, () => ({
     present: () => {
@@ -149,7 +161,7 @@ export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSh
         showsVerticalScrollIndicator
       >
         <View style={styles.topRow}>
-          <Text style={styles.h2}>Caminho</Text>
+          <Text style={styles.h2}>{t('levels.path')}</Text>
           <Pressable
             style={styles.backMenuBtn}
             onPress={() => {
@@ -158,14 +170,14 @@ export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSh
             }}
           >
             <House size={15} color="#3a2d45" strokeWidth={2.2} />
-            <Text style={styles.backMenuText}>Menu</Text>
+            <Text style={styles.backMenuText}>{t('levels.menu')}</Text>
           </Pressable>
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.heroTitle}>A TUA AVENTURA</Text>
+          <Text style={styles.heroTitle}>{t('levels.adventure')}</Text>
           <Text style={styles.heroCount}>
-            {solvedCount} <Text style={styles.heroCountSub}>/ {total} ilhas</Text>
+            {solvedCount} <Text style={styles.heroCountSub}>{t('levels.progressCount', { total })}</Text>
           </Text>
           <View style={styles.heroBarWrap}>
             <View style={[styles.heroBarFill, { width: `${(solvedCount / total) * 100}%` }]} />
@@ -173,7 +185,7 @@ export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSh
         </View>
 
         {DIFFS.map((d, di) => {
-          const island = ISLANDS[di] ?? { name: d.label, story: '', color: '#718cc3', bg: '#edf1f8' };
+          const island = ISLANDS[di] ?? { id: d.label, color: '#718cc3', bg: '#edf1f8' };
           const { startIdx, endIdx } = tierRanges[di];
           let doneCount = 0;
           for (let i = startIdx; i < endIdx; i++) if (isSolved(i)) doneCount++;
@@ -189,9 +201,9 @@ export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSh
                     <Text style={styles.cardBadge2Text}>{di + 1}</Text>
                   </View>
                   <View style={styles.cardMeta}>
-                    <Text style={[styles.cardName, { color: island.color }]}>{island.name}</Text>
+                    <Text style={[styles.cardName, { color: island.color }]}>{t(`island.${island.id}.name`)}</Text>
                     <Text style={[styles.cardGridLabel, { color: island.color }]}>
-                      {d.size}×{d.size} · {d.label}
+                      {d.size}×{d.size} · {t(`difficulty.${d.label}`)}
                     </Text>
                   </View>
                   <View style={[styles.cardBadge, { borderColor: island.color }]}>
@@ -201,7 +213,7 @@ export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSh
                   </View>
                 </View>
 
-                <Text style={styles.cardStory}>&quot;{island.story}&quot;</Text>
+                <Text style={styles.cardStory}>&quot;{t(`island.${island.id}.story`)}&quot;</Text>
 
                 <View style={styles.cardProgress}>
                   <View style={styles.cardBarWrap}>
@@ -242,7 +254,7 @@ export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSh
                 {doneCount === d.count && (
                   <View style={styles.completeBanner}>
                     <MapPinned size={14} color={island.color} strokeWidth={2.5} />
-                    <Text style={[styles.completeBannerText, { color: island.color }]}>Ilha descoberta</Text>
+                    <Text style={[styles.completeBannerText, { color: island.color }]}>{t('levels.islandFound')}</Text>
                   </View>
                 )}
               </View>

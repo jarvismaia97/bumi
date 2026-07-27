@@ -14,7 +14,7 @@ describe('challenge links', () => {
   });
 
   it('formats a daily result without exposing the puzzle solution', () => {
-    expect(createDailyResultMessage('20260720', '42s · 0 dicas · 1 erro', 3)).toContain('42s · 0 dicas · 1 erro');
+    expect(createDailyResultMessage('20260720', '42s · 0 dicas · 1 erro', 3, 'pt-PT')).toContain('42s · 0 dicas · 1 erro');
   });
 
   it('accepts a campaign level within range', () => {

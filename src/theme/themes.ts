@@ -9,9 +9,9 @@ export interface ThemeTokens {
 
 export type ThemeName = 'classic' | 'mint' | 'violet' | 'navy' | 'rose' | 'sun';
 
+// The display name lives in the message catalogue under `theme.<name>`.
 export interface ThemeOption {
   name: ThemeName;
-  label: string;
   preview: readonly [string, string, string];
 }
 
@@ -25,10 +25,10 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
 };
 
 export const THEME_OPTIONS: readonly ThemeOption[] = [
-  { name: 'classic', label: 'Clássico', preview: ['#f7f3f0', '#718cc3', '#292827'] },
-  { name: 'mint', label: 'Menta', preview: ['#effaf5', '#71cda5', '#174d36'] },
-  { name: 'violet', label: 'Violeta', preview: ['#faf5fc', '#9d7cbb', '#40304e'] },
-  { name: 'navy', label: 'Azul', preview: ['#f0f4fb', '#254b7d', '#173863'] },
-  { name: 'rose', label: 'Rosa', preview: ['#fff5f8', '#d78cab', '#613044'] },
-  { name: 'sun', label: 'Sol', preview: ['#fff9e8', '#e3ad3e', '#5f4810'] },
+  { name: 'classic', preview: ['#f7f3f0', '#718cc3', '#292827'] },
+  { name: 'mint', preview: ['#effaf5', '#71cda5', '#174d36'] },
+  { name: 'violet', preview: ['#faf5fc', '#9d7cbb', '#40304e'] },
+  { name: 'navy', preview: ['#f0f4fb', '#254b7d', '#173863'] },
+  { name: 'rose', preview: ['#fff5f8', '#d78cab', '#613044'] },
+  { name: 'sun', preview: ['#fff9e8', '#e3ad3e', '#5f4810'] },
 ];

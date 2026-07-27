@@ -13,6 +13,7 @@ import Zap from 'lucide-react-native/icons/zap';
 import { getAchievements, type AchievementProgress } from '@/game/achievements';
 import { useProgressStore } from '@/state/progressStore';
 import { useThemeTokens } from '@/state/themeStore';
+import { useI18n } from '@/i18n';
 
 export interface AchievementsSheetHandle {
   present: () => void;
@@ -39,6 +40,7 @@ function AchievementIcon({ achievement, color }: { achievement: AchievementProgr
 export const AchievementsSheet = forwardRef<AchievementsSheetHandle, AchievementsSheetProps>(function AchievementsSheet({ onBack }, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const theme = useThemeTokens();
+  const { t } = useI18n();
   const solvedMap = useProgressStore(state => state.solvedMap);
   const solvedDateMap = useProgressStore(state => state.solvedDateMap);
   const levelMedals = useProgressStore(state => state.levelMedals);
@@ -69,12 +71,12 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle, Achievement
     >
       <BottomSheetScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Pressable style={[styles.backButton, { borderColor: theme.gridSep }]} onPress={goBack} accessibilityLabel="Voltar a definições">
+          <Pressable style={[styles.backButton, { borderColor: theme.gridSep }]} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
             <ArrowLeft size={18} color={theme.text} strokeWidth={2.3} />
           </Pressable>
           <View style={styles.headerCopy}>
-            <Text style={[styles.title, { color: theme.text }]}>Conquistas</Text>
-            <Text style={[styles.subtitle, { color: theme.sub }]}>{unlockedCount} de {achievements.length} concluídas</Text>
+            <Text style={[styles.title, { color: theme.text }]}>{t('achievements.title')}</Text>
+            <Text style={[styles.subtitle, { color: theme.sub }]}>{t('achievements.subtitle', { done: unlockedCount, total: achievements.length })}</Text>
           </View>
           <View style={[styles.count, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
             <Trophy size={18} color="#d6a72f" strokeWidth={2.4} />
@@ -82,9 +84,9 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle, Achievement
           </View>
         </View>
 
-        {(['Campanha', 'Ilhas', 'Domínio'] as const).map(category => (
+        {(['campaign', 'islands', 'mastery'] as const).map(category => (
           <View key={category} style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.sub }]}>{category}</Text>
+            <Text style={[styles.sectionTitle, { color: theme.sub }]}>{t(`achievement.category.${category}`)}</Text>
             {achievements.filter(achievement => achievement.category === category).map(achievement => {
               const complete = achievement.current >= achievement.target;
               const progress = Math.min(achievement.current / achievement.target, 1);
@@ -96,10 +98,10 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle, Achievement
                   </View>
                   <View style={styles.copy}>
                     <View style={styles.titleRow}>
-                      <Text style={[styles.cardTitle, { color: theme.text }]}>{achievement.title}</Text>
+                      <Text style={[styles.cardTitle, { color: theme.text }]}>{t(`achievement.${achievement.id}.title`)}</Text>
                       <Text style={[styles.progressLabel, { color: complete ? '#2e8a50' : theme.sub }]}>{Math.min(achievement.current, achievement.target)} / {achievement.target}</Text>
                     </View>
-                    <Text style={[styles.description, { color: theme.sub }]}>{achievement.description}</Text>
+                    <Text style={[styles.description, { color: theme.sub }]}>{t(`achievement.${achievement.id}.description`)}</Text>
                     <View style={[styles.bar, { backgroundColor: theme.gridSep }]}>
                       <View style={[styles.barFill, { width: `${progress * 100}%`, backgroundColor: accent }]} />
                     </View>

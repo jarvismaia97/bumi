@@ -1,23 +1,74 @@
-import type { SupportedLanguage } from '@/i18n';
+import type { SupportedLanguage } from '@/i18n/messages';
 import { BD_PAL, BG_PAL } from '@/theme/palette';
 
-// Players are shown a generated nickname and a square mosaic instead of the provider's
+// Players are shown a painter's nickname and a square mosaic instead of the provider's
 // name and email. Apple's "hide my email" relay addresses are unreadable, and nobody needs
 // to see anyone's real address to play. Everything here is derived from the account id, so
 // the same person gets the same identity on every device without storing an extra column.
 
-// The word lists are index-aligned across languages: an account always lands on the same
-// slot, so the nickname translates rather than changing identity with the device language.
-/** Portuguese adjectives are invariant so they agree with any noun gender. */
-export const ADJECTIVES: Record<SupportedLanguage, string[]> = {
-  'pt-PT': ['Veloz', 'Ágil', 'Feliz', 'Gentil', 'Valente', 'Radiante', 'Brilhante', 'Elegante', 'Alegre', 'Forte', 'Leal', 'Hábil', 'Audaz', 'Sagaz', 'Grande', 'Doce', 'Nobre', 'Simples', 'Amável', 'Fiel'],
-  en: ['Swift', 'Nimble', 'Happy', 'Gentle', 'Brave', 'Radiant', 'Bright', 'Elegant', 'Cheerful', 'Strong', 'Loyal', 'Skilful', 'Bold', 'Clever', 'Grand', 'Sweet', 'Noble', 'Simple', 'Kind', 'True'],
-};
+interface Artist {
+  /** The name the artist is commonly known by. Never translated. */
+  name: string;
+  /** Affectionate jab at the artist's most recognisable habit, per language. */
+  epithet: Record<SupportedLanguage, string>;
+}
 
-export const NOUNS: Record<SupportedLanguage, string[]> = {
-  'pt-PT': ['Lince', 'Coruja', 'Raposa', 'Tartaruga', 'Golfinho', 'Pinguim', 'Falcão', 'Lontra', 'Texugo', 'Camaleão', 'Polvo', 'Esquilo', 'Panda', 'Doninha', 'Íbis', 'Foca', 'Corvo', 'Alce', 'Gaivota', 'Toupeira'],
-  en: ['Lynx', 'Owl', 'Fox', 'Turtle', 'Dolphin', 'Penguin', 'Falcon', 'Otter', 'Badger', 'Chameleon', 'Octopus', 'Squirrel', 'Panda', 'Weasel', 'Ibis', 'Seal', 'Raven', 'Elk', 'Seagull', 'Mole'],
-};
+// Artist and epithet are one unit: the joke only lands because the nickname matches that
+// particular painter, so these are fixed pairs rather than two lists combined at random.
+// The jabs are aimed at style and subject matter only — never at anyone's illness, body or
+// death. Collisions between players are fine; this is decoration, not an identifier.
+export const ARTISTS: Artist[] = [
+  { name: 'Mondrian', epithet: { 'pt-PT': 'Grelha Perfeita', en: 'Perfect Grid' } },
+  { name: 'Malevich', epithet: { 'pt-PT': 'Só um Quadrado', en: 'Just a Square' } },
+  { name: 'Rothko', epithet: { 'pt-PT': 'Dois Retângulos', en: 'Two Rectangles' } },
+  { name: 'Pollock', epithet: { 'pt-PT': 'Pinga-Pinga', en: 'Drip Drop' } },
+  { name: 'Munch', epithet: { 'pt-PT': 'O Desesperado', en: 'The Screamer' } },
+  { name: 'Magritte', epithet: { 'pt-PT': 'Cara de Maçã', en: 'Apple Face' } },
+  { name: 'Matisse', epithet: { 'pt-PT': 'Recorta e Cola', en: 'Cut and Paste' } },
+  { name: 'Michelangelo', epithet: { 'pt-PT': 'Músculo Puro', en: 'Pure Muscle' } },
+  { name: 'Rembrandt', epithet: { 'pt-PT': 'Luz de Vela', en: 'Candlelight' } },
+  { name: 'Botticelli', epithet: { 'pt-PT': 'Vénus na Concha', en: 'Venus on a Shell' } },
+  { name: 'Monet', epithet: { 'pt-PT': 'Mais Nenúfares', en: 'More Water Lilies' } },
+  { name: 'Dalí', epithet: { 'pt-PT': 'Relógio Derretido', en: 'Melting Clock' } },
+  { name: 'Picasso', epithet: { 'pt-PT': 'Nariz ao Lado', en: 'Nose on the Side' } },
+  { name: 'Warhol', epithet: { 'pt-PT': 'Lata de Sopa', en: 'Soup Can' } },
+  { name: 'Klimt', epithet: { 'pt-PT': 'Tudo Dourado', en: 'All That Gold' } },
+  { name: 'Vermeer', epithet: { 'pt-PT': 'Brinco de Pérola', en: 'Pearl Earring' } },
+  { name: 'Escher', epithet: { 'pt-PT': 'Escada Sem Fim', en: 'Endless Stairs' } },
+  { name: 'Hokusai', epithet: { 'pt-PT': 'Onda Gigante', en: 'Giant Wave' } },
+  { name: 'Da Vinci', epithet: { 'pt-PT': 'Sorriso Estranho', en: 'That Odd Smile' } },
+  { name: 'Caravaggio', epithet: { 'pt-PT': 'Luz Dramática', en: 'Spotlight' } },
+  { name: 'Goya', epithet: { 'pt-PT': 'Sonho Escuro', en: 'Dark Dream' } },
+  { name: 'Miró', epithet: { 'pt-PT': 'Rabisco Alegre', en: 'Happy Scribble' } },
+  { name: 'Chagall', epithet: { 'pt-PT': 'Toda a Gente Voa', en: 'Everyone Floats' } },
+  { name: 'Cézanne', epithet: { 'pt-PT': 'Maçãs na Mesa', en: 'Apples on a Table' } },
+  { name: 'Gauguin', epithet: { 'pt-PT': 'Fugiu para a Ilha', en: 'Off to the Island' } },
+  { name: 'Rousseau', epithet: { 'pt-PT': 'Selva Imaginada', en: 'Imaginary Jungle' } },
+  { name: 'Bosch', epithet: { 'pt-PT': 'Monstros Estranhos', en: 'Weird Monsters' } },
+  { name: 'Bruegel', epithet: { 'pt-PT': 'Aldeia Cheia', en: 'Crowded Village' } },
+  { name: 'Turner', epithet: { 'pt-PT': 'Só Nevoeiro', en: 'Mostly Fog' } },
+  { name: 'Degas', epithet: { 'pt-PT': 'Mais Bailarinas', en: 'More Ballerinas' } },
+  { name: 'Renoir', epithet: { 'pt-PT': 'Sempre Feliz', en: 'Always Happy' } },
+  { name: 'Seurat', epithet: { 'pt-PT': 'Ponto por Ponto', en: 'Dot by Dot' } },
+  { name: 'Modigliani', epithet: { 'pt-PT': 'Pescoço Comprido', en: 'Long Neck' } },
+  { name: "O'Keeffe", epithet: { 'pt-PT': 'Flor Gigante', en: 'Giant Flower' } },
+  { name: 'Hopper', epithet: { 'pt-PT': 'Café Vazio', en: 'Empty Diner' } },
+  { name: 'Kahlo', epithet: { 'pt-PT': 'Autorretrato Nº9', en: 'Self-Portrait No.9' } },
+  { name: 'Basquiat', epithet: { 'pt-PT': 'Coroa em Tudo', en: 'Crown on All' } },
+  { name: 'Haring', epithet: { 'pt-PT': 'Bonecos a Dançar', en: 'Dancing Figures' } },
+  { name: 'Lichtenstein', epithet: { 'pt-PT': 'Banda Desenhada', en: 'Comic Panel' } },
+  { name: 'Kusama', epithet: { 'pt-PT': 'Bolinhas Infinitas', en: 'Infinite Dots' } },
+  { name: 'Calder', epithet: { 'pt-PT': 'Tudo a Baloiçar', en: 'All Wobbly' } },
+  { name: 'Giacometti', epithet: { 'pt-PT': 'Bonecos Magros', en: 'Skinny Figures' } },
+  { name: 'Brancusi', epithet: { 'pt-PT': 'Liso e Brilhante', en: 'Smooth and Shiny' } },
+  { name: 'Rodin', epithet: { 'pt-PT': 'A Pensar Muito', en: 'Deep in Thought' } },
+  { name: 'Duchamp', epithet: { 'pt-PT': 'Isto é Arte?', en: 'Is This Art?' } },
+  { name: 'Kandinsky', epithet: { 'pt-PT': 'Muitos Círculos', en: 'So Many Circles' } },
+  { name: 'Hockney', epithet: { 'pt-PT': 'Piscina Outra Vez', en: 'Another Pool' } },
+  { name: 'Klee', epithet: { 'pt-PT': 'Linha a Passear', en: 'Wandering Line' } },
+  { name: 'Arcimboldo', epithet: { 'pt-PT': 'Cabeça de Legumes', en: 'Veggie Head' } },
+  { name: 'Vasarely', epithet: { 'pt-PT': 'Olhos a Girar', en: 'Spinning Eyes' } },
+];
 
 export const AVATAR_GRID = 5;
 /** Mirrored around the centre column, so only the left half carries information. */
@@ -59,13 +110,8 @@ function seedOf(userId: string | null | undefined): number {
 }
 
 export function playerName(userId: string | null | undefined, language: SupportedLanguage): string {
-  const next = random(seedOf(userId));
-  const adjectives = ADJECTIVES[language];
-  const nouns = NOUNS[language];
-  const adjective = adjectives[Math.floor(next() * adjectives.length)];
-  const noun = nouns[Math.floor(next() * nouns.length)];
-  // Portuguese puts the adjective after the noun.
-  return language === 'en' ? `${adjective} ${noun}` : `${noun} ${adjective}`;
+  const artist = ARTISTS[seedOf(userId) % ARTISTS.length];
+  return `${artist.name} "${artist.epithet[language]}"`;
 }
 
 export function playerAvatar(userId: string | null | undefined): PlayerAvatar {

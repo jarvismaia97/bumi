@@ -54,7 +54,7 @@ function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
     <Pressable style={[styles.accountButton, { backgroundColor: theme.surface, borderColor: theme.gridSep }]} onPress={onOpenSettings} accessibilityLabel={t('menu.settings')}>
       <PlayerAvatarTile userId={user.id} size={38} />
       <View style={styles.accountCopy}>
-        <Text style={[styles.accountName, { color: theme.text }]} numberOfLines={1}>{playerName(user.id, language)}</Text>
+        <Text style={[styles.accountName, { color: theme.text }]} numberOfLines={2}>{playerName(user.id, language)}</Text>
         <Text style={[styles.accountDetail, { color: theme.sub }]}>{t('menu.settings')}</Text>
       </View>
       <Settings size={20} color={theme.sub} strokeWidth={2.2} />

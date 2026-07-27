@@ -4,6 +4,7 @@ import Lightbulb from 'lucide-react-native/icons/lightbulb';
 import Undo2 from 'lucide-react-native/icons/undo-2';
 import type { LucideIcon } from 'lucide-react-native';
 import { useThemeTokens } from '@/state/themeStore';
+import { useI18n } from '@/i18n';
 
 interface FooterButtonsProps {
   hintLabel: string;
@@ -23,12 +24,13 @@ export function FooterButtons({
   bottomInset = 0,
 }: FooterButtonsProps) {
   const theme = useThemeTokens();
+  const { t } = useI18n();
 
   return (
     <View style={[styles.footer, { paddingBottom: Math.max(16, bottomInset) }]}>
       <View style={styles.row}>
-        <FooterBtn Icon={Undo2} label="Desfazer" onPress={onUndo} theme={theme} />
-        <FooterBtn Icon={Eraser} label="Limpar" onPress={onClear} theme={theme} />
+        <FooterBtn Icon={Undo2} label={t('game.undo')} onPress={onUndo} theme={theme} />
+        <FooterBtn Icon={Eraser} label={t('game.clear')} onPress={onClear} theme={theme} />
         <FooterBtn Icon={Lightbulb} label={hintLabel} onPress={onHint} theme={theme} disabled={hintDisabled} />
       </View>
     </View>

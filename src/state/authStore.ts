@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { authClient } from '@/lib/auth-client';
 import { useProgressStore } from '@/state/progressStore';
 import { Platform } from 'react-native';
+import { resolveLanguage, translate } from '@/i18n/messages';
+import { useLanguageStore } from '@/state/languageStore';
+import { getLocales } from 'expo-localization';
 
 export type AuthUser = {
   id: string;
@@ -34,6 +37,12 @@ let googleConfigured = false;
 /** Thrown when the user dismisses the native Google sheet; not surfaced as an error. */
 const GOOGLE_CANCELLED = 'google/cancelled';
 
+/** Store-aware, but usable outside React: auth errors surface before any hook can run. */
+function currentLanguage() {
+  const preference = useLanguageStore.getState().preference;
+  return preference === 'auto' ? resolveLanguage(getLocales()[0]?.languageCode) : preference;
+}
+
 async function signInWithGoogleNative(): Promise<string> {
   const { GoogleSignin, statusCodes, isSuccessResponse } = await import(
     '@react-native-google-signin/google-signin'
@@ -55,7 +64,7 @@ async function signInWithGoogleNative(): Promise<string> {
     if (!isSuccessResponse(response)) throw new Error(GOOGLE_CANCELLED);
 
     const idToken = response.data.idToken;
-    if (!idToken) throw new Error('Não foi possível confirmar a identidade Google.');
+    if (!idToken) throw new Error(translate(currentLanguage(), 'auth.googleFailed'));
     return idToken;
   } catch (error) {
     if ((error as { code?: string }).code === statusCodes.SIGN_IN_CANCELLED) {
@@ -134,13 +143,13 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   signInWithApple: async () => {
-    if (Platform.OS !== 'ios') throw new Error('O início de sessão Apple só está disponível no iPhone e iPad.');
+    if (Platform.OS !== 'ios') throw new Error(translate(currentLanguage(), 'auth.appleUnavailable'));
     set({ error: null });
     const AppleAuthentication = await import('expo-apple-authentication');
     const credential = await AppleAuthentication.signInAsync({
       requestedScopes: [AppleAuthentication.AppleAuthenticationScope.FULL_NAME, AppleAuthentication.AppleAuthenticationScope.EMAIL],
     });
-    if (!credential.identityToken) throw new Error('Não foi possível confirmar a identidade Apple.');
+    if (!credential.identityToken) throw new Error(translate(currentLanguage(), 'auth.appleFailed'));
 
     const { error } = await authClient.signIn.social({
       provider: 'apple',

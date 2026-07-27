@@ -25,6 +25,7 @@ import { shareChallenge, shareDailyChallenge, shareDailyResult } from '@/lib/cha
 import { useChallengeStore } from '@/state/challengeStore';
 import { useAuthStore } from '@/state/authStore';
 import { canShowIOSInstallPrompt } from '@/lib/iosInstallPrompt';
+import { useI18n, type Translate } from '@/i18n';
 
 function useGridCellSize(size: number) {
   const { width, height } = useWindowDimensions();
@@ -34,9 +35,17 @@ function useGridCellSize(size: number) {
   return Math.floor(px / size);
 }
 
+/** "1m 20s · 2 dicas · 0 tentativas inválidas" and its English counterpart. */
+function formatSummary(durationMs: number, hintsUsed: number, mistakes: number, t: Translate): string {
+  const hints = `${hintsUsed} ${t(hintsUsed === 1 ? 'game.hintOne' : 'game.hintMany')}`;
+  const invalid = `${mistakes} ${t(mistakes === 1 ? 'game.mistakeOne' : 'game.mistakeMany')}`;
+  return `${formatResultDuration(durationMs)} · ${hints} · ${invalid}`;
+}
+
 export default function GameScreen() {
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
+  const { t, language } = useI18n();
 
   const { screen, mode, curLvl, infiniteCount, goToMenu, enterGame, setCurLvl, tutorialStep, setTutorialStep } =
     useUIStore();
@@ -127,9 +136,9 @@ export default function GameScreen() {
 
   async function onShareChallenge() {
     try {
-      const result = await shareChallenge(curLvl);
-      if (result === 'copied') showShareNotice('Link copiado');
-      if (result === 'unavailable') showShareNotice('Não foi possível partilhar neste dispositivo');
+      const result = await shareChallenge(curLvl, language);
+      if (result === 'copied') showShareNotice(t('game.linkCopied'));
+      if (result === 'unavailable') showShareNotice(t('game.shareUnavailable'));
     } catch {
       // The user dismissing the native share sheet is not an error worth showing.
     }
@@ -137,9 +146,9 @@ export default function GameScreen() {
 
   async function onShareDailyChallenge() {
     try {
-      const result = await shareDailyChallenge(dailyChallengeDate);
-      if (result === 'copied') showShareNotice('Link copiado');
-      if (result === 'unavailable') showShareNotice('Não foi possível partilhar neste dispositivo');
+      const result = await shareDailyChallenge(dailyChallengeDate, language);
+      if (result === 'copied') showShareNotice(t('game.linkCopied'));
+      if (result === 'unavailable') showShareNotice(t('game.shareUnavailable'));
     } catch {
       // The user dismissing the native share sheet is not an error worth showing.
     }
@@ -148,9 +157,9 @@ export default function GameScreen() {
   async function onShareDailyResult() {
     if (!dailyResult) return;
     try {
-      const result = await shareDailyResult(dailyChallengeDate, dailyResult, progress.dailyStreak());
-      if (result === 'copied') showShareNotice('Resultado copiado');
-      if (result === 'unavailable') showShareNotice('Não foi possível partilhar neste dispositivo');
+      const result = await shareDailyResult(dailyChallengeDate, dailyResult, progress.dailyStreak(), language);
+      if (result === 'copied') showShareNotice(t('game.resultCopied'));
+      if (result === 'unavailable') showShareNotice(t('game.shareUnavailable'));
     } catch {
       // The user dismissing the native share sheet is not an error worth showing.
     }
@@ -171,7 +180,7 @@ export default function GameScreen() {
       }
       if (mode === 'daily') {
         const durationMs = Math.max(0, Date.now() - startedAt);
-        setDailyResult(`${formatResultDuration(durationMs)} · ${hintsUsed} ${hintsUsed === 1 ? 'dica' : 'dicas'} · ${mistakes} ${mistakes === 1 ? 'tentativa inválida' : 'tentativas inválidas'}`);
+        setDailyResult(formatSummary(durationMs, hintsUsed, mistakes, t));
         if (dailyChallengeDate === getDailyDateKey()) progress.markDailyDone();
         presentWinSheet();
         return;
@@ -186,8 +195,8 @@ export default function GameScreen() {
         progress.setLevelMedal(curLvl, medal);
         setCampaignResult({
           medal: displayedMedal,
-          summary: `${formatResultDuration(durationMs)} · ${hintsUsed} ${hintsUsed === 1 ? 'dica' : 'dicas'} · ${mistakes} ${mistakes === 1 ? 'tentativa inválida' : 'tentativas inválidas'}`,
-          unlockedIslandName: unlockedIslandIndex == null ? undefined : ISLANDS[unlockedIslandIndex]?.name,
+          summary: formatSummary(durationMs, hintsUsed, mistakes, t),
+          unlockedIslandName: unlockedIslandIndex == null ? undefined : t(`island.${ISLANDS[unlockedIslandIndex].id}.name`),
         });
       }
       presentWinSheet();
@@ -253,16 +262,23 @@ export default function GameScreen() {
 
   const meta = mode === 'campaign' ? LEVEL_META[curLvl] : null;
   const isTodayDaily = mode === 'daily' && dailyChallengeDate === getDailyDateKey();
-  const levelLabel = mode === 'infinite' ? 'Infinito' : mode === 'daily' ? 'Hoje' : mode === 'tutorial' ? `Tutorial ${tutorialLevelIndex + 1}/3` : `Nível ${curLvl + 1}`;
+  const levelLabel =
+    mode === 'infinite'
+      ? t('game.infinite')
+      : mode === 'daily'
+        ? t('game.today')
+        : mode === 'tutorial'
+          ? t('game.tutorialLevel', { current: tutorialLevelIndex + 1, total: TUTORIAL_LEVELS.length })
+          : t('game.level', { level: curLvl + 1 });
   const diffLabel =
     mode === 'daily'
-      ? 'Desafio Diário'
+      ? t('game.dailyLabel')
       : mode === 'infinite'
-        ? `Infinito · #${infiniteCount + 1} · ${level.size}×${level.size}`
+        ? t('game.infiniteMeta', { count: infiniteCount + 1, size: level.size })
         : mode === 'tutorial'
-          ? `Aprender · ${levelRows}×${levelColumns}`
+          ? t('game.learnMeta', { rows: levelRows, columns: levelColumns })
           : meta
-            ? `${meta.milestone ? 'Extra difícil · ' : ''}${meta.label} · ${meta.size}×${meta.size}`
+            ? `${meta.milestone ? `${t('game.extraHard')} · ` : ''}${t(`difficulty.${meta.label}`)} · ${meta.size}×${meta.size}`
             : '';
 
   const isNewSolve = mode === 'campaign' && progress.isSolved(curLvl);
@@ -270,21 +286,21 @@ export default function GameScreen() {
     won || (mode !== 'training' && mode !== 'tutorial' && (curLvl === 0 && mode === 'campaign' ? true : progress.hints <= 0));
   const hintLabel =
     mode === 'training' || mode === 'tutorial'
-      ? 'Dica'
+      ? t('game.hint')
       : mode === 'campaign' && curLvl === 0
-        ? 'Sem dica'
-        : `Dica · ${progress.hints}`;
+        ? t('game.noHint')
+        : t('game.hintWithCount', { count: progress.hints });
 
   function onHintPress() {
     if (mode === 'training' || mode === 'tutorial') {
-      if (hint()) showShareNotice('Dica aplicada');
+      if (hint()) showShareNotice(t('game.hintApplied'));
       return;
     }
     if (mode === 'campaign' && curLvl === 0) return;
     if (progress.hints <= 0) return;
     if (!hint()) return;
     progress.spendHint();
-    showShareNotice('Dica aplicada');
+    showShareNotice(t('game.hintApplied'));
   }
 
   function onNextLevel() {
@@ -343,14 +359,14 @@ export default function GameScreen() {
 
       <WinSheet
         ref={winSheetRef}
-        title={mode === 'daily' ? 'Desafio completo!' : 'Puzzle resolvido!'}
+        title={t(mode === 'daily' ? 'win.dailyTitle' : 'win.title')}
         subtitle={
           mode === 'daily'
-            ? new Date(Number(dailyChallengeDate.slice(0, 4)), Number(dailyChallengeDate.slice(4, 6)) - 1, Number(dailyChallengeDate.slice(6, 8))).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })
+            ? new Date(Number(dailyChallengeDate.slice(0, 4)), Number(dailyChallengeDate.slice(4, 6)) - 1, Number(dailyChallengeDate.slice(6, 8))).toLocaleDateString(language, { day: 'numeric', month: 'long' })
             : mode === 'infinite'
-              ? `Puzzle Infinito · #${infiniteCount + 1}`
+              ? t('win.infiniteSubtitle', { count: infiniteCount + 1 })
               : meta
-                ? `Nível ${curLvl + 1} · ${meta.label}`
+                ? t('win.levelSubtitle', { level: curLvl + 1, difficulty: t(`difficulty.${meta.label}`) })
                 : ''
         }
         showHintReward={mode === 'campaign' && isNewSolve && !!meta?.milestone}
@@ -363,12 +379,12 @@ export default function GameScreen() {
         dailyCountdown={dailyCountdown}
         nextLabel={
           mode === 'daily'
-            ? 'Voltar ao menu'
+            ? t('win.backToMenu')
             : mode === 'infinite'
-              ? 'Próximo'
+              ? t('win.next')
               : mode === 'training'
-                ? 'Jogar novamente'
-                : 'Próximo nível'
+                ? t('win.playAgain')
+                : t('win.nextLevel')
         }
         onReview={() => winSheetRef.current?.dismiss()}
         onNext={onNextLevel}

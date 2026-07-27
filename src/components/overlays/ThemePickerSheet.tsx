@@ -5,6 +5,7 @@ import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import Check from 'lucide-react-native/icons/check';
 import { useThemeStore, useThemeTokens } from '@/state/themeStore';
 import { THEME_OPTIONS, THEMES } from '@/theme/themes';
+import { useI18n } from '@/i18n';
 
 export interface ThemePickerSheetHandle {
   present: () => void;
@@ -17,6 +18,7 @@ interface ThemePickerSheetProps {
 export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle, ThemePickerSheetProps>(function ThemePickerSheet({ onBack }, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const theme = useThemeTokens();
+  const { t } = useI18n();
   const themeName = useThemeStore(state => state.themeName);
   const setThemeName = useThemeStore(state => state.setThemeName);
 
@@ -45,10 +47,10 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle, ThemePickerSh
     >
       <BottomSheetView style={styles.content}>
         <View style={styles.header}>
-          <Pressable style={[styles.backButton, { borderColor: theme.gridSep }]} onPress={goBack} accessibilityLabel="Voltar a definições">
+          <Pressable style={[styles.backButton, { borderColor: theme.gridSep }]} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
             <ArrowLeft size={18} color={theme.text} strokeWidth={2.3} />
           </Pressable>
-          <Text style={[styles.title, { color: theme.text }]}>Temas</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{t('theme.title')}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -64,14 +66,14 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle, ThemePickerSh
                   { backgroundColor: optionTheme.bg, borderColor: selected ? optionTheme.accent : optionTheme.gridSep },
                 ]}
                 onPress={() => selectTheme(option.name)}
-                accessibilityLabel={`Usar tema ${option.label}`}
+                accessibilityLabel={t('a11y.useTheme', { theme: t(`theme.${option.name}`) })}
                 accessibilityState={{ selected }}
               >
                 <View style={styles.optionCopy}>
                   <View style={styles.swatches}>
                     {option.preview.map(color => <View key={color} style={[styles.swatch, { backgroundColor: color }]} />)}
                   </View>
-                  <Text style={[styles.optionLabel, { color: optionTheme.text }]}>{option.label}</Text>
+                  <Text style={[styles.optionLabel, { color: optionTheme.text }]}>{t(`theme.${option.name}`)}</Text>
                 </View>
                 {selected && <Check size={19} color={optionTheme.accent} strokeWidth={2.8} />}
               </Pressable>

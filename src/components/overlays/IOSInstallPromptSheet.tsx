@@ -6,6 +6,7 @@ import Share from 'lucide-react-native/icons/share';
 import X from 'lucide-react-native/icons/x';
 import { Logo } from '@/components/Logo';
 import { useThemeTokens } from '@/state/themeStore';
+import { useI18n } from '@/i18n';
 
 export interface IOSInstallPromptSheetHandle {
   present: () => void;
@@ -14,6 +15,7 @@ export interface IOSInstallPromptSheetHandle {
 export const IOSInstallPromptSheet = forwardRef<IOSInstallPromptSheetHandle>(function IOSInstallPromptSheet(_, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const theme = useThemeTokens();
+  const { t } = useI18n();
 
   async function openShareMenu() {
     if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return;
@@ -21,7 +23,7 @@ export const IOSInstallPromptSheet = forwardRef<IOSInstallPromptSheetHandle>(fun
     try {
       await navigator.share({
         title: 'Bumi',
-        text: 'Joga Bumi, um puzzle de retangulos.',
+        text: t('install.shareText'),
         url: window.location.href,
       });
     } catch {
@@ -42,25 +44,25 @@ export const IOSInstallPromptSheet = forwardRef<IOSInstallPromptSheetHandle>(fun
       handleIndicatorStyle={{ backgroundColor: theme.gridSep }}
     >
       <BottomSheetView style={styles.content}>
-        <Pressable style={[styles.close, { borderColor: theme.gridSep }]} onPress={() => sheetRef.current?.dismiss()} accessibilityLabel="Fechar">
+        <Pressable style={[styles.close, { borderColor: theme.gridSep }]} onPress={() => sheetRef.current?.dismiss()} accessibilityLabel={t('a11y.close')}>
           <X size={17} color={theme.sub} strokeWidth={2.4} />
         </Pressable>
         <View style={[styles.logo, { backgroundColor: theme.surface }]}><Logo size={40} /></View>
-        <Text style={[styles.title, { color: theme.text }]}>Joga como uma app</Text>
-        <Text style={[styles.subtitle, { color: theme.sub }]}>Adiciona Bumi ao ecrã principal para abrir mais depressa.</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t('install.title')}</Text>
+        <Text style={[styles.subtitle, { color: theme.sub }]}>{t('install.subtitle')}</Text>
         <View style={styles.steps}>
           <Pressable
             style={({ pressed }) => [styles.step, styles.shareAction, { backgroundColor: theme.surface, borderColor: theme.gridSep, opacity: pressed ? 0.72 : 1 }]}
             onPress={openShareMenu}
             accessibilityRole="button"
-            accessibilityLabel="Abrir o menu Partilhar do Safari"
+            accessibilityLabel={t('a11y.openShareMenu')}
           >
             <Share size={19} color={theme.accent} strokeWidth={2.4} />
-            <Text style={[styles.stepText, { color: theme.text }]}>1. Abrir Partilhar</Text>
+            <Text style={[styles.stepText, { color: theme.text }]}>{t('install.step1')}</Text>
           </Pressable>
           <View style={[styles.step, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
             <SquarePlus size={19} color={theme.accent} strokeWidth={2.4} />
-            <Text style={[styles.stepText, { color: theme.text }]}>2. Escolher “Adicionar ao ecrã principal”</Text>
+            <Text style={[styles.stepText, { color: theme.text }]}>{t('install.step2')}</Text>
           </View>
         </View>
       </BottomSheetView>

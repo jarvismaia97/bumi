@@ -4,7 +4,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
 import Share2 from 'lucide-react-native/icons/share-2';
 import { Logo } from '@/components/Logo';
-import { medalLabel, type Medal } from '@/game/medals';
+import type { Medal } from '@/game/medals';
+import { useI18n } from '@/i18n';
 
 export interface WinSheetHandle {
   present: () => void;
@@ -33,6 +34,7 @@ export const WinSheet = forwardRef<WinSheetHandle, WinSheetProps>(function WinSh
   ref,
 ) {
   const sheetRef = useRef<BottomSheetModal>(null);
+  const { t } = useI18n();
 
   useImperativeHandle(ref, () => ({
     present: () => sheetRef.current?.present(),
@@ -48,13 +50,13 @@ export const WinSheet = forwardRef<WinSheetHandle, WinSheetProps>(function WinSh
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
 
-        {showHintReward && <Text style={styles.hintReward}>+1 dica</Text>}
+        {showHintReward && <Text style={styles.hintReward}>{t('win.hintReward')}</Text>}
 
         {campaignMedal && (
           <View style={styles.medalResult}>
             <View style={[styles.medalMark, { backgroundColor: MEDAL_COLORS[campaignMedal] }]} />
             <View>
-              <Text style={styles.medalTitle}>Medalha de {medalLabel(campaignMedal)}</Text>
+              <Text style={styles.medalTitle}>{t('win.medal', { medal: t(`medal.${campaignMedal}`) })}</Text>
               {!!campaignSummary && <Text style={styles.medalSummary}>{campaignSummary}</Text>}
             </View>
           </View>
@@ -64,7 +66,7 @@ export const WinSheet = forwardRef<WinSheetHandle, WinSheetProps>(function WinSh
           <View style={styles.islandUnlock}>
             <MapPinned size={20} color="#5e82be" strokeWidth={2.3} />
             <View>
-              <Text style={styles.islandUnlockLabel}>Ilha descoberta</Text>
+              <Text style={styles.islandUnlockLabel}>{t('win.islandFound')}</Text>
               <Text style={styles.islandUnlockName}>{unlockedIslandName}</Text>
             </View>
           </View>
@@ -73,19 +75,19 @@ export const WinSheet = forwardRef<WinSheetHandle, WinSheetProps>(function WinSh
         {isDaily && (
           <View style={styles.dailyExtra}>
             {!!dailySummary && <Text style={styles.dailySummary}>{dailySummary}</Text>}
-            <Text style={styles.dailyStreak}>Sequência de {dailyStreak} {dailyStreak === 1 ? 'dia' : 'dias'}</Text>
-            <Text style={styles.dailyCountdown}>Próximo desafio em {dailyCountdown}</Text>
+            <Text style={styles.dailyStreak}>{t('win.streak', { count: dailyStreak, label: t(dailyStreak === 1 ? 'menu.day' : 'menu.days') })}</Text>
+            <Text style={styles.dailyCountdown}>{t('win.nextDaily', { time: dailyCountdown })}</Text>
           </View>
         )}
 
         <View style={styles.actions}>
           {onShareDailyResult && (
-            <Pressable style={styles.shareBtn} onPress={onShareDailyResult} accessibilityLabel="Partilhar resultado">
+            <Pressable style={styles.shareBtn} onPress={onShareDailyResult} accessibilityLabel={t('a11y.shareResult')}>
               <Share2 size={19} color="#3a2d45" strokeWidth={2.3} />
             </Pressable>
           )}
           <Pressable style={styles.secondaryBtn} onPress={onReview}>
-            <Text style={styles.secondaryBtnText}>Rever</Text>
+            <Text style={styles.secondaryBtnText}>{t('win.review')}</Text>
           </Pressable>
           <Pressable style={styles.primaryBtn} onPress={onNext}>
             <Text style={styles.primaryBtnText}>{nextLabel}</Text>

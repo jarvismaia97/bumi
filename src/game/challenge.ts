@@ -1,3 +1,5 @@
+import { translate, type SupportedLanguage } from '@/i18n/messages';
+
 export function getChallengeLevelIndex(value: unknown, totalLevels: number): number | null {
   const raw = Array.isArray(value) ? value[0] : value;
   const level = typeof raw === 'string' ? Number(raw) : NaN;
@@ -27,9 +29,16 @@ export function createDailyChallengeUrl(dateKey: string, baseUrl: string): strin
   return `${baseUrl.replace(/\/$/, '')}/partilha/diario/${validDateKey}`;
 }
 
-export function createDailyResultMessage(dateKey: string, summary: string, streak: number): string {
+export function createDailyResultMessage(
+  dateKey: string,
+  summary: string,
+  streak: number,
+  language: SupportedLanguage,
+): string {
   const date = new Date(Number(dateKey.slice(0, 4)), Number(dateKey.slice(4, 6)) - 1, Number(dateKey.slice(6, 8)));
-  const label = date.toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' });
-  const streakLabel = streak === 1 ? 'dia' : 'dias';
-  return `Bumi · Desafio diário ${label}\n${summary}\nSequência: ${streak} ${streakLabel}\nConsegues melhorar esta marca?`;
+  const label = date.toLocaleDateString(language, { day: 'numeric', month: 'long' });
+  const streakLabel = translate(language, streak === 1 ? 'menu.day' : 'menu.days');
+  const title = translate(language, 'share.dailyTitleDated', { date: label });
+  const streakLine = translate(language, 'share.resultStreak', { count: streak, label: streakLabel });
+  return `${title}\n${summary}\n${streakLine}\n${translate(language, 'share.resultBeat')}`;
 }

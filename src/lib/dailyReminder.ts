@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import type { CalendarTriggerInput, DailyTriggerInput } from 'expo-notifications';
+import { translate, type SupportedLanguage } from '@/i18n/messages';
 
 const REMINDER_ID = 'bumi-daily-reminder';
 const REMINDER_HOUR = 19;
@@ -18,13 +19,13 @@ export async function configureNotificationHandler(): Promise<void> {
   });
 }
 
-export async function setDailyReminder(enabled: boolean): Promise<boolean> {
+export async function setDailyReminder(enabled: boolean, language: SupportedLanguage): Promise<boolean> {
   if (Platform.OS === 'web') return false;
 
   const Notifications = await import('expo-notifications');
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('daily-reminder', {
-      name: 'Desafio diário',
+      name: translate(language, 'reminder.channel'),
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
@@ -51,8 +52,8 @@ export async function setDailyReminder(enabled: boolean): Promise<boolean> {
   await Notifications.scheduleNotificationAsync({
     identifier: REMINDER_ID,
     content: {
-      title: 'O desafio diário está pronto',
-      body: 'Reserva dois minutos para resolver o puzzle de hoje.',
+      title: translate(language, 'reminder.title'),
+      body: translate(language, 'reminder.body'),
       data: { screen: 'daily' },
     },
     trigger: Platform.OS === 'ios' ? iosTrigger : androidTrigger,

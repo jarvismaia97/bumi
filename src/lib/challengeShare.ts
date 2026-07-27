@@ -1,5 +1,6 @@
 import { Platform, Share } from 'react-native';
 import { createChallengeUrl, createDailyChallengeUrl, createDailyResultMessage } from '@/game/challenge';
+import { translate, type SupportedLanguage } from '@/i18n/messages';
 
 // See auth-client.ts: native has a window without location, node static
 // rendering is 'web' with no window at all. Both guards are required.
@@ -10,27 +11,26 @@ const productionUrl =
 
 export type ShareResult = 'shared' | 'copied' | 'unavailable';
 
-export async function shareChallenge(levelIndex: number): Promise<ShareResult> {
+export async function shareChallenge(levelIndex: number, language: SupportedLanguage): Promise<ShareResult> {
   const url = createChallengeUrl(levelIndex, productionUrl);
-  const message = `Bumi · Nível ${levelIndex + 1}\nConsegues resolver este puzzle sem dicas?`;
-  return share(message, url, `Bumi · Nível ${levelIndex + 1}`);
+  const title = translate(language, 'share.levelTitle', { level: levelIndex + 1 });
+  return share(`${title}\n${translate(language, 'share.levelBody')}`, url, title);
 }
 
-export async function shareDailyChallenge(dateKey: string): Promise<ShareResult> {
+export async function shareDailyChallenge(dateKey: string, language: SupportedLanguage): Promise<ShareResult> {
   const url = createDailyChallengeUrl(dateKey, productionUrl);
-  const label = formatDailyDate(dateKey);
-  const message = `Bumi · Desafio diário ${label}\nConsegues resolver antes de mim?`;
-  return share(message, url, 'Bumi · Desafio diário');
+  const title = translate(language, 'share.dailyTitleDated', { date: formatDailyDate(dateKey, language) });
+  return share(`${title}\n${translate(language, 'share.dailyBody')}`, url, translate(language, 'share.dailyTitle'));
 }
 
-export async function shareDailyResult(dateKey: string, summary: string, streak: number): Promise<ShareResult> {
+export async function shareDailyResult(dateKey: string, summary: string, streak: number, language: SupportedLanguage): Promise<ShareResult> {
   const url = createDailyChallengeUrl(dateKey, productionUrl);
-  return share(createDailyResultMessage(dateKey, summary, streak), url, 'Resultado do desafio diário Bumi');
+  return share(createDailyResultMessage(dateKey, summary, streak, language), url, translate(language, 'share.resultTitle'));
 }
 
-function formatDailyDate(dateKey: string): string {
+function formatDailyDate(dateKey: string, language: SupportedLanguage): string {
   const date = new Date(Number(dateKey.slice(0, 4)), Number(dateKey.slice(4, 6)) - 1, Number(dateKey.slice(6, 8)));
-  return date.toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' });
+  return date.toLocaleDateString(language, { day: 'numeric', month: 'long' });
 }
 
 async function share(message: string, url: string, title: string): Promise<ShareResult> {

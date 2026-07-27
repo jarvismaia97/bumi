@@ -7,23 +7,23 @@ import type { ChallengeProfile, DifficultyTier, HardLevel, LevelMeta } from './t
 // 12x12, so each row carries its own. The generator hits these by construction (see
 // targetArea in generator.ts) rather than by rejection sampling.
 export const DIFFS: DifficultyTier[] = [
-  { label: 'Fácil', size: 4, maxArea: 8, count: 20, hard: 0, clues: [4, 6] },
-  { label: 'Fácil', size: 5, maxArea: 10, count: 25, hard: 0, clues: [6, 9] },
-  { label: 'Fácil', size: 6, maxArea: 12, count: 25, hard: 0, clues: [10, 14] },
-  { label: 'Médio', size: 7, maxArea: 10, count: 30, hard: 0, clues: [14, 18] },
-  { label: 'Médio', size: 8, maxArea: 9, count: 30, hard: 0, clues: [19, 24] },
-  { label: 'Difícil', size: 9, maxArea: 8, count: 35, hard: 1, clues: [24, 29] },
-  { label: 'Difícil', size: 10, maxArea: 8, count: 35, hard: 1, clues: [29, 34] },
-  { label: 'Expert', size: 10, maxArea: 9, count: 40, hard: 1, clues: [32, 36] },
-  { label: 'Expert', size: 11, maxArea: 9, count: 40, hard: 1, clues: [36, 40] },
-  { label: 'Mestre', size: 11, maxArea: 10, count: 45, hard: 2, clues: [40, 44] },
-  { label: 'Mestre', size: 12, maxArea: 12, count: 45, hard: 2, clues: [42, 46] },
+  { label: 'easy', size: 4, maxArea: 8, count: 20, hard: 0, clues: [4, 6] },
+  { label: 'easy', size: 5, maxArea: 10, count: 25, hard: 0, clues: [6, 9] },
+  { label: 'easy', size: 6, maxArea: 12, count: 25, hard: 0, clues: [10, 14] },
+  { label: 'medium', size: 7, maxArea: 10, count: 30, hard: 0, clues: [14, 18] },
+  { label: 'medium', size: 8, maxArea: 9, count: 30, hard: 0, clues: [19, 24] },
+  { label: 'hard', size: 9, maxArea: 8, count: 35, hard: 1, clues: [24, 29] },
+  { label: 'hard', size: 10, maxArea: 8, count: 35, hard: 1, clues: [29, 34] },
+  { label: 'expert', size: 10, maxArea: 9, count: 40, hard: 1, clues: [32, 36] },
+  { label: 'expert', size: 11, maxArea: 9, count: 40, hard: 1, clues: [36, 40] },
+  { label: 'master', size: 11, maxArea: 10, count: 45, hard: 2, clues: [40, 44] },
+  { label: 'master', size: 12, maxArea: 12, count: 45, hard: 2, clues: [42, 46] },
   // Lenda used to cap at 15/16. Swept against every other setting at this board size and
   // density, maxArea 16 graded worst in all eight upper tiers — a 16 has only three legal
   // shapes on a 12-wide board (2x8, 8x2, 4x4), so a big clue value pins itself down instead
   // of opening choices. Lenda's difficulty comes from piece density, not piece size.
-  { label: 'Lenda', size: 12, maxArea: 12, count: 65, hard: 2, clues: [45, 49] },
-  { label: 'Lenda', size: 12, maxArea: 12, count: 65, hard: 2, clues: [48, 52] },
+  { label: 'legend', size: 12, maxArea: 12, count: 65, hard: 2, clues: [45, 49] },
+  { label: 'legend', size: 12, maxArea: 12, count: 65, hard: 2, clues: [48, 52] },
 ];
 
 /** How far a generated level may sit from its target piece count before it's rejected. */

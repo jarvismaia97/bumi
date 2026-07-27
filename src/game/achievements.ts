@@ -1,13 +1,12 @@
 import { getCompletedIslandCount, getIslandRange, ISLANDS } from './islands';
 import type { Medal } from './medals';
 
-export type AchievementCategory = 'Campanha' | 'Ilhas' | 'Domínio';
+export type AchievementCategory = 'campaign' | 'islands' | 'mastery';
 
+// Title and description live in the message catalogue under `achievement.<id>.*`.
 export interface AchievementProgress {
   id: string;
   category: AchievementCategory;
-  title: string;
-  description: string;
   icon: 'flag' | 'zap' | 'route' | 'mountain' | 'map' | 'trophy' | 'medal' | 'flame';
   current: number;
   target: number;
@@ -47,17 +46,17 @@ export function getAchievements({ solvedMap, solvedDateMap, levelMedals, dailySt
   const islandDayDone = completedIslandInOneDay(solvedMap, solvedDateMap);
 
   return [
-    { id: 'first-step', category: 'Campanha', title: 'Primeiro passo', description: 'Resolve o teu primeiro nível.', icon: 'flag', current: campaignStreak, target: 1 },
-    { id: 'campaign-10', category: 'Campanha', title: 'Em ritmo', description: 'Resolve 10 níveis da campanha seguidos.', icon: 'zap', current: campaignStreak, target: 10 },
-    { id: 'campaign-50', category: 'Campanha', title: 'Caminho aberto', description: 'Resolve 50 níveis da campanha seguidos.', icon: 'route', current: campaignStreak, target: 50 },
-    { id: 'campaign-100', category: 'Campanha', title: 'Centenário', description: 'Resolve 100 níveis da campanha seguidos.', icon: 'mountain', current: campaignStreak, target: 100 },
-    { id: 'campaign-250', category: 'Campanha', title: 'Incansável', description: 'Resolve 250 níveis da campanha seguidos.', icon: 'route', current: campaignStreak, target: 250 },
-    { id: 'campaign-500', category: 'Campanha', title: 'Mestre Bumi', description: 'Resolve os 500 níveis da campanha.', icon: 'trophy', current: campaignStreak, target: 500 },
-    { id: 'first-island', category: 'Ilhas', title: 'Terra à vista', description: 'Conquista a tua primeira ilha.', icon: 'map', current: completedIslands, target: 1 },
-    { id: 'five-islands', category: 'Ilhas', title: 'Explorador', description: 'Conquista 5 ilhas.', icon: 'map', current: completedIslands, target: 5 },
-    { id: 'island-day', category: 'Ilhas', title: 'Expedição', description: 'Conquista uma ilha num único dia.', icon: 'flame', current: islandDayDone ? 1 : 0, target: 1 },
-    { id: 'gold-10', category: 'Domínio', title: 'Ouro polido', description: 'Ganha 10 medalhas de ouro.', icon: 'medal', current: goldMedals, target: 10 },
-    { id: 'gold-50', category: 'Domínio', title: 'Coleção dourada', description: 'Ganha 50 medalhas de ouro.', icon: 'medal', current: goldMedals, target: 50 },
-    { id: 'daily-7', category: 'Domínio', title: 'Sete dias', description: 'Mantém uma sequência diária de 7 dias.', icon: 'flame', current: dailyStreak, target: 7 },
+    { id: 'first-step', category: 'campaign', icon: 'flag', current: campaignStreak, target: 1 },
+    { id: 'campaign-10', category: 'campaign', icon: 'zap', current: campaignStreak, target: 10 },
+    { id: 'campaign-50', category: 'campaign', icon: 'route', current: campaignStreak, target: 50 },
+    { id: 'campaign-100', category: 'campaign', icon: 'mountain', current: campaignStreak, target: 100 },
+    { id: 'campaign-250', category: 'campaign', icon: 'route', current: campaignStreak, target: 250 },
+    { id: 'campaign-500', category: 'campaign', icon: 'trophy', current: campaignStreak, target: 500 },
+    { id: 'first-island', category: 'islands', icon: 'map', current: completedIslands, target: 1 },
+    { id: 'five-islands', category: 'islands', icon: 'map', current: completedIslands, target: 5 },
+    { id: 'island-day', category: 'islands', icon: 'flame', current: islandDayDone ? 1 : 0, target: 1 },
+    { id: 'gold-10', category: 'mastery', icon: 'medal', current: goldMedals, target: 10 },
+    { id: 'gold-50', category: 'mastery', icon: 'medal', current: goldMedals, target: 50 },
+    { id: 'daily-7', category: 'mastery', icon: 'flame', current: dailyStreak, target: 7 },
   ];
 }

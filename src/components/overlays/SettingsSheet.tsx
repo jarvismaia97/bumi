@@ -1,10 +1,12 @@
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import Check from 'lucide-react-native/icons/check';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Cloud from 'lucide-react-native/icons/cloud';
 import CloudOff from 'lucide-react-native/icons/cloud-off';
 import LogOut from 'lucide-react-native/icons/log-out';
+import Languages from 'lucide-react-native/icons/languages';
 import Palette from 'lucide-react-native/icons/palette';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import Trash2 from 'lucide-react-native/icons/trash-2';
@@ -13,6 +15,7 @@ import { router } from 'expo-router';
 import { PlayerAvatarTile } from '@/components/PlayerAvatar';
 import { playerName } from '@/lib/identity';
 import { useAuthStore } from '@/state/authStore';
+import { useLanguageStore, type LanguagePreference } from '@/state/languageStore';
 import { useSyncStore } from '@/state/syncStore';
 import { useThemeTokens } from '@/state/themeStore';
 import { setDailyReminder } from '@/lib/dailyReminder';
@@ -28,11 +31,20 @@ interface SettingsSheetProps {
   onOpenThemes: () => void;
 }
 
+/** Native names, so a player who lands in the wrong language can still find their own. */
+const LANGUAGE_OPTIONS: { value: LanguagePreference; label: string; flag: string }[] = [
+  { value: 'auto', label: 'Auto', flag: '' },
+  { value: 'pt-PT', label: 'Português', flag: '🇵🇹' },
+  { value: 'en', label: 'English', flag: '🇬🇧' },
+];
+
 export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>(function SettingsSheet({ onOpenAchievements, onOpenThemes }, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const theme = useThemeTokens();
   const { user, signOut, deleteAccount, error } = useAuthStore();
   const { status, hasPendingChanges } = useSyncStore();
+  const languagePreference = useLanguageStore(state => state.preference);
+  const setLanguagePreference = useLanguageStore(state => state.setPreference);
   const dailyReminderEnabled = useProgressStore(state => state.dailyReminderEnabled);
   const setDailyReminderEnabled = useProgressStore(state => state.setDailyReminderEnabled);
   const { t, language } = useI18n();
@@ -76,7 +88,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
   }
 
   async function toggleDailyReminder(enabled: boolean) {
-    const scheduled = await setDailyReminder(enabled);
+    const scheduled = await setDailyReminder(enabled, language);
     if (scheduled) setDailyReminderEnabled(enabled);
     else if (enabled) Alert.alert(t('settings.permissionTitle'), t('settings.permissionBody'));
   }
@@ -98,7 +110,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
               <View style={styles.accountIdentity}>
                 <PlayerAvatarTile userId={user.id} size={44} />
                 <View style={styles.accountIdentityCopy}>
-                  <Text style={[styles.accountName, { color: theme.text }]} numberOfLines={1}>{playerName(user.id, language)}</Text>
+                  <Text style={[styles.accountName, { color: theme.text }]} numberOfLines={2}>{playerName(user.id, language)}</Text>
                   <Text style={[styles.accountDetail, { color: theme.sub }]} numberOfLines={1}>{t('settings.playerHint')}</Text>
                 </View>
               </View>
@@ -116,17 +128,41 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
           </>
         ) : null}
 
-        <Text style={[styles.sectionLabel, { color: theme.sub }]}>Jogo</Text>
+        <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.game')}</Text>
         <Pressable style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => closeAndOpen(onOpenAchievements)}>
-          <View style={styles.rowCopy}><Trophy size={18} color="#c39828" strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>Conquistas</Text></View>
+          <View style={styles.rowCopy}><Trophy size={18} color="#c39828" strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.achievements')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
         </Pressable>
 
-        <Text style={[styles.sectionLabel, { color: theme.sub }]}>Aspeto</Text>
+        <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.appearance')}</Text>
         <Pressable style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => closeAndOpen(onOpenThemes)}>
-          <View style={styles.rowCopy}><Palette size={18} color={theme.accent} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>Temas</Text></View>
+          <View style={styles.rowCopy}><Palette size={18} color={theme.accent} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.themes')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
         </Pressable>
+
+        <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.language')}</Text>
+        {LANGUAGE_OPTIONS.map(option => {
+          const selected = option.value === languagePreference;
+          return (
+            <Pressable
+              key={option.value}
+              style={[styles.row, { borderColor: selected ? theme.accent : theme.gridSep }]}
+              onPress={() => setLanguagePreference(option.value)}
+              accessibilityState={{ selected }}
+            >
+              <View style={styles.rowCopy}>
+                {option.value === 'auto'
+                  ? <Languages size={18} color={theme.accent} strokeWidth={2.2} />
+                  : <Text style={styles.flag}>{option.flag}</Text>}
+                <View>
+                  <Text style={[styles.rowLabel, { color: theme.text }]}>{option.value === 'auto' ? t('settings.languageAuto') : option.label}</Text>
+                  {option.value === 'auto' && <Text style={[styles.rowDetail, { color: theme.sub }]}>{t('settings.languageAutoDetail')}</Text>}
+                </View>
+              </View>
+              {selected && <Check size={18} color={theme.accent} strokeWidth={2.8} />}
+            </Pressable>
+          );
+        })}
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.privacySupport')}</Text>
         <Pressable style={[styles.row, { borderColor: theme.gridSep }]} onPress={closeAndOpenPrivacy}>
@@ -182,6 +218,7 @@ const styles = StyleSheet.create({
   rowCopy: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 },
   rowLabel: { fontSize: 14, fontWeight: '700' },
   rowDetail: { fontSize: 11, marginTop: 2 },
+  flag: { fontSize: 18 },
   dangerRow: { minHeight: 52, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   dangerText: { color: '#b03060', fontSize: 14, fontWeight: '700' },
   error: { color: '#b03060', fontSize: 12, lineHeight: 17, marginTop: 2 },

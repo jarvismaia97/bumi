@@ -4,6 +4,7 @@ import Share2 from 'lucide-react-native/icons/share-2';
 import { Logo } from '@/components/Logo';
 import { useThemeTokens } from '@/state/themeStore';
 import type { Mode } from '@/state/uiStore';
+import { useI18n } from '@/i18n';
 
 interface HeaderProps {
   mode: Mode;
@@ -15,14 +16,15 @@ interface HeaderProps {
   topInset?: number;
 }
 
-const BADGES: Partial<Record<Mode, { label: string; bg: string; fg: string; border: string }>> = {
-  training: { label: 'Treino', bg: '#ffd6e0', fg: '#b03060', border: '#ffb3c6' },
-  daily: { label: 'Diário', bg: '#fff8d0', fg: '#8a6000', border: '#f0c820' },
-  infinite: { label: 'Infinito', bg: '#e8d5ff', fg: '#6040a0', border: '#c0a8e8' },
+const BADGES: Partial<Record<Mode, { labelKey: string; bg: string; fg: string; border: string }>> = {
+  training: { labelKey: 'game.badgeTraining', bg: '#ffd6e0', fg: '#b03060', border: '#ffb3c6' },
+  daily: { labelKey: 'game.badgeDaily', bg: '#fff8d0', fg: '#8a6000', border: '#f0c820' },
+  infinite: { labelKey: 'game.badgeInfinite', bg: '#e8d5ff', fg: '#6040a0', border: '#c0a8e8' },
 };
 
 export function Header({ mode, levelLabel, diffLabel, onMenu, onLevels, onShare, topInset = 0 }: HeaderProps) {
   const theme = useThemeTokens();
+  const { t } = useI18n();
   const badge = BADGES[mode];
   const { width } = useWindowDimensions();
   const compact = width < 360;
@@ -33,12 +35,12 @@ export function Header({ mode, levelLabel, diffLabel, onMenu, onLevels, onShare,
 
   return (
     <View style={[styles.header, { paddingTop: Math.max(12, topInset) }]}>
-      <Pressable style={styles.brand} onPress={onMenu} accessibilityLabel="Voltar ao menu">
+      <Pressable style={styles.brand} onPress={onMenu} accessibilityLabel={t('a11y.backToMenu')}>
         <Logo size={compact ? 23 : 28} />
         <Text style={[styles.title, compact && styles.titleCompact, { color: theme.text }]} numberOfLines={1}>Bumi</Text>
         {badge && (
           <View style={[styles.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
-            <Text style={[styles.badgeText, { color: badge.fg }]}>{badge.label}</Text>
+            <Text style={[styles.badgeText, { color: badge.fg }]}>{t(badge.labelKey)}</Text>
           </View>
         )}
       </Pressable>
@@ -49,12 +51,12 @@ export function Header({ mode, levelLabel, diffLabel, onMenu, onLevels, onShare,
           <Text style={[styles.levelDiff, { color: theme.sub }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{diffLabel}</Text>
         </View>
         {onLevels && (
-          <Pressable style={[styles.iconButton, { borderColor: theme.gridSep }]} onPress={onLevels} accessibilityLabel="Abrir mapa de níveis">
+          <Pressable style={[styles.iconButton, { borderColor: theme.gridSep }]} onPress={onLevels} accessibilityLabel={t('a11y.openLevels')}>
             <Map size={18} color={theme.text} strokeWidth={2.2} />
           </Pressable>
         )}
         {onShare && (
-          <Pressable style={[styles.iconButton, { borderColor: theme.gridSep }]} onPress={onShare} accessibilityLabel="Partilhar desafio">
+          <Pressable style={[styles.iconButton, { borderColor: theme.gridSep }]} onPress={onShare} accessibilityLabel={t('a11y.shareChallenge')}>
             <Share2 size={18} color={theme.text} strokeWidth={2.2} />
           </Pressable>
         )}

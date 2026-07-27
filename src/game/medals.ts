@@ -26,10 +26,6 @@ export function isBetterMedal(next: Medal, current?: Medal): boolean {
   return !current || MEDAL_RANK[next] > MEDAL_RANK[current];
 }
 
-export function medalLabel(medal: Medal): string {
-  return medal === 'gold' ? 'Ouro' : medal === 'silver' ? 'Prata' : 'Bronze';
-}
-
 export function formatResultDuration(durationMs: number): string {
   const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
   const minutes = Math.floor(totalSeconds / 60);

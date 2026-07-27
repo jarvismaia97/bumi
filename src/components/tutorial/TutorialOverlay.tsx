@@ -1,29 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
+import { useI18n } from '@/i18n';
 
-interface TutorialLesson {
-  title: string;
-  body: string;
-  button: string;
-}
-
-const LESSONS: TutorialLesson[] = [
-  {
-    title: 'Uma linha de cada vez',
-    body: 'O número diz quantas casas o retângulo ocupa. Arrasta sobre o 2 para criar uma linha de duas casas.',
-    button: 'Começar',
-  },
-  {
-    title: 'Agora um quadrado',
-    body: 'O 4 ocupa quatro casas. Arrasta de canto a canto para formar um quadrado 2 por 2.',
-    button: 'Continuar',
-  },
-  {
-    title: 'Constrói o Bumi',
-    body: 'Junta as três formas para montar o logótipo: 2 em linha no topo, 4 em quadrado e 3 em coluna.',
-    button: 'Construir',
-  },
-];
+/** Copy lives in the message catalogue under `tutorial.<lesson>.*`. */
+const LESSONS = ['lesson1', 'lesson2', 'lesson3'] as const;
 
 interface TutorialOverlayProps {
   visible: boolean;
@@ -36,17 +16,14 @@ interface TutorialOverlayProps {
 }
 
 export function TutorialOverlay({ visible, lessonIndex, readyToPlay, won, onStartLesson, onNextLesson, onPlayLevel1 }: TutorialOverlayProps) {
+  const { t } = useI18n();
   if (!visible) return null;
 
   const lesson = LESSONS[lessonIndex] ?? LESSONS.at(-1)!;
   const finalLesson = lessonIndex === LESSONS.length - 1;
-  const title = won ? (finalLesson ? 'O Bumi está construído!' : 'Muito bem!') : lesson.title;
-  const body = won
-    ? finalLesson
-      ? 'Já conheces as formas. A campanha começa agora no Nível 1.'
-      : 'A forma ficou perfeita. Vamos avançar para a próxima peça.'
-    : lesson.body;
-  const button = won ? (finalLesson ? 'Jogar nível 1' : 'Próxima forma') : lesson.button;
+  const title = won ? t(finalLesson ? 'tutorial.finalTitle' : 'tutorial.wonTitle') : t(`tutorial.${lesson}.title`);
+  const body = won ? t(finalLesson ? 'tutorial.finalBody' : 'tutorial.wonBody') : t(`tutorial.${lesson}.body`);
+  const button = won ? t(finalLesson ? 'tutorial.finalButton' : 'tutorial.wonButton') : t(`tutorial.${lesson}.button`);
   const onPress = won ? (finalLesson ? onPlayLevel1 : onNextLesson) : onStartLesson;
 
   if (readyToPlay && !won) return null;

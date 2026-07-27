@@ -60,8 +60,8 @@ export interface LevelMeta {
 }
 
 export interface Island {
-  name: string;
-  story: string;
+  /** Key into the message catalogue: `island.<id>.name` and `island.<id>.story`. */
+  id: string;
   color: string;
   bg: string;
 }

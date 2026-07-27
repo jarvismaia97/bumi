@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
 import { Logo } from '@/components/Logo';
 import { useThemeTokens } from '@/state/themeStore';
+import { useI18n } from '@/i18n';
 
 export default function LoadingScreen() {
   const theme = useThemeTokens();
+  const { t } = useI18n();
   const [pulse] = useState(() => new Animated.Value(0));
   const [sweep] = useState(() => new Animated.Value(0));
 
@@ -67,7 +69,7 @@ export default function LoadingScreen() {
           ]}
         />
       </View>
-      <Text style={[styles.label, { color: theme.sub }]}>A preparar...</Text>
+      <Text style={[styles.label, { color: theme.sub }]}>{t('game.preparing')}</Text>
     </View>
   );
 }

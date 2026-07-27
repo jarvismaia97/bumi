@@ -1,28 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { ADJECTIVES, AVATAR_GRID, NOUNS, playerAvatar, playerName } from './identity';
+import { ARTISTS, AVATAR_GRID, playerAvatar, playerName } from './identity';
 
 describe('playerName', () => {
-  it('keeps the word lists index-aligned across languages', () => {
-    expect(ADJECTIVES.en).toHaveLength(ADJECTIVES['pt-PT'].length);
-    expect(NOUNS.en).toHaveLength(NOUNS['pt-PT'].length);
+  it('gives every artist an epithet in both languages', () => {
+    for (const artist of ARTISTS) {
+      expect(artist.epithet['pt-PT']).toBeTruthy();
+      expect(artist.epithet.en).toBeTruthy();
+    }
+  });
+
+  it('keeps the artist name identical across languages, translating only the epithet', () => {
+    const portuguese = playerName('user_abc123', 'pt-PT');
+    const english = playerName('user_abc123', 'en');
+    expect(portuguese.split(' "')[0]).toBe(english.split(' "')[0]);
+  });
+
+  it('stays short enough for the account card', () => {
+    for (const artist of ARTISTS) {
+      expect(`${artist.name} "${artist.epithet['pt-PT']}"`.length).toBeLessThanOrEqual(32);
+      expect(`${artist.name} "${artist.epithet.en}"`.length).toBeLessThanOrEqual(32);
+    }
   });
 
   it('is stable for the same account id', () => {
     expect(playerName('user_abc123', 'pt-PT')).toBe(playerName('user_abc123', 'pt-PT'));
   });
 
-  it('picks the same slot in every language, so the nickname just translates', () => {
-    const ids = ['user_a', 'user_b', 'user_c', 'user_d'];
-    const portuguese = ids.map(id => playerName(id, 'pt-PT'));
-    const english = ids.map(id => playerName(id, 'en'));
-    // Same identity => same shape of collisions across languages.
-    expect(new Set(portuguese).size).toBe(new Set(english).size);
-    expect(portuguese.every(name => name.split(' ').length === 2)).toBe(true);
-    expect(english.every(name => name.split(' ').length === 2)).toBe(true);
-  });
-
-  it('spreads different ids across different names', () => {
-    const names = new Set(Array.from({ length: 40 }, (_, i) => playerName(`user_${i}`, 'pt-PT')));
+  it('spreads different ids across different artists', () => {
+    const names = new Set(Array.from({ length: 60 }, (_, i) => playerName(`user_${i}`, 'pt-PT')));
     expect(names.size).toBeGreaterThan(25);
   });
 
