@@ -17,6 +17,16 @@ describe('challenge links', () => {
     expect(createDailyResultMessage('20260720', '42s · 0 dicas · 1 erro', 3, 'pt-PT')).toContain('42s · 0 dicas · 1 erro');
   });
 
+  it('leaves the URL clean for Portuguese, the server default', () => {
+    expect(createChallengeUrl(41, 'https://www.jogarbumi.pt', 'pt-PT')).toBe('https://www.jogarbumi.pt/partilha/nivel/42');
+    expect(createDailyChallengeUrl('20260720', 'https://www.jogarbumi.pt', 'pt-PT')).toBe('https://www.jogarbumi.pt/partilha/diario/20260720');
+  });
+
+  it('stamps the sharer language on the URL so the card renders in it', () => {
+    expect(createChallengeUrl(41, 'https://www.jogarbumi.pt', 'en')).toBe('https://www.jogarbumi.pt/partilha/nivel/42?lang=en');
+    expect(createDailyChallengeUrl('20260720', 'https://www.jogarbumi.pt', 'en')).toBe('https://www.jogarbumi.pt/partilha/diario/20260720?lang=en');
+  });
+
   it('accepts a campaign level within range', () => {
     expect(getChallengeLevelIndex('42', 500)).toBe(41);
   });

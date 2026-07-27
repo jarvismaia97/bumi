@@ -7,9 +7,18 @@ export function getChallengeLevelIndex(value: unknown, totalLevels: number): num
   return level - 1;
 }
 
-export function createChallengeUrl(levelIndex: number, baseUrl: string): string {
+/**
+ * `language` rides along so the link preview card is rendered in the language of whoever
+ * shared it — the receiver's own device language is unknowable from a server-rendered card.
+ */
+export function createChallengeUrl(levelIndex: number, baseUrl: string, language?: SupportedLanguage): string {
   const level = levelIndex + 1;
-  return `${baseUrl.replace(/\/$/, '')}/partilha/nivel/${level}`;
+  return `${baseUrl.replace(/\/$/, '')}/partilha/nivel/${level}${languageQuery(language)}`;
+}
+
+function languageQuery(language: SupportedLanguage | undefined): string {
+  // Portuguese is the server's default, so only the other one needs saying.
+  return language && language !== 'pt-PT' ? `?lang=${language}` : '';
 }
 
 export function getDailyChallengeDateKey(value: unknown): string | null {
@@ -23,10 +32,10 @@ export function getDailyChallengeDateKey(value: unknown): string | null {
   return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day ? raw : null;
 }
 
-export function createDailyChallengeUrl(dateKey: string, baseUrl: string): string {
+export function createDailyChallengeUrl(dateKey: string, baseUrl: string, language?: SupportedLanguage): string {
   const validDateKey = getDailyChallengeDateKey(dateKey);
   if (!validDateKey) throw new Error('Invalid daily challenge date');
-  return `${baseUrl.replace(/\/$/, '')}/partilha/diario/${validDateKey}`;
+  return `${baseUrl.replace(/\/$/, '')}/partilha/diario/${validDateKey}${languageQuery(language)}`;
 }
 
 export function createDailyResultMessage(

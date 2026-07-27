@@ -12,19 +12,19 @@ const productionUrl =
 export type ShareResult = 'shared' | 'copied' | 'unavailable';
 
 export async function shareChallenge(levelIndex: number, language: SupportedLanguage): Promise<ShareResult> {
-  const url = createChallengeUrl(levelIndex, productionUrl);
+  const url = createChallengeUrl(levelIndex, productionUrl, language);
   const title = translate(language, 'share.levelTitle', { level: levelIndex + 1 });
   return share(`${title}\n${translate(language, 'share.levelBody')}`, url, title);
 }
 
 export async function shareDailyChallenge(dateKey: string, language: SupportedLanguage): Promise<ShareResult> {
-  const url = createDailyChallengeUrl(dateKey, productionUrl);
+  const url = createDailyChallengeUrl(dateKey, productionUrl, language);
   const title = translate(language, 'share.dailyTitleDated', { date: formatDailyDate(dateKey, language) });
   return share(`${title}\n${translate(language, 'share.dailyBody')}`, url, translate(language, 'share.dailyTitle'));
 }
 
 export async function shareDailyResult(dateKey: string, summary: string, streak: number, language: SupportedLanguage): Promise<ShareResult> {
-  const url = createDailyChallengeUrl(dateKey, productionUrl);
+  const url = createDailyChallengeUrl(dateKey, productionUrl, language);
   return share(createDailyResultMessage(dateKey, summary, streak, language), url, translate(language, 'share.resultTitle'));
 }
 

@@ -31,10 +31,17 @@ describe('message catalogue', () => {
     expect(translate('en', 'menu.continueLevel', { level: 42 })).toBe('Continue at level 42');
   });
 
-  it('treats anything that is not English as Portuguese', () => {
-    expect(resolveLanguage('en-US')).toBe('en');
+  it('serves Portuguese speakers Portuguese and everyone else English', () => {
     expect(resolveLanguage('pt')).toBe('pt-PT');
-    expect(resolveLanguage('fr')).toBe('pt-PT');
+    expect(resolveLanguage('pt-BR')).toBe('pt-PT');
+    expect(resolveLanguage('en-US')).toBe('en');
+    expect(resolveLanguage('fr')).toBe('en');
+    expect(resolveLanguage('es-ES')).toBe('en');
+  });
+
+  it('falls back to Portuguese when the device reports no locale at all', () => {
+    // Static web rendering has no locale, and the site is Portuguese-first.
     expect(resolveLanguage(null)).toBe('pt-PT');
+    expect(resolveLanguage(undefined)).toBe('pt-PT');
   });
 });

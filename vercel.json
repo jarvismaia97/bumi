@@ -7,6 +7,17 @@
   "rewrites": [
     {
       "source": "/partilha/:kind/:value",
+      "has": [
+        {
+          "type": "query",
+          "key": "lang",
+          "value": "(?<lang>.*)"
+        }
+      ],
+      "destination": "/api/share?kind=:kind&value=:value&lang=:lang"
+    },
+    {
+      "source": "/partilha/:kind/:value",
       "destination": "/api/share?kind=:kind&value=:value"
     },
     {

@@ -206,6 +206,13 @@ const messages: Record<SupportedLanguage, Record<string, string>> = {
     'privacy.deleteBody': 'Podes eliminar a conta e todos os dados associados em Definições, dentro do jogo. A eliminação é permanente.',
     'privacy.contactTitle': 'Contacto',
     'privacy.contactBody': 'Para questões sobre privacidade ou suporte, escreve para suporte@jogarbumi.pt.',
+    'card.title': 'Bumi · Puzzle de lógica',
+    'card.description': 'Divide a grelha em retângulos e resolve o puzzle.',
+    'card.levelTitle': 'Bumi · Nível {level}',
+    'card.levelDescription': 'Consegues resolver este puzzle de lógica sem dicas?',
+    'card.dailyTitle': 'Bumi · Desafio diário {date}',
+    'card.dailyDescription': 'Resolve o desafio de hoje e compara a tua marca.',
+    'card.opening': 'A abrir Bumi…',
     'share.levelTitle': 'Bumi · Nível {level}',
     'share.levelBody': 'Consegues resolver este puzzle sem dicas?',
     'share.dailyTitle': 'Bumi · Desafio diário',
@@ -436,6 +443,13 @@ const messages: Record<SupportedLanguage, Record<string, string>> = {
     'privacy.deleteBody': 'You can delete your account and all associated data in Settings, inside the game. Deletion is permanent.',
     'privacy.contactTitle': 'Contact',
     'privacy.contactBody': 'For privacy questions or support, write to suporte@jogarbumi.pt.',
+    'card.title': 'Bumi · Logic puzzle',
+    'card.description': 'Split the grid into rectangles and solve the puzzle.',
+    'card.levelTitle': 'Bumi · Level {level}',
+    'card.levelDescription': 'Can you solve this logic puzzle without hints?',
+    'card.dailyTitle': 'Bumi · Daily challenge {date}',
+    'card.dailyDescription': 'Solve today\u2019s challenge and compare your time.',
+    'card.opening': 'Opening Bumi…',
     'share.levelTitle': 'Bumi · Level {level}',
     'share.levelBody': 'Can you solve this puzzle without hints?',
     'share.dailyTitle': 'Bumi · Daily challenge',
@@ -466,8 +480,14 @@ const messages: Record<SupportedLanguage, Record<string, string>> = {
   },
 };
 
+/**
+ * Portuguese for Portuguese speakers, English for everyone else — a Spanish or German
+ * player is better served by English than by Portuguese. No signal at all still means
+ * Portuguese: that is the case during static web rendering, and the site is pt-first.
+ */
 export function resolveLanguage(languageCode: string | null | undefined): SupportedLanguage {
-  return languageCode?.toLowerCase().startsWith('en') ? 'en' : 'pt-PT';
+  if (!languageCode) return 'pt-PT';
+  return languageCode.toLowerCase().startsWith('pt') ? 'pt-PT' : 'en';
 }
 
 export function translate(language: SupportedLanguage, key: string, variables: Variables = {}): string {
