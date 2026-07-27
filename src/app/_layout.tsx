@@ -13,7 +13,9 @@ import { initProgressSync } from '@/state/progressSync';
 import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
 import { LEVEL_META } from '@/game/levels';
 import { useChallengeStore } from '@/state/challengeStore';
-import { configureNotificationHandler } from '@/lib/dailyReminder';
+import { configureNotificationHandler, setDailyReminder } from '@/lib/dailyReminder';
+import { useProgressStore } from '@/state/progressStore';
+import { useI18n } from '@/i18n';
 
 export default function RootLayout() {
   const init = useAuthStore(s => s.init);
@@ -22,12 +24,21 @@ export default function RootLayout() {
   const linkingUrl = Linking.useLinkingURL();
   const setPendingChallenge = useChallengeStore(s => s.setPendingChallenge);
   const setPendingDailyChallenge = useChallengeStore(s => s.setPendingDailyChallenge);
+  const dailyReminderEnabled = useProgressStore(s => s.dailyReminderEnabled);
+  const { language } = useI18n();
 
   useEffect(() => {
     init();
     initProgressSync();
     configureNotificationHandler().catch(() => {});
   }, [init]);
+
+  // The reminder is scheduled once with its text baked in, so a language change would
+  // otherwise leave the player with a notification in the language they just left.
+  useEffect(() => {
+    if (!dailyReminderEnabled) return;
+    setDailyReminder(true, language, { promptForPermission: false }).catch(() => {});
+  }, [dailyReminderEnabled, language]);
 
   useEffect(() => {
     if (!linkingUrl) return;

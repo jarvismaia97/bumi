@@ -19,7 +19,16 @@ export async function configureNotificationHandler(): Promise<void> {
   });
 }
 
-export async function setDailyReminder(enabled: boolean, language: SupportedLanguage): Promise<boolean> {
+/**
+ * `promptForPermission` is off when we are only re-scheduling an already-enabled reminder
+ * (a language change), so a player whose permission was revoked is not ambushed by a
+ * system dialog on launch.
+ */
+export async function setDailyReminder(
+  enabled: boolean,
+  language: SupportedLanguage,
+  { promptForPermission = true }: { promptForPermission?: boolean } = {},
+): Promise<boolean> {
   if (Platform.OS === 'web') return false;
 
   const Notifications = await import('expo-notifications');
@@ -34,6 +43,7 @@ export async function setDailyReminder(enabled: boolean, language: SupportedLang
   if (!enabled) return true;
 
   const current = await Notifications.getPermissionsAsync();
+  if (!current.granted && !promptForPermission) return false;
   const permission = current.granted ? current : await Notifications.requestPermissionsAsync();
   if (!permission.granted) return false;
 
