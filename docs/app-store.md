@@ -69,17 +69,31 @@ with the Services ID as `sub`, an `audience` array covering both it and the bund
 and a hand-built web button. App Store guideline 4.8 governs only the iOS app, so none
 of that is needed to ship.
 
+## Build credentials
+
+Generated 2026-07-27 and stored on EAS, so builds no longer prompt for them.
+
+| Item | Value |
+| --- | --- |
+| Distribution certificate | `728702EE354F7CFBB38C7640D11D041D`, expires 2027-07-27 |
+| Provisioning profile | `GQWHJ83D78`, active |
+| Push key | created and assigned |
+
+`eas-cli` is deliberately **not** a project dependency — it pulls in
+`dtrace-provider`, whose `node-gyp rebuild` install script fails on EAS Build. The
+version floor lives in `eas.json` under `cli.version`, which is what EAS recommends.
+Invoke it as `npx eas-cli`; plain `npx eas` cannot resolve the binary.
+
 ## Blocked on
 
-1. **Rotate the web client secret.** The original was pasted into a chat transcript.
-   Reset it in APIs & Services > Credentials and update `GOOGLE_CLIENT_SECRET` in
-   Vercel. Also set `GOOGLE_CLIENT_ID` to the new web client above.
-2. **Publish the OAuth consent screen** for project `jarvis-485711`. A new project
-   starts in Testing mode, which caps sign-in at 100 listed test users and expires
-   refresh tokens after 7 days. Scopes here are only email/profile/openid, so
-   publishing needs no Google review.
-3. **App ID capability.** Confirm `pt.jogarbumi.app` has Sign in with Apple enabled in
-   the developer portal. Missing capability fails at runtime, not at build.
+1. **Disable the old Google client secret.** A new secret was added alongside it, so
+   both currently authenticate. Until the old one is disabled in Google Auth Platform >
+   Clients, the value leaked into a chat transcript still works.
+2. **App ID capability.** Confirm `pt.jogarbumi.app` has Sign in with Apple enabled in
+   the developer portal. EAS synced Push Notifications but did not report Sign in with
+   Apple. Missing capability fails at runtime, not at build.
+3. **Verify Google login end to end** on the web, with a pre-existing account, and
+   confirm it does not create a duplicate user row.
 4. `suporte@jogarbumi.pt` created and receiving mail; the support URL still points at
    the privacy page.
 
@@ -92,14 +106,14 @@ of that is needed to ship.
    above and `GOOGLE_CLIENT_SECRET` to the rotated secret.
 2. Redeploy, then **verify web Google login still works and an existing user lands on
    their existing account** — this changes both the client id array and the project.
-3. `npx eas login && npx eas init` — writes `extra.eas.projectId` into `app.json`.
-4. `npx eas build --profile development --platform ios`, install on a physical iPhone.
+3. `npx eas-cli login && npx eas-cli init` — writes `extra.eas.projectId` into `app.json`.
+4. `npx eas-cli build --profile development --platform ios`, install on a physical iPhone.
    Expo Go no longer works for this app: `@react-native-google-signin/google-signin`
    is native code, so a development build is required.
 5. Test on device: Google sign-in, Apple sign-in, account deletion, offline play,
    daily reminder. Confirm both providers land on one user row, not two.
-6. `npx eas build --profile production --platform ios`
-7. `npx eas submit --platform ios` — prompts for Apple ID plus an app-specific
+6. `npx eas-cli build --profile production --platform ios`
+7. `npx eas-cli submit --platform ios` — prompts for Apple ID plus an app-specific
    password. The `.p8` above is a Sign in with Apple key and cannot authenticate
    submission; an App Store Connect API key (Users and Access > Integrations, which
    also yields an Issuer ID) would make this non-interactive and is required for CI.
