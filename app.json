@@ -15,6 +15,12 @@
       "usesAppleSignIn": true,
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "CFBundleLocalizations": [
+          "pt-PT",
+          "en"
+        ]
       }
     },
     "android": {
@@ -69,6 +75,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3bf458e7-227b-4e48-b22e-b831cf632207"
+      }
+    },
+    "owner": "primamaster"
   }
 }
