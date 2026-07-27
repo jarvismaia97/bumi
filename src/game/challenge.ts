@@ -1,4 +1,6 @@
-import { translate, type SupportedLanguage } from '@/i18n/messages';
+// Relative, not the `@/` alias: this module is reached from api/share.ts, and Vercel's
+// function builder compiles each file without reading tsconfig paths. See share.paths.test.ts.
+import { translate, type SupportedLanguage } from '../i18n/messages';
 
 export function getChallengeLevelIndex(value: unknown, totalLevels: number): number | null {
   const raw = Array.isArray(value) ? value[0] : value;
