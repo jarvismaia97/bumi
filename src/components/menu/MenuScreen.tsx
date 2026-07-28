@@ -80,30 +80,28 @@ function GoalCard({ title, goal, reward, doneLabel, accent }: { title: string; g
   const remaining = Math.max(goal.target - goal.done, 0);
 
   return (
-    <View style={[styles.weeklyGoal, { backgroundColor: theme.surface, borderColor: goal.complete ? accent : theme.gridSep }]}>
-      <View style={styles.weeklyTopRow}>
-        <View style={styles.weeklyTitleRow}>
-          <Flame size={17} color={accent} strokeWidth={2.3} />
-          <Text style={[styles.weeklyTitle, { color: theme.text }]}>{title}</Text>
-        </View>
-        <Text style={[styles.weeklyCount, { color: theme.text }]}>{Math.min(goal.done, goal.target)} / {goal.target}</Text>
+    <View style={[styles.goalCard, { backgroundColor: theme.surface, borderColor: goal.complete ? accent : theme.gridSep }]}>
+      <View style={styles.goalTitleRow}>
+        <Flame size={15} color={accent} strokeWidth={2.3} />
+        <Text style={[styles.goalTitle, { color: theme.text }]}>{title}</Text>
       </View>
-      <View style={[styles.weeklyBar, { backgroundColor: theme.gridSep }]}>
-        <View style={[styles.weeklyBarFill, { width: `${filled * 100}%`, backgroundColor: accent }]} />
+      {/* Half-width leaves no room for a count beside the title, so the card stacks like the
+          stat tiles above it: number first, then the detail underneath. */}
+      <Text style={[styles.goalCount, { color: theme.text }]}>{Math.min(goal.done, goal.target)} / {goal.target}</Text>
+      <View style={[styles.goalBar, { backgroundColor: theme.gridSep }]}>
+        <View style={[styles.goalBarFill, { width: `${filled * 100}%`, backgroundColor: accent }]} />
       </View>
-      <View style={styles.goalFooter}>
-        <Text style={[styles.weeklyDetail, { color: theme.sub }]}>
-          {goal.complete
-            ? doneLabel
-            : t('menu.remainingDaily', { count: remaining, label: t(remaining === 1 ? 'menu.dailyChallenge' : 'menu.dailyChallenges') })}
+      <Text style={[styles.goalDetail, { color: theme.sub }]}>
+        {goal.complete
+          ? doneLabel
+          : t('menu.remainingDaily', { count: remaining, label: t(remaining === 1 ? 'menu.dailyChallenge' : 'menu.dailyChallenges') })}
+      </Text>
+      {/* The reward is the point of the goal, so it is stated up front rather than on arrival. */}
+      {!goal.complete && (
+        <Text style={[styles.goalReward, { color: accent }]}>
+          {t('menu.goalReward', { count: reward, label: t(reward === 1 ? 'menu.hintOne' : 'menu.hintMany') })}
         </Text>
-        {/* The reward is the point of the goal, so it is stated up front rather than on arrival. */}
-        {!goal.complete && (
-          <Text style={[styles.goalReward, { color: accent }]}>
-            {t('menu.goalReward', { count: reward, label: t(reward === 1 ? 'menu.hintOne' : 'menu.hintMany') })}
-          </Text>
-        )}
-      </View>
+      )}
     </View>
   );
 }
@@ -171,20 +169,22 @@ export function MenuScreen({
         <Text style={[styles.islandProgressText, { color: theme.sub }]}>{t('menu.islands', { completed: completedIslandCount, total: islandTotal })}</Text>
       </View>
 
-      <GoalCard
-        title={t('menu.weeklyGoal')}
-        goal={weekly}
-        reward={WEEKLY_REWARD_HINTS}
-        doneLabel={t('menu.weeklyDone')}
-        accent={semantic.streak}
-      />
-      <GoalCard
-        title={t('menu.monthlyGoal')}
-        goal={monthly}
-        reward={MONTHLY_REWARD_HINTS}
-        doneLabel={t('menu.monthlyDone')}
-        accent={theme.accent}
-      />
+      <View style={styles.goalsRow}>
+        <GoalCard
+          title={t('menu.weeklyGoal')}
+          goal={weekly}
+          reward={WEEKLY_REWARD_HINTS}
+          doneLabel={t('menu.weeklyDone')}
+          accent={semantic.streak}
+        />
+        <GoalCard
+          title={t('menu.monthlyGoal')}
+          goal={monthly}
+          reward={MONTHLY_REWARD_HINTS}
+          doneLabel={t('menu.monthlyDone')}
+          accent={theme.accent}
+        />
+      </View>
 
       <View style={styles.menuBtns}>
         <AnimatedPressable accessibilityRole="button" style={[styles.playBtn, { backgroundColor: theme.accent }]} onPress={onStartGame}>
@@ -248,16 +248,15 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 10, fontWeight: '600', marginTop: 2 },
   islandProgress: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 20 },
   islandProgressText: { flexShrink: 1, minWidth: 0, fontSize: 12, fontWeight: '700' },
-  weeklyGoal: { width: '100%', maxWidth: 320, borderWidth: 1.5, borderRadius: 8, padding: 13 },
-  weeklyTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  weeklyTitleRow: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  weeklyTitle: { flexShrink: 1, minWidth: 0, fontSize: 13, fontWeight: '700' },
-  weeklyCount: { flexShrink: 0, fontSize: 13, fontWeight: '800' },
-  weeklyBar: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 10 },
-  weeklyBarFill: { height: '100%', borderRadius: 3 },
-  weeklyDetail: { flexShrink: 1, minWidth: 0, fontSize: 11 },
-  goalFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 7 },
-  goalReward: { fontSize: 11, fontWeight: '800', flexShrink: 0 },
+  goalsRow: { flexDirection: 'row', alignItems: 'stretch', width: '100%', maxWidth: 320, gap: 8 },
+  goalCard: { flex: 1, minWidth: 0, borderWidth: 1.5, borderRadius: 8, padding: 12 },
+  goalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  goalTitle: { flexShrink: 1, minWidth: 0, fontSize: 12, fontWeight: '700' },
+  goalCount: { fontSize: 18, fontWeight: '800', marginTop: 5 },
+  goalBar: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 7 },
+  goalBarFill: { height: '100%', borderRadius: 3 },
+  goalDetail: { fontSize: 10, marginTop: 7 },
+  goalReward: { fontSize: 10, fontWeight: '800', marginTop: 3 },
   archiveBtn: { borderWidth: 1.5, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center' },
   archiveLabel: { fontSize: 13, fontWeight: '700' },
   archiveDetail: { fontSize: 11, marginTop: 2 },
