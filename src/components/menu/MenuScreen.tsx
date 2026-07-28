@@ -16,6 +16,9 @@ import { SettingsSheet, type SettingsSheetHandle } from '@/components/overlays/S
 import { AchievementsSheet, type AchievementsSheetHandle } from '@/components/overlays/AchievementsSheet';
 import { PrivacySheet, type PrivacySheetHandle } from '@/components/overlays/PrivacySheet';
 import { LanguageSheet, type LanguageSheetHandle } from '@/components/overlays/LanguageSheet';
+import { DailyArchiveSheet, type DailyArchiveSheetHandle } from '@/components/overlays/DailyArchiveSheet';
+import { countMissedDays } from '@/game/archive';
+import { useProgressStore } from '@/state/progressStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
@@ -36,6 +39,7 @@ interface MenuScreenProps {
   campaignComplete: boolean;
   onStartGame: () => void;
   onStartDaily: () => void;
+  onStartDailyFor: (dateKey: string) => void;
 }
 
 function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -118,6 +122,7 @@ export function MenuScreen({
   campaignComplete,
   onStartGame,
   onStartDaily,
+  onStartDailyFor,
 }: MenuScreenProps) {
   const theme = useThemeTokens();
   const semantic = useSemanticTokens();
@@ -128,6 +133,8 @@ export function MenuScreen({
   const achievementsRef = useRef<AchievementsSheetHandle>(null);
   const privacyRef = useRef<PrivacySheetHandle>(null);
   const languageRef = useRef<LanguageSheetHandle>(null);
+  const archiveRef = useRef<DailyArchiveSheetHandle>(null);
+  const missedDays = countMissedDays(useProgressStore(state => state.dailyCompletionDates));
 
   const daily = dailyDone
     ? { fg: semantic.success, bg: semantic.successSurface, border: semantic.successBorder }
@@ -198,6 +205,17 @@ export function MenuScreen({
             {dailyStreak ? t('menu.streak', { count: dailyStreak, label: t(dailyStreak === 1 ? 'menu.day' : 'menu.days') }) : t('menu.startStreak')}
           </Text>
         </AnimatedPressable>
+
+        <AnimatedPressable
+          accessibilityRole="button"
+          style={[styles.archiveBtn, { borderColor: theme.gridSep }]}
+          onPress={() => archiveRef.current?.present()}
+        >
+          <Text style={[styles.archiveLabel, { color: theme.text }]}>{t('archive.open')}</Text>
+          <Text style={[styles.archiveDetail, { color: theme.sub }]}>
+            {missedDays ? t('archive.openDetail', { count: missedDays }) : t('archive.allDone')}
+          </Text>
+        </AnimatedPressable>
       </View>
 
         <AuthPill onOpenSettings={() => settingsRef.current?.present()} />
@@ -213,6 +231,7 @@ export function MenuScreen({
       <AchievementsSheet ref={achievementsRef} />
       <PrivacySheet ref={privacyRef} />
       <LanguageSheet ref={languageRef} />
+      <DailyArchiveSheet ref={archiveRef} onSelectDay={onStartDailyFor} />
     </>
   );
 }
@@ -239,6 +258,9 @@ const styles = StyleSheet.create({
   weeklyDetail: { flexShrink: 1, minWidth: 0, fontSize: 11 },
   goalFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 7 },
   goalReward: { fontSize: 11, fontWeight: '800', flexShrink: 0 },
+  archiveBtn: { borderWidth: 1.5, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center' },
+  archiveLabel: { fontSize: 13, fontWeight: '700' },
+  archiveDetail: { fontSize: 11, marginTop: 2 },
   menuBtns: { gap: 8, width: '100%', maxWidth: 320 },
   playBtn: { borderRadius: 8, paddingVertical: 13, paddingHorizontal: 15, alignItems: 'center', flexDirection: 'row', gap: 8 },
   campaignCopy: { flex: 1 },

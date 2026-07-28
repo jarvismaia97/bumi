@@ -293,6 +293,9 @@ export default function GameScreen() {
         campaignComplete={campaignComplete}
         onStartGame={progress.solvedCount() === 0 ? startTutorial : () => startCampaign(campaignIndex)}
         onStartDaily={() => startDaily()}
+        onStartDailyFor={dateKey =>
+          startDaily(new Date(Number(dateKey.slice(0, 4)), Number(dateKey.slice(4, 6)) - 1, Number(dateKey.slice(6, 8))))
+        }
       />
       </Animated.View>
     );
