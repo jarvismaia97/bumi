@@ -91,12 +91,13 @@ Invoke it as `npx eas-cli`; plain `npx eas` cannot resolve the binary.
    Clients, the value leaked into a chat transcript still works.
 2. **Verify Google login end to end** on the web, with a pre-existing account, and
    confirm it does not create a duplicate user row.
-3. `suporte@jogarbumi.pt` created and receiving mail; the support URL still points at
-   the privacy page.
 
-Sign in with Apple was the other open item and is now closed: signing in works on a real
-device, so the App ID carries the capability. That one could only be checked at runtime —
-EAS synced Push Notifications but never reported the Apple capability either way.
+Two items are now closed. Sign in with Apple works on a real device, so the App ID carries
+the capability — that could only ever be checked at runtime, since EAS syncs Push
+Notifications but never reports the Apple capability either way. And `suporte@jogarbumi.pt`
+is live and receiving mail; the support URL stays pointed at the privacy page on purpose,
+because that page states the address (`privacy.contactBody`), which is what Apple asks a
+support URL to provide.
 
 ## Before submission
 
