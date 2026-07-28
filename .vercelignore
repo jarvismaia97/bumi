@@ -1,0 +1,4 @@
+# Vercel turns every .ts under api/ into a serverless function, so the test files
+# next to the handlers were being deployed as live endpoints (and type-checked in
+# the build). They are not part of the deployment.
+api/**/*.test.ts

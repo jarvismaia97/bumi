@@ -34,10 +34,10 @@ interface SettingsSheetProps {
 }
 
 /** Native names, so a player who lands in the wrong language can still find their own. */
-const LANGUAGE_OPTIONS: { value: LanguagePreference; label: string; flag: string }[] = [
-  { value: 'auto', label: 'Auto', flag: '🌐' },
-  { value: 'pt-PT', label: 'Português', flag: '🇵🇹' },
-  { value: 'en', label: 'English', flag: '🇬🇧' },
+const LANGUAGE_OPTIONS: { value: LanguagePreference; label: string }[] = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'pt-PT', label: 'Português' },
+  { value: 'en', label: 'English' },
 ];
 
 /** Points at the list it reveals. Rotation only — transform is the cheap property. */
@@ -201,14 +201,11 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
                     }}
                     accessibilityState={{ selected }}
                   >
-                    <View style={styles.rowCopy}>
-                      <Text style={styles.flag}>{option.flag}</Text>
-                      <View style={styles.groupOptionCopy}>
-                        <Text style={[styles.rowLabel, { color: theme.text }]}>{optionLabel(option)}</Text>
-                        {option.value === 'auto' && (
-                          <Text style={[styles.rowDetail, { color: theme.sub }]}>{t('settings.languageAutoDetail')}</Text>
-                        )}
-                      </View>
+                    <View style={styles.groupOptionCopy}>
+                      <Text style={[styles.rowLabel, { color: theme.text }]}>{optionLabel(option)}</Text>
+                      {option.value === 'auto' && (
+                        <Text style={[styles.rowDetail, { color: theme.sub }]}>{t('settings.languageAutoDetail')}</Text>
+                      )}
                     </View>
                     {selected && <Check size={18} color={theme.accent} strokeWidth={2.8} />}
                   </Pressable>
@@ -285,12 +282,13 @@ const styles = StyleSheet.create({
   rowCopy: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 },
   rowLabel: { fontSize: 14, fontWeight: '700' },
   rowDetail: { fontSize: 11, lineHeight: 15, marginTop: 2 },
-  flag: { fontSize: 18, width: 18, textAlign: 'center' },
   group: { borderWidth: 1.5, borderRadius: 8, overflow: 'hidden' },
   groupTrigger: { minHeight: 52, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   groupValue: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
   groupValueText: { fontSize: 13, fontWeight: '600' },
-  groupOption: { minHeight: 52, paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // 44 = 14 padding + the 18pt icon column + its 12pt gap, so option labels sit under
+  // the trigger's label instead of under its icon.
+  groupOption: { minHeight: 52, paddingLeft: 44, paddingRight: 14, paddingVertical: 10, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   groupOptionCopy: { flex: 1, minWidth: 0 },
   dangerText: { color: '#b03060', fontSize: 14, fontWeight: '700' },
   error: { color: '#b03060', fontSize: 12, lineHeight: 17, marginTop: 4 },
