@@ -199,11 +199,11 @@ export default function GameScreen() {
         setDailyResult(formatSummary(durationMs, hintsUsed, mistakes, t));
 
         let tier: CelebrationTier = 'normal';
-        if (dailyChallengeDate === getDailyDateKey()) {
+        {
           // Read before marking: afterwards today is already in the list and the transition
           // that earned the reward is gone.
-          const closed = goalsCompletedBy(progress.dailyCompletionDates, getDailyDateKey());
-          progress.markDailyDone();
+          const closed = goalsCompletedBy(progress.dailyCompletionDates, dailyChallengeDate);
+          progress.markDailyDone(dailyChallengeDate);
           tier = highestTier(
             closed.monthly ? 'island' : null,
             closed.weekly ? 'gold' : null,

@@ -32,7 +32,7 @@ interface ProgressState {
   dailyReminderEnabled: boolean;
   markSolved: (idx: number) => boolean; // returns true if this was a new solve
   spendHint: () => void;
-  markDailyDone: () => void;
+  markDailyDone: (dateKey?: string) => void;
   isDailyDoneToday: () => boolean;
   dailyStreak: () => number;
   setLevelMedal: (idx: number, medal: Medal) => boolean;
@@ -72,15 +72,21 @@ export const useProgressStore = create<ProgressState>()(
       spendHint: () => set(s => ({ hints: normalizeHintCount(s.hints - 1) })),
 
 
-      markDailyDone: () => {
-        const today = getDailyDateKey();
+      /**
+       * `dateKey` is the puzzle's own date, not the day it was played: a completion belongs
+       * to the day it solves. Catching up on a missed daily from the archive therefore counts
+       * towards the month and can close a gap in the streak — the streak asks whether each
+       * day's puzzle is done, not whether the app was opened that day.
+       */
+      markDailyDone: (dateKey = getDailyDateKey()) => {
         set(s => {
           // Paid on the transition, like a milestone level, so no record of which goals were
           // already rewarded has to be kept or synced.
-          const reward = goalRewardHints(goalsCompletedBy(s.dailyCompletionDates, today));
+          const reward = goalRewardHints(goalsCompletedBy(s.dailyCompletionDates, dateKey));
           return {
-            dailyCompletedDate: today,
-            dailyCompletionDates: Array.from(new Set([...s.dailyCompletionDates, today])).sort(),
+            // Only today's puzzle changes what "done today" means.
+            dailyCompletedDate: dateKey === getDailyDateKey() ? dateKey : s.dailyCompletedDate,
+            dailyCompletionDates: Array.from(new Set([...s.dailyCompletionDates, dateKey])).sort(),
             hints: normalizeHintCount(s.hints + reward),
           };
         });
