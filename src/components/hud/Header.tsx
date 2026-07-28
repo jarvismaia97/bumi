@@ -32,9 +32,7 @@ interface HeaderProps {
 type BadgeFamily = 'danger' | 'warning' | 'info';
 
 const BADGES: Partial<Record<Mode, { labelKey: string; family: BadgeFamily }>> = {
-  training: { labelKey: 'game.badgeTraining', family: 'danger' },
   daily: { labelKey: 'game.badgeDaily', family: 'warning' },
-  infinite: { labelKey: 'game.badgeInfinite', family: 'info' },
 };
 
 function badgeColors(semantic: SemanticTokens, family: BadgeFamily) {

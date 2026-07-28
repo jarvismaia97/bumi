@@ -8,7 +8,6 @@ import { AppState, Platform } from 'react-native';
 
 type RemoteProgress = {
   hints: number;
-  infiniteBest: number;
   dailyCompletedDate: string | null;
   dailyCompletionDates: string[];
 };
@@ -52,7 +51,6 @@ async function pushProgress(): Promise<void> {
   await apiRequest<{ ok: true }>('POST', {
     progress: {
       hints: s.hints,
-      infiniteBest: s.infiniteBest,
       dailyCompletedDate: s.dailyCompletedDate,
       dailyCompletionDates: s.dailyCompletionDates,
     },
@@ -103,7 +101,6 @@ async function mergeFromRemote(): Promise<void> {
     solvedMap: mergedSolvedMap,
     solvedDateMap: mergedSolvedDateMap,
     hints: normalizeHintCount(Math.max(local.hints, remote.progress?.hints ?? 0)),
-    infiniteBest: Math.max(local.infiniteBest, remote.progress?.infiniteBest ?? 0),
     dailyCompletedDate: mergedDaily,
     dailyCompletionDates: mergedDailyDates,
     levelMedals: mergedLevelMedals,
@@ -223,7 +220,6 @@ export function initProgressSync(): void {
 
     if (
       state.hints !== prevState.hints ||
-      state.infiniteBest !== prevState.infiniteBest ||
       state.dailyCompletedDate !== prevState.dailyCompletedDate ||
       state.dailyCompletionDates !== prevState.dailyCompletionDates
     ) {

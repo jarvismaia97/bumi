@@ -54,7 +54,6 @@ export default function GameScreen() {
   const screen = useUIStore(s => s.screen);
   const mode = useUIStore(s => s.mode);
   const curLvl = useUIStore(s => s.curLvl);
-  const infiniteCount = useUIStore(s => s.infiniteCount);
   const goToMenu = useUIStore(s => s.goToMenu);
   const enterGame = useUIStore(s => s.enterGame);
   const setCurLvl = useUIStore(s => s.setCurLvl);
@@ -191,11 +190,6 @@ export default function GameScreen() {
         setTutorialWon(true);
         return;
       }
-      if (mode === 'infinite') {
-        progress.setInfiniteBest(infiniteCount + 1);
-        presentWinSheet();
-        return;
-      }
       if (mode === 'daily') {
         const durationMs = Math.max(0, Date.now() - startedAt);
         setDailyResult(formatSummary(durationMs, hintsUsed, mistakes, t));
@@ -292,36 +286,32 @@ export default function GameScreen() {
   const meta = mode === 'campaign' ? LEVEL_META[curLvl] : null;
   const isTodayDaily = mode === 'daily' && dailyChallengeDate === getDailyDateKey();
   const levelLabel =
-    mode === 'infinite'
-      ? t('game.infinite')
-      : mode === 'daily'
-        ? t('game.today')
-        : mode === 'tutorial'
-          ? t('game.tutorialLevel', { current: tutorialLevelIndex + 1, total: TUTORIAL_LEVELS.length })
-          : t('game.level', { level: curLvl + 1 });
+    mode === 'daily'
+      ? t('game.today')
+      : mode === 'tutorial'
+        ? t('game.tutorialLevel', { current: tutorialLevelIndex + 1, total: TUTORIAL_LEVELS.length })
+        : t('game.level', { level: curLvl + 1 });
   const diffLabel =
     mode === 'daily'
       ? t('game.dailyLabel')
-      : mode === 'infinite'
-        ? t('game.infiniteMeta', { count: infiniteCount + 1, size: level.size })
-        : mode === 'tutorial'
-          ? t('game.learnMeta', { rows: levelRows, columns: levelColumns })
-          : meta
-            ? `${meta.milestone ? `${t('game.extraHard')} · ` : ''}${t(`difficulty.${meta.label}`)} · ${meta.size}×${meta.size}`
-            : '';
+      : mode === 'tutorial'
+        ? t('game.learnMeta', { rows: levelRows, columns: levelColumns })
+        : meta
+          ? `${meta.milestone ? `${t('game.extraHard')} · ` : ''}${t(`difficulty.${meta.label}`)} · ${meta.size}×${meta.size}`
+          : '';
 
   const isNewSolve = mode === 'campaign' && progress.isSolved(curLvl);
   const hintDisabled =
-    won || (mode !== 'training' && mode !== 'tutorial' && (curLvl === 0 && mode === 'campaign' ? true : progress.hints <= 0));
+    won || (mode !== 'tutorial' && (curLvl === 0 && mode === 'campaign' ? true : progress.hints <= 0));
   const hintLabel =
-    mode === 'training' || mode === 'tutorial'
+    mode === 'tutorial'
       ? t('game.hint')
       : mode === 'campaign' && curLvl === 0
         ? t('game.noHint')
         : t('game.hintWithCount', { count: progress.hints });
 
   function onHintPress() {
-    if (mode === 'training' || mode === 'tutorial') {
+    if (mode === 'tutorial') {
       if (hint()) showShareNotice(t('game.hintApplied'));
       return;
     }
@@ -394,11 +384,9 @@ export default function GameScreen() {
         subtitle={
           mode === 'daily'
             ? new Date(Number(dailyChallengeDate.slice(0, 4)), Number(dailyChallengeDate.slice(4, 6)) - 1, Number(dailyChallengeDate.slice(6, 8))).toLocaleDateString(language, { day: 'numeric', month: 'long' })
-            : mode === 'infinite'
-              ? t('win.infiniteSubtitle', { count: infiniteCount + 1 })
-              : meta
-                ? t('win.levelSubtitle', { level: curLvl + 1, difficulty: t(`difficulty.${meta.label}`) })
-                : ''
+            : meta
+              ? t('win.levelSubtitle', { level: curLvl + 1, difficulty: t(`difficulty.${meta.label}`) })
+              : ''
         }
         showHintReward={mode === 'campaign' && isNewSolve && !!meta?.milestone}
         isDaily={isTodayDaily}
@@ -409,13 +397,7 @@ export default function GameScreen() {
         dailyStreak={progress.dailyStreak()}
         dailyCountdown={dailyCountdown}
         nextLabel={
-          mode === 'daily'
-            ? t('win.backToMenu')
-            : mode === 'infinite'
-              ? t('win.next')
-              : mode === 'training'
-                ? t('win.playAgain')
-                : t('win.nextLevel')
+          mode === 'daily' ? t('win.backToMenu') : t('win.nextLevel')
         }
         onReview={() => winSheetRef.current?.dismiss()}
         onNext={onNextLevel}

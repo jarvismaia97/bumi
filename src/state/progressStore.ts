@@ -25,7 +25,6 @@ interface ProgressState {
   solvedMap: Record<number, true>;
   solvedDateMap: Record<number, string>;
   hints: number;
-  infiniteBest: number;
   dailyCompletedDate: string | null;
   dailyCompletionDates: string[];
   levelMedals: Record<number, Medal>;
@@ -33,7 +32,6 @@ interface ProgressState {
   dailyReminderEnabled: boolean;
   markSolved: (idx: number) => boolean; // returns true if this was a new solve
   spendHint: () => void;
-  setInfiniteBest: (count: number) => void;
   markDailyDone: () => void;
   isDailyDoneToday: () => boolean;
   dailyStreak: () => number;
@@ -46,15 +44,14 @@ interface ProgressState {
   reset: () => void;
 }
 
-// This is the fix for the original prototype's core bug: `solved`, `hints`, and
-// `infiniteCount` used to be plain in-memory JS variables that reset on every reload.
+// This is the fix for the original prototype's core bug: `solved` and `hints` used to be
+// plain in-memory JS variables that reset on every reload.
 export const useProgressStore = create<ProgressState>()(
   persist(
     (set, get) => ({
       solvedMap: {},
       solvedDateMap: {},
       hints: INITIAL_HINTS,
-      infiniteBest: 0,
       dailyCompletedDate: null,
       dailyCompletionDates: [],
       levelMedals: {},
@@ -74,7 +71,6 @@ export const useProgressStore = create<ProgressState>()(
 
       spendHint: () => set(s => ({ hints: normalizeHintCount(s.hints - 1) })),
 
-      setInfiniteBest: count => set(s => ({ infiniteBest: Math.max(s.infiniteBest, count) })),
 
       markDailyDone: () => {
         const today = getDailyDateKey();
@@ -115,7 +111,6 @@ export const useProgressStore = create<ProgressState>()(
         solvedMap: {},
         solvedDateMap: {},
         hints: INITIAL_HINTS,
-        infiniteBest: 0,
         dailyCompletedDate: null,
         dailyCompletionDates: [],
         levelMedals: {},
