@@ -18,7 +18,7 @@ import { useAuthStore } from '@/state/authStore';
 import { useLanguageStore } from '@/state/languageStore';
 import { useSyncStore } from '@/state/syncStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
-import { setDailyReminder } from '@/lib/dailyReminder';
+import { refreshDailyReminders } from '@/lib/dailyReminder';
 import { playHaptic } from '@/lib/haptics';
 import { useProgressStore } from '@/state/progressStore';
 import { useI18n } from '@/i18n';
@@ -91,7 +91,13 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
   }
 
   async function toggleDailyReminder(enabled: boolean) {
-    const scheduled = await setDailyReminder(enabled, language);
+    const progress = useProgressStore.getState();
+    const scheduled = await refreshDailyReminders({
+      enabled,
+      language,
+      dailyDoneToday: progress.isDailyDoneToday(),
+      dailyStreak: progress.dailyStreak(),
+    });
     if (scheduled) {
       playHaptic('selection');
       setDailyReminderEnabled(enabled);

@@ -3,7 +3,7 @@ import { forwardRef } from 'react';
 import { View } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { playHaptic } from '@/lib/haptics';
-import { setDailyReminder } from '@/lib/dailyReminder';
+import { refreshDailyReminders } from '@/lib/dailyReminder';
 import { useAuthStore } from '@/state/authStore';
 import { useLanguageStore } from '@/state/languageStore';
 import { useProgressStore } from '@/state/progressStore';
@@ -15,7 +15,7 @@ vi.mock('@/lib/haptics', () => ({ playHaptic: vi.fn() }));
 
 // Scheduling touches expo-notifications and the permission prompt; the tests drive its
 // answer directly because the answer is what decides the feedback.
-vi.mock('@/lib/dailyReminder', () => ({ setDailyReminder: vi.fn() }));
+vi.mock('@/lib/dailyReminder', () => ({ refreshDailyReminders: vi.fn() }));
 
 vi.mock('expo-router', () => ({ router: { push: vi.fn() } }));
 
@@ -57,7 +57,7 @@ function renderSheet() {
 }
 
 beforeEach(() => {
-  vi.mocked(setDailyReminder).mockResolvedValue(true);
+  vi.mocked(refreshDailyReminders).mockResolvedValue(true);
   // The switch starts off, so every test's click is a request to turn the reminder on.
   useProgressStore.setState({ dailyReminderEnabled: false });
   useAuthStore.setState({
@@ -93,7 +93,7 @@ describe('SettingsSheet haptics', () => {
 
   // The switch springs back rather than turning on, so success feedback here would be a lie.
   it('warns instead when the reminder could not be scheduled', async () => {
-    vi.mocked(setDailyReminder).mockResolvedValue(false);
+    vi.mocked(refreshDailyReminders).mockResolvedValue(false);
     renderSheet();
 
     fireEvent.click(screen.getByRole('switch'));

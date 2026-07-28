@@ -12,10 +12,10 @@ import { useAppearance } from '@/state/appearanceStore';
 import { useAuthStore } from '@/state/authStore';
 import { initProgressSync } from '@/state/progressSync';
 import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
-import { getDailyDateKey } from '@/game/daily';
+import { getDailyDateKey, getDailyStreak } from '@/game/daily';
 import { LEVEL_META } from '@/game/levels';
 import { useChallengeStore } from '@/state/challengeStore';
-import { configureNotificationHandler, onNotificationOpened, REMINDER_SCREEN, setDailyReminder } from '@/lib/dailyReminder';
+import { configureNotificationHandler, onNotificationOpened, refreshDailyReminders, REMINDER_SCREEN } from '@/lib/dailyReminder';
 import { useProgressStore } from '@/state/progressStore';
 import { useI18n } from '@/i18n';
 
@@ -27,6 +27,8 @@ export default function RootLayout() {
   const setPendingChallenge = useChallengeStore(s => s.setPendingChallenge);
   const setPendingDailyChallenge = useChallengeStore(s => s.setPendingDailyChallenge);
   const dailyReminderEnabled = useProgressStore(s => s.dailyReminderEnabled);
+  const dailyCompletedDate = useProgressStore(s => s.dailyCompletedDate);
+  const dailyCompletionDates = useProgressStore(s => s.dailyCompletionDates);
   const appearance = useAppearance();
   const { language } = useI18n();
 
@@ -38,10 +40,19 @@ export default function RootLayout() {
 
   // The reminder is scheduled once with its text baked in, so a language change would
   // otherwise leave the player with a notification in the language they just left.
+  // Re-armed on launch and whenever the day's state changes: the schedule depends on
+  // whether today is already played and on how long the streak is, and iOS only lets the
+  // app schedule while it is running.
   useEffect(() => {
     if (!dailyReminderEnabled) return;
-    setDailyReminder(true, language, { promptForPermission: false }).catch(() => {});
-  }, [dailyReminderEnabled, language]);
+    refreshDailyReminders({
+      enabled: true,
+      language,
+      dailyDoneToday: dailyCompletedDate === getDailyDateKey(),
+      dailyStreak: getDailyStreak(dailyCompletionDates),
+      promptForPermission: false,
+    }).catch(() => {});
+  }, [dailyReminderEnabled, language, dailyCompletedDate, dailyCompletionDates]);
 
   // The reminder carries the screen it wants opened; without this the payload was written
   // and never read, so tapping it just landed on the menu like the app icon does.
