@@ -22,7 +22,18 @@ describe('PlayerAvatarTile', () => {
   it('paints exactly the cells the generator marked', () => {
     const { cells } = playerAvatar('user_abc123');
     const { container } = render(<PlayerAvatarTile userId="user_abc123" />);
-    expect(paintedCells(container)).toEqual(cells);
+    expect(paintedCells(container)).toEqual(cells.map(cell => cell !== null));
+  });
+
+  it('uses more than one ink, so a tile is not a two-colour silhouette', () => {
+    const { container } = render(<PlayerAvatarTile userId="user_abc123" />);
+    const inks = new Set(
+      Array.from(container.querySelectorAll('div'))
+        .filter(node => node.children.length === 0)
+        .map(node => node.style.backgroundColor)
+        .filter(colour => colour !== TRANSPARENT),
+    );
+    expect(inks.size).toBeGreaterThan(1);
   });
 
   it('gives two different accounts different tiles', () => {

@@ -9,7 +9,7 @@ interface PlayerAvatarProps {
 
 /** Mirrored mosaic derived from the account id — the player's stand-in for a photo. */
 export function PlayerAvatarTile({ userId, size = 40 }: PlayerAvatarProps) {
-  const { cells, fill, ink } = useMemo(() => playerAvatar(userId), [userId]);
+  const { cells, fill } = useMemo(() => playerAvatar(userId), [userId]);
   const padding = Math.round(size * 0.14);
   const cellSize = (size - padding * 2) / AVATAR_GRID;
 
@@ -33,7 +33,7 @@ export function PlayerAvatarTile({ userId, size = 40 }: PlayerAvatarProps) {
               style={{
                 width: cellSize,
                 height: cellSize,
-                backgroundColor: cells[row * AVATAR_GRID + col] ? ink : 'transparent',
+                backgroundColor: cells[row * AVATAR_GRID + col] ?? 'transparent',
               }}
             />
           ))}

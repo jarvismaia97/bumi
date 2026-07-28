@@ -66,3 +66,44 @@ describe('playerAvatar', () => {
     expect(fills.size).toBeGreaterThan(5);
   });
 });
+
+describe('avatar colour', () => {
+  it('paints a tile in more than one ink', () => {
+    const inks = new Set(playerAvatar('user_abc123').cells.filter(Boolean));
+    expect(inks.size).toBeGreaterThan(1);
+  });
+
+  it('never repeats a hue family within one tile', () => {
+    // Picking by stride kept landing on three blues, because the palette holds several.
+    const hueFamily = (hex: string) => {
+      const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      if (max === min) return -1;
+      const d = max - min;
+      const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      return Math.floor(h);
+    };
+
+    for (let i = 0; i < 300; i++) {
+      const inks = [...new Set(playerAvatar(`user_${i}`).cells.filter(Boolean))] as string[];
+      expect(new Set(inks.map(hueFamily)).size).toBe(inks.length);
+    }
+  });
+
+  it('varies how full a tile is instead of fixing every one at the same ratio', () => {
+    const densities = new Set(
+      Array.from({ length: 200 }, (_, i) => playerAvatar(`user_${i}`).cells.filter(Boolean).length),
+    );
+    expect(densities.size).toBeGreaterThan(4);
+  });
+
+  it('keeps the colours mirrored along with the shape', () => {
+    const { cells } = playerAvatar('user_abc123');
+    for (let row = 0; row < AVATAR_GRID; row++) {
+      for (let col = 0; col < AVATAR_GRID; col++) {
+        expect(cells[row * AVATAR_GRID + col]).toBe(cells[row * AVATAR_GRID + (AVATAR_GRID - 1 - col)]);
+      }
+    }
+  });
+});
