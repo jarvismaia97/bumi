@@ -37,7 +37,7 @@ afterEach(() => {
 
 describe('ThemePickerSheet haptics', () => {
   it('answers a theme pick with selection feedback', () => {
-    render(<ThemePickerSheet onBack={() => {}} />);
+    render(<ThemePickerSheet />);
 
     fireEvent.click(screen.getByLabelText('Usar tema Clássico'));
 
@@ -47,7 +47,7 @@ describe('ThemePickerSheet haptics', () => {
   // Going back changes nothing; the sheet sliding away is already the answer. Buzzing here
   // is how an interface starts feeling cheap.
   it('leaves the back button silent', () => {
-    render(<ThemePickerSheet onBack={() => {}} />);
+    render(<ThemePickerSheet />);
 
     fireEvent.click(screen.getByLabelText('Voltar a definições'));
 
@@ -57,7 +57,7 @@ describe('ThemePickerSheet haptics', () => {
 
 describe('ThemePickerSheet', () => {
   it('offers one row per theme', () => {
-    render(<ThemePickerSheet onBack={() => {}} />);
+    render(<ThemePickerSheet />);
     // One button per theme plus the back button.
     expect(screen.getAllByRole('button')).toHaveLength(THEME_OPTIONS.length + 1);
   });
@@ -65,7 +65,7 @@ describe('ThemePickerSheet', () => {
   // The rows are sized for the resting text size. Pinning their height instead of their
   // minimum is what clips a label once the system font size grows.
   it('never pins the height of a box that holds text', () => {
-    const { container } = render(<ThemePickerSheet onBack={() => {}} />);
+    const { container } = render(<ThemePickerSheet />);
     const pinned = textBoxes(container).filter(node => {
       const height = getComputedStyle(node).height;
       return height !== '' && height !== 'auto';
@@ -74,7 +74,7 @@ describe('ThemePickerSheet', () => {
   });
 
   it('keeps the 48pt touch target as a minimum the row can grow past', () => {
-    render(<ThemePickerSheet onBack={() => {}} />);
+    render(<ThemePickerSheet />);
     const row = screen.getByLabelText('Usar tema Clássico');
     const { minHeight, paddingTop, paddingBottom } = getComputedStyle(row);
     expect(minHeight).toBe('48px');
@@ -84,7 +84,7 @@ describe('ThemePickerSheet', () => {
   });
 
   it('lets every theme name wrap instead of truncating it', () => {
-    const { container } = render(<ThemePickerSheet onBack={() => {}} />);
+    const { container } = render(<ThemePickerSheet />);
     // react-native-web turns numberOfLines into an ellipsis, on one line or clamped to many.
     const truncated = textBoxes(container).filter(node => getComputedStyle(node).textOverflow === 'ellipsis');
     expect(truncated.map(label)).toEqual([]);

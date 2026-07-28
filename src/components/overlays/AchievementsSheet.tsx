@@ -24,10 +24,6 @@ export interface AchievementsSheetHandle {
   present: () => void;
 }
 
-interface AchievementsSheetProps {
-  onBack: () => void;
-}
-
 function AchievementIcon({ achievement, color }: { achievement: AchievementProgress; color: string }) {
   const props = { size: 19, color, strokeWidth: 2.3 };
   switch (achievement.icon) {
@@ -42,7 +38,7 @@ function AchievementIcon({ achievement, color }: { achievement: AchievementProgr
   }
 }
 
-export const AchievementsSheet = forwardRef<AchievementsSheetHandle, AchievementsSheetProps>(function AchievementsSheet({ onBack }, ref) {
+export const AchievementsSheet = forwardRef<AchievementsSheetHandle>(function AchievementsSheet(_, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const theme = useThemeTokens();
   const semantic = useSemanticTokens();
@@ -61,9 +57,9 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle, Achievement
     present: () => sheetRef.current?.present(),
   }));
 
+  // Dismissing is enough: the provider restores the settings sheet underneath.
   function goBack() {
     sheetRef.current?.dismiss();
-    setTimeout(onBack, 180);
   }
 
   return (

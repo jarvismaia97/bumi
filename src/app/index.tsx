@@ -4,6 +4,7 @@ import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Grid } from '@/components/Grid/Grid';
+import { celebrationDurationMs } from '@/components/Grid/celebration';
 import { FooterButtons } from '@/components/hud/FooterButtons';
 import { Header } from '@/components/hud/Header';
 import { MenuScreen } from '@/components/menu/MenuScreen';
@@ -26,6 +27,7 @@ import { useChallengeStore } from '@/state/challengeStore';
 import { useAuthStore } from '@/state/authStore';
 import { canShowIOSInstallPrompt } from '@/lib/iosInstallPrompt';
 import { useI18n, type Translate } from '@/i18n';
+import Animated, { FadeIn, ReduceMotion, useReducedMotion } from 'react-native-reanimated';
 
 function useGridCellSize(size: number) {
   const { width, height } = useWindowDimensions();
@@ -46,6 +48,7 @@ export default function GameScreen() {
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
   const { t, language } = useI18n();
+  const reduceMotion = useReducedMotion();
 
   const screen = useUIStore(s => s.screen);
   const mode = useUIStore(s => s.mode);
@@ -130,9 +133,12 @@ export default function GameScreen() {
     loadLevel(TUTORIAL_LEVELS[index]);
   }
 
+  // Let the board finish celebrating before covering it. The old fixed 620ms cut the
+  // rectangles off mid-stagger on anything larger than a two-piece level.
   function presentWinSheet() {
     if (winTimeoutRef.current) clearTimeout(winTimeoutRef.current);
-    winTimeoutRef.current = setTimeout(() => winSheetRef.current?.present(), 620);
+    const holdMs = celebrationDurationMs(placed.length, reduceMotion);
+    winTimeoutRef.current = setTimeout(() => winSheetRef.current?.present(), holdMs);
   }
 
   function showShareNotice(message: string) {
@@ -247,6 +253,7 @@ export default function GameScreen() {
 
   if (screen === 'menu') {
     return (
+      <Animated.View style={styles.screen} entering={SCREEN_FADE}>
       <MenuScreen
         dailyDone={progress.isDailyDoneToday()}
         dailyStreak={progress.dailyStreak()}
@@ -262,6 +269,7 @@ export default function GameScreen() {
         onStartGame={progress.solvedCount() === 0 ? startTutorial : () => startCampaign(campaignIndex)}
         onStartDaily={() => startDaily()}
       />
+      </Animated.View>
     );
   }
 
@@ -331,7 +339,7 @@ export default function GameScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+    <Animated.View style={[styles.container, { backgroundColor: theme.bg }]} entering={SCREEN_FADE}>
       <Header
         mode={mode}
         levelLabel={levelLabel}
@@ -422,11 +430,17 @@ export default function GameScreen() {
         onPlayLevel1={() => startCampaign(0)}
       />
 
-    </View>
+    </Animated.View>
   );
 }
 
+// Menu and board are a conditional render, not a navigation, so there is no navigator
+// transition to configure — the swap is animated where it happens. Fade only: the board
+// appearing is the calmest moment in the game and a slide would push it around.
+const SCREEN_FADE = FadeIn.duration(220).reduceMotion(ReduceMotion.System);
+
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   container: { flex: 1, alignItems: 'center' },
   gridWrap: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 12, width: '100%', maxWidth: 480 },
   shareNotice: { position: 'absolute', alignSelf: 'center', zIndex: 2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },

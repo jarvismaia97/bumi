@@ -18,11 +18,7 @@ export interface ThemePickerSheetHandle {
   present: () => void;
 }
 
-interface ThemePickerSheetProps {
-  onBack: () => void;
-}
-
-export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle, ThemePickerSheetProps>(function ThemePickerSheet({ onBack }, ref) {
+export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle>(function ThemePickerSheet(_, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const theme = useThemeTokens();
   const appearance = useAppearance();
@@ -41,9 +37,9 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle, ThemePickerSh
     sheetRef.current?.dismiss();
   }
 
+  // Dismissing is enough: the provider restores the settings sheet underneath.
   function goBack() {
     sheetRef.current?.dismiss();
-    setTimeout(onBack, 180);
   }
 
   return (

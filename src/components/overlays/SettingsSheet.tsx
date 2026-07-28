@@ -96,9 +96,11 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
     router.push('../privacidade');
   }
 
-  function closeAndOpen(next: () => void) {
-    sheetRef.current?.dismiss();
-    setTimeout(next, 180);
+  // No dismiss first: the modal provider's default 'switch' stack behaviour minimises
+  // this sheet and restores it when the child is dismissed, so the old dismiss-wait-open
+  // dance was fighting the library and showing an empty screen for its 180ms.
+  function openChildSheet(next: () => void) {
+    next();
   }
 
   function confirmDeleteAccount() {
@@ -169,13 +171,13 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         ) : null}
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.game')}</Text>
-        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => closeAndOpen(onOpenAchievements)}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenAchievements)}>
           <View style={styles.rowCopy}><Trophy size={18} color={semantic.gold} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.achievements')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
         </AnimatedPressable>
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.appearance')}</Text>
-        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => closeAndOpen(onOpenThemes)}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenThemes)}>
           <View style={styles.rowCopy}><Palette size={18} color={theme.accent} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.themes')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
         </AnimatedPressable>

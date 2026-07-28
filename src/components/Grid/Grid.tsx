@@ -7,6 +7,16 @@ import type { Level, PlacedRect, SolutionRect } from '@/game/types';
 import { BD_PAL, BG_PAL } from '@/theme/palette';
 import { useThemeTokens } from '@/state/themeStore';
 import { Cell, type CellEdges, type CellState } from './Cell';
+import {
+  CELEBRATION_IN_MS,
+  CELEBRATION_OUT_MS,
+  CELEBRATION_STAGGER_MS,
+  GLOW_DELAY_MS,
+  GLOW_IN_MS,
+  GLOW_OUT_MS,
+  REDUCED_IN_MS,
+  REDUCED_OUT_MS,
+} from './celebration';
 import { useDragToPlaceRect } from './useDragToPlaceRect';
 
 interface GridProps {
@@ -128,8 +138,8 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
 // left in it: the rectangles hold a lit border and fade, all at once. The stagger goes because a
 // wave crossing the grid is apparent motion even when nothing in it moves.
 const REDUCED_CELEBRATION = {
-  in: { duration: 260, reduceMotion: ReduceMotion.Never },
-  out: { duration: 520, reduceMotion: ReduceMotion.Never },
+  in: { duration: REDUCED_IN_MS, reduceMotion: ReduceMotion.Never },
+  out: { duration: REDUCED_OUT_MS, reduceMotion: ReduceMotion.Never },
 } as const;
 
 function CelebrationRect({ rect, cellSize, color, active, index }: { rect: PlacedRect; cellSize: number; color: string; active: boolean; index: number }) {
@@ -141,7 +151,10 @@ function CelebrationRect({ rect, cellSize, color, active, index }: { rect: Place
     if (!active) return;
     progress.value = reduceMotion
       ? withSequence(withTiming(1, REDUCED_CELEBRATION.in), withTiming(0, REDUCED_CELEBRATION.out))
-      : withDelay(index * 85, withSequence(withTiming(1, { duration: 230 }), withTiming(0, { duration: 280 })));
+      : withDelay(
+          index * CELEBRATION_STAGGER_MS,
+          withSequence(withTiming(1, { duration: CELEBRATION_IN_MS }), withTiming(0, { duration: CELEBRATION_OUT_MS })),
+        );
   }, [active, index, progress, reduceMotion]);
 
   const style = useAnimatedStyle(() => (reduceMotion
@@ -180,7 +193,10 @@ function CompletionGlow({ active, color }: { active: boolean; color: string }) {
     // would only split one glow into two beats, so the reduced grid lights as a single event.
     progress.value = reduceMotion
       ? withSequence(withTiming(1, REDUCED_CELEBRATION.in), withTiming(0, REDUCED_CELEBRATION.out))
-      : withDelay(180, withSequence(withTiming(1, { duration: 280 }), withTiming(0, { duration: 420 })));
+      : withDelay(
+          GLOW_DELAY_MS,
+          withSequence(withTiming(1, { duration: GLOW_IN_MS }), withTiming(0, { duration: GLOW_OUT_MS })),
+        );
   }, [active, progress, reduceMotion]);
 
   const style = useAnimatedStyle(() => (reduceMotion

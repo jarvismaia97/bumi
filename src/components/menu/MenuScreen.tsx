@@ -165,13 +165,13 @@ export function MenuScreen({
 
         <AuthPill onOpenSettings={() => settingsRef.current?.present()} />
       </ScrollView>
-      <ThemePickerSheet ref={themePickerRef} onBack={() => settingsRef.current?.present()} />
+      <ThemePickerSheet ref={themePickerRef} />
       <SettingsSheet
         ref={settingsRef}
         onOpenAchievements={() => achievementsRef.current?.present()}
         onOpenThemes={() => themePickerRef.current?.present()}
       />
-      <AchievementsSheet ref={achievementsRef} onBack={() => settingsRef.current?.present()} />
+      <AchievementsSheet ref={achievementsRef} />
     </>
   );
 }
