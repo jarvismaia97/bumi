@@ -8,6 +8,17 @@ import { getDailyDateKey } from './daily';
 export const WEEKLY_TARGET = 3;
 export const MONTHLY_TARGET = 12;
 
+/**
+ * Streak lengths worth marking. Deliberately sparse and far apart: a streak that celebrates
+ * every week stops being an achievement, and these are the only numbers a player is likely
+ * to say out loud.
+ */
+export const STREAK_MILESTONES = [30, 50, 100, 365] as const;
+
+export function isStreakMilestone(streak: number): boolean {
+  return (STREAK_MILESTONES as readonly number[]).includes(streak);
+}
+
 /** Hints, not cosmetics: the player who keeps showing up is the one who wants help. */
 export const WEEKLY_REWARD_HINTS = 1;
 export const MONTHLY_REWARD_HINTS = 3;

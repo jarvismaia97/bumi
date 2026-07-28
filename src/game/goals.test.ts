@@ -4,7 +4,9 @@ import {
   getWeeklyProgress,
   goalRewardHints,
   goalsCompletedBy,
+  isStreakMilestone,
   MONTHLY_TARGET,
+  STREAK_MILESTONES,
   WEEKLY_TARGET,
 } from './goals';
 
@@ -66,5 +68,25 @@ describe('paying out on the transition', () => {
 
   it('rewards nothing when nothing completed', () => {
     expect(goalRewardHints({ weekly: false, monthly: false })).toBe(0);
+  });
+});
+
+describe('streak milestones', () => {
+  it('marks only the lengths worth saying out loud', () => {
+    expect(STREAK_MILESTONES).toEqual([30, 50, 100, 365]);
+    for (const streak of STREAK_MILESTONES) expect(isStreakMilestone(streak)).toBe(true);
+  });
+
+  it('stays quiet on the days around one', () => {
+    // A streak that celebrates often stops being an achievement.
+    for (const streak of [1, 7, 29, 31, 49, 99, 101, 364, 366]) {
+      expect(isStreakMilestone(streak)).toBe(false);
+    }
+  });
+
+  it('never fires before the first milestone is reachable', () => {
+    for (let streak = 0; streak < STREAK_MILESTONES[0]; streak++) {
+      expect(isStreakMilestone(streak)).toBe(false);
+    }
   });
 });

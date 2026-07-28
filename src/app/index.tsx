@@ -14,7 +14,7 @@ import { WinSheet, type WinSheetHandle } from '@/components/overlays/WinSheet';
 import { IOSInstallPromptSheet, type IOSInstallPromptSheetHandle } from '@/components/overlays/IOSInstallPromptSheet';
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
 import { formatDuration, getDailyDateKey, getDailyLevel, getNextDailyInMs } from '@/game/daily';
-import { getMonthlyProgress, getWeeklyProgress } from '@/game/goals';
+import { getMonthlyProgress, getWeeklyProgress, goalsCompletedBy, isStreakMilestone } from '@/game/goals';
 import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
 import { isCampaignLevelUnlocked, requiresCampaignLogin } from '@/game/access';
 import { formatResultDuration, getMedalForResult, isBetterMedal, type Medal } from '@/game/medals';
@@ -188,14 +188,30 @@ export default function GameScreen() {
     if (!won) return;
     const timer = setTimeout(() => {
       if (mode === 'tutorial') {
+        // Assembling the Bumi mark is the most thematic moment in the game and happens once
+        // per player, so it cannot fatigue: it gets the largest celebration there is.
+        if (tutorialLevelIndex === TUTORIAL_LEVELS.length - 1) setCelebrationTier('island');
         setTutorialWon(true);
         return;
       }
       if (mode === 'daily') {
         const durationMs = Math.max(0, Date.now() - startedAt);
         setDailyResult(formatSummary(durationMs, hintsUsed, mistakes, t));
-        if (dailyChallengeDate === getDailyDateKey()) progress.markDailyDone();
-        presentWinSheet();
+
+        let tier: CelebrationTier = 'normal';
+        if (dailyChallengeDate === getDailyDateKey()) {
+          // Read before marking: afterwards today is already in the list and the transition
+          // that earned the reward is gone.
+          const closed = goalsCompletedBy(progress.dailyCompletionDates, getDailyDateKey());
+          progress.markDailyDone();
+          tier = highestTier(
+            closed.monthly ? 'island' : null,
+            closed.weekly ? 'gold' : null,
+            isStreakMilestone(progress.dailyStreak()) ? 'gold' : null,
+          );
+        }
+        setCelebrationTier(tier);
+        presentWinSheet(tier);
         return;
       }
       if (mode === 'campaign') {
