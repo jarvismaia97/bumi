@@ -15,6 +15,7 @@ export const LANGUAGE_OPTIONS: { value: LanguagePreference; label: string }[] = 
   { value: 'auto', label: 'Auto' },
   { value: 'pt-PT', label: 'Português' },
   { value: 'en', label: 'English' },
+  { value: 'es', label: 'Español' },
 ];
 
 export const LanguageSheet = forwardRef<LanguageSheetHandle>(function LanguageSheet(_, ref) {

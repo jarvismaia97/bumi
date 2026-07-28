@@ -5,6 +5,8 @@ import { resolveLanguage, translate, type SupportedLanguage } from '../src/i18n/
 const APP_URL = process.env.BETTER_AUTH_URL ?? 'https://www.jogarbumi.pt';
 const MAX_CAMPAIGN_LEVEL = 500;
 
+const OG_LOCALES: Record<SupportedLanguage, string> = { 'pt-PT': 'pt_PT', en: 'en_GB', es: 'es_ES' };
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char);
 }
@@ -59,7 +61,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 <meta name="description" content="${escapeHtml(description)}" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Bumi" />
-<meta property="og:locale" content="${language === 'pt-PT' ? 'pt_PT' : 'en_GB'}" />
+<meta property="og:locale" content="${OG_LOCALES[language]}" />
 <meta property="og:title" content="${escapeHtml(title)}" />
 <meta property="og:description" content="${escapeHtml(description)}" />
 <meta property="og:url" content="${escapeHtml(destination)}" />
