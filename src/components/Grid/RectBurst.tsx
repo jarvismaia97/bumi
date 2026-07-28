@@ -15,12 +15,27 @@ interface RectBurstProps {
 interface Particle {
   angle: number;
   distance: number;
-  size: number;
+  width: number;
+  height: number;
   spin: number;
   delay: number;
   fill: string;
   border: string;
 }
+
+/**
+ * Mixed aspect ratios, not one shape repeated: the pieces the player spends the game drawing
+ * are wide, tall and square, so a burst of identical tiles would look like anything but this
+ * game. Indexed rather than random for the same reason the rest of the particle is.
+ */
+const SHAPES = [
+  { w: 1, h: 1 },
+  { w: 1.6, h: 1 },
+  { w: 1, h: 1.5 },
+  { w: 2.1, h: 1 },
+  { w: 1, h: 1 },
+  { w: 1.3, h: 1 },
+] as const;
 
 /**
  * Confetti is what every app reaches for. This game is about rectangles, so the burst is made
@@ -33,10 +48,13 @@ function buildParticles(count: number, radius: number): Particle[] {
   return Array.from({ length: count }, (_, i) => {
     const golden = i * 2.399963; // golden angle, so successive particles never line up
     const spread = ((i * 37) % 11) / 11;
+    const shape = SHAPES[i % SHAPES.length];
+    const scale = 11 + ((i * 13) % 9);
     return {
       angle: golden,
-      distance: radius * (0.55 + spread * 0.5),
-      size: 6 + ((i * 13) % 7),
+      distance: radius * (0.5 + spread * 0.62),
+      width: scale * shape.w,
+      height: scale * shape.h,
       spin: ((i % 2 === 0 ? 1 : -1) * (90 + ((i * 53) % 180))),
       delay: ((i * 29) % 7) * 18,
       fill: BG_PAL[i % BG_PAL.length],
@@ -80,12 +98,12 @@ function BurstParticle({ particle, active }: { particle: Particle; active: boole
         styles.particle,
         style,
         {
-          width: particle.size,
-          height: particle.size * 0.72,
+          width: particle.width,
+          height: particle.height,
           backgroundColor: particle.fill,
           borderColor: particle.border,
-          marginLeft: -particle.size / 2,
-          marginTop: -particle.size * 0.36,
+          marginLeft: -particle.width / 2,
+          marginTop: -particle.height / 2,
         },
       ]}
     />
@@ -96,7 +114,7 @@ export function RectBurst({ tier, active, width, height }: RectBurstProps) {
   const count = burstParticleCount(tier);
   if (count === 0) return null;
 
-  const particles = buildParticles(count, Math.max(width, height) * 0.62);
+  const particles = buildParticles(count, Math.max(width, height) * 0.78);
 
   return (
     <Animated.View pointerEvents="none" style={styles.origin}>

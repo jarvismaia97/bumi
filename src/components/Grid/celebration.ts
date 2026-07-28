@@ -47,7 +47,7 @@ export const BURST_TRAVEL_MS = 620;
 export const BURST_FADE_MS = 260;
 
 /** Gold is frequent enough that its burst stays modest; an island is a 20-45 level arc. */
-export const BURST_PARTICLES: Record<'gold' | 'island', number> = { gold: 14, island: 24 };
+export const BURST_PARTICLES: Record<'gold' | 'island', number> = { gold: 26, island: 44 };
 
 export function burstParticleCount(tier: CelebrationTier): number {
   return tier === 'gold' || tier === 'island' ? BURST_PARTICLES[tier] : 0;

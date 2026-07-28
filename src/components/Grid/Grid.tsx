@@ -80,7 +80,10 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
   const borderPal = BD_PAL;
 
   return (
-    <GestureDetector gesture={gesture}>
+    // The board clips its own children so the rounded corners hold; the burst has to sit
+    // outside that or every particle is cut off at the edge it is trying to fly past.
+    <View style={{ width: gridWidth, height: gridHeight }}>
+      <GestureDetector gesture={gesture}>
       <View style={[styles.grid, { width: gridWidth, height: gridHeight, backgroundColor: theme.gridSep }]}>
         {Array.from({ length: rows }).map((_, r) => (
           <View key={r} style={styles.row}>
@@ -133,9 +136,10 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
           />
         ))}
         <CompletionGlow active={celebrating} color={theme.accent} repeat={celebrationTier === 'milestone'} />
-        <RectBurst tier={celebrationTier} active={celebrating} width={gridWidth} height={gridHeight} />
       </View>
-    </GestureDetector>
+      </GestureDetector>
+      <RectBurst tier={celebrationTier} active={celebrating} width={gridWidth} height={gridHeight} />
+    </View>
   );
 }
 
