@@ -2,7 +2,6 @@ import { genUniqueLevel } from './generateUnique';
 import type { Level } from './types';
 
 const DAILY_SIZES = [5, 6, 6, 7, 5, 6, 7];
-export const WEEKLY_DAILY_TARGET = 3;
 
 export function getDailyDateKey(d: Date = new Date()): string {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
@@ -19,16 +18,6 @@ export function getDailyStreak(completedDates: readonly string[], now: Date = ne
   }
 
   return streak;
-}
-
-export function getWeeklyDailyCount(completedDates: readonly string[], now: Date = new Date()): number {
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-  const firstDay = getDailyDateKey(monday);
-  const lastDay = getDailyDateKey(today);
-
-  return new Set(completedDates.filter(date => date >= firstDay && date <= lastDay)).size;
 }
 
 export function getDailyLevel(d: Date = new Date()): Level {

@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { getDailyDateKey, getDailyStreak } from '@/game/daily';
 import { INITIAL_HINTS, isMilestoneLevel, MAX_HINTS, normalizeHintCount } from '@/game/hints';
+import { goalRewardHints, goalsCompletedBy } from '@/game/goals';
 import { isBetterMedal, type Medal } from '@/game/medals';
 
 const CAMPAIGN_CATALOG_VERSION = 3;
@@ -77,10 +78,16 @@ export const useProgressStore = create<ProgressState>()(
 
       markDailyDone: () => {
         const today = getDailyDateKey();
-        set(s => ({
-          dailyCompletedDate: today,
-          dailyCompletionDates: Array.from(new Set([...s.dailyCompletionDates, today])).sort(),
-        }));
+        set(s => {
+          // Paid on the transition, like a milestone level, so no record of which goals were
+          // already rewarded has to be kept or synced.
+          const reward = goalRewardHints(goalsCompletedBy(s.dailyCompletionDates, today));
+          return {
+            dailyCompletedDate: today,
+            dailyCompletionDates: Array.from(new Set([...s.dailyCompletionDates, today])).sort(),
+            hints: normalizeHintCount(s.hints + reward),
+          };
+        });
       },
 
       isDailyDoneToday: () => get().dailyCompletedDate === getDailyDateKey(),

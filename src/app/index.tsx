@@ -12,7 +12,8 @@ import { LevelPickerSheet, type LevelPickerSheetHandle } from '@/components/over
 import { WinSheet, type WinSheetHandle } from '@/components/overlays/WinSheet';
 import { IOSInstallPromptSheet, type IOSInstallPromptSheetHandle } from '@/components/overlays/IOSInstallPromptSheet';
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
-import { formatDuration, getDailyDateKey, getDailyLevel, getNextDailyInMs, getWeeklyDailyCount, WEEKLY_DAILY_TARGET } from '@/game/daily';
+import { formatDuration, getDailyDateKey, getDailyLevel, getNextDailyInMs } from '@/game/daily';
+import { getMonthlyProgress, getWeeklyProgress } from '@/game/goals';
 import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
 import { isCampaignLevelUnlocked, requiresCampaignLogin } from '@/game/access';
 import { formatResultDuration, getMedalForResult, isBetterMedal, type Medal } from '@/game/medals';
@@ -270,8 +271,8 @@ export default function GameScreen() {
       <MenuScreen
         dailyDone={progress.isDailyDoneToday()}
         dailyStreak={progress.dailyStreak()}
-        weeklyDailyCount={getWeeklyDailyCount(progress.dailyCompletionDates)}
-        weeklyDailyTarget={WEEKLY_DAILY_TARGET}
+        weekly={getWeeklyProgress(progress.dailyCompletionDates)}
+        monthly={getMonthlyProgress(progress.dailyCompletionDates)}
         solvedCount={progress.solvedCount()}
         goldMedalCount={Object.values(progress.levelMedals).filter(medal => medal === 'gold').length}
         completedIslandCount={getCompletedIslandCount(progress.solvedMap)}

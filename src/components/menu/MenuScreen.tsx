@@ -19,12 +19,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
+import { MONTHLY_REWARD_HINTS, WEEKLY_REWARD_HINTS, type GoalProgress } from '@/game/goals';
 
 interface MenuScreenProps {
   dailyDone: boolean;
   dailyStreak: number;
-  weeklyDailyCount: number;
-  weeklyDailyTarget: number;
+  weekly: GoalProgress;
+  monthly: GoalProgress;
   solvedCount: number;
   goldMedalCount: number;
   completedIslandCount: number;
@@ -66,11 +67,47 @@ function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
   );
 }
 
+/** Both goals read the same, because they are the same promise at two cadences. */
+function GoalCard({ title, goal, reward, doneLabel, accent }: { title: string; goal: GoalProgress; reward: number; doneLabel: string; accent: string }) {
+  const theme = useThemeTokens();
+  const { t } = useI18n();
+  const filled = Math.min(goal.done / goal.target, 1);
+  const remaining = Math.max(goal.target - goal.done, 0);
+
+  return (
+    <View style={[styles.weeklyGoal, { backgroundColor: theme.surface, borderColor: goal.complete ? accent : theme.gridSep }]}>
+      <View style={styles.weeklyTopRow}>
+        <View style={styles.weeklyTitleRow}>
+          <Flame size={17} color={accent} strokeWidth={2.3} />
+          <Text style={[styles.weeklyTitle, { color: theme.text }]}>{title}</Text>
+        </View>
+        <Text style={[styles.weeklyCount, { color: theme.text }]}>{Math.min(goal.done, goal.target)} / {goal.target}</Text>
+      </View>
+      <View style={[styles.weeklyBar, { backgroundColor: theme.gridSep }]}>
+        <View style={[styles.weeklyBarFill, { width: `${filled * 100}%`, backgroundColor: accent }]} />
+      </View>
+      <View style={styles.goalFooter}>
+        <Text style={[styles.weeklyDetail, { color: theme.sub }]}>
+          {goal.complete
+            ? doneLabel
+            : t('menu.remainingDaily', { count: remaining, label: t(remaining === 1 ? 'menu.dailyChallenge' : 'menu.dailyChallenges') })}
+        </Text>
+        {/* The reward is the point of the goal, so it is stated up front rather than on arrival. */}
+        {!goal.complete && (
+          <Text style={[styles.goalReward, { color: accent }]}>
+            {t('menu.goalReward', { count: reward, label: t(reward === 1 ? 'menu.hintOne' : 'menu.hintMany') })}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
 export function MenuScreen({
   dailyDone,
   dailyStreak,
-  weeklyDailyCount,
-  weeklyDailyTarget,
+  weekly,
+  monthly,
   solvedCount,
   goldMedalCount,
   completedIslandCount,
@@ -89,8 +126,7 @@ export function MenuScreen({
   const settingsRef = useRef<SettingsSheetHandle>(null);
   const achievementsRef = useRef<AchievementsSheetHandle>(null);
   const privacyRef = useRef<PrivacySheetHandle>(null);
-  const weeklyProgress = Math.min(weeklyDailyCount / weeklyDailyTarget, 1);
-  const remainingWeekly = Math.max(weeklyDailyTarget - weeklyDailyCount, 0);
+
   const daily = dailyDone
     ? { fg: semantic.success, bg: semantic.successSurface, border: semantic.successBorder }
     : { fg: semantic.warning, bg: semantic.warningSurface, border: semantic.warningBorder };
@@ -126,23 +162,20 @@ export function MenuScreen({
         <Text style={[styles.islandProgressText, { color: theme.sub }]}>{t('menu.islands', { completed: completedIslandCount, total: islandTotal })}</Text>
       </View>
 
-      <View style={[styles.weeklyGoal, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
-        <View style={styles.weeklyTopRow}>
-          <View style={styles.weeklyTitleRow}>
-            <Flame size={17} color={semantic.streak} strokeWidth={2.3} />
-            <Text style={[styles.weeklyTitle, { color: theme.text }]}>{t('menu.weeklyGoal')}</Text>
-          </View>
-          <Text style={[styles.weeklyCount, { color: theme.text }]}>{Math.min(weeklyDailyCount, weeklyDailyTarget)} / {weeklyDailyTarget}</Text>
-        </View>
-        <View style={[styles.weeklyBar, { backgroundColor: theme.gridSep }]}>
-          <View style={[styles.weeklyBarFill, { width: `${weeklyProgress * 100}%`, backgroundColor: semantic.streak }]} />
-        </View>
-        <Text style={[styles.weeklyDetail, { color: theme.sub }]}>
-          {remainingWeekly
-            ? t('menu.remainingDaily', { count: remainingWeekly, label: t(remainingWeekly === 1 ? 'menu.dailyChallenge' : 'menu.dailyChallenges') })
-            : t('menu.weeklyDone')}
-        </Text>
-      </View>
+      <GoalCard
+        title={t('menu.weeklyGoal')}
+        goal={weekly}
+        reward={WEEKLY_REWARD_HINTS}
+        doneLabel={t('menu.weeklyDone')}
+        accent={semantic.streak}
+      />
+      <GoalCard
+        title={t('menu.monthlyGoal')}
+        goal={monthly}
+        reward={MONTHLY_REWARD_HINTS}
+        doneLabel={t('menu.monthlyDone')}
+        accent={theme.accent}
+      />
 
       <View style={styles.menuBtns}>
         <AnimatedPressable accessibilityRole="button" style={[styles.playBtn, { backgroundColor: theme.accent }]} onPress={onStartGame}>
@@ -199,7 +232,9 @@ const styles = StyleSheet.create({
   weeklyCount: { flexShrink: 0, fontSize: 13, fontWeight: '800' },
   weeklyBar: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 10 },
   weeklyBarFill: { height: '100%', borderRadius: 3 },
-  weeklyDetail: { fontSize: 11, marginTop: 7 },
+  weeklyDetail: { flexShrink: 1, minWidth: 0, fontSize: 11 },
+  goalFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 7 },
+  goalReward: { fontSize: 11, fontWeight: '800', flexShrink: 0 },
   menuBtns: { gap: 8, width: '100%', maxWidth: 320 },
   playBtn: { borderRadius: 8, paddingVertical: 13, paddingHorizontal: 15, alignItems: 'center', flexDirection: 'row', gap: 8 },
   campaignCopy: { flex: 1 },
