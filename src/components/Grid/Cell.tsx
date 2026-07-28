@@ -12,20 +12,20 @@ export type CellState = 'empty' | 'placed' | 'correct';
 interface CellProps {
   size: number;
   clueValue?: number;
-  clueColor?: string;
+  clueColor: string;
   state: CellState;
   edges: CellEdges;
   fillColor?: string;
   borderColor?: string;
-  emptyColor?: string;
+  emptyColor: string;
+  gapColor: string;
 }
 
 const BORDER_W = 3;
-const GAP_COLOR = '#eee8e3';
 
-export function Cell({ size, clueValue, clueColor, state, edges, fillColor, borderColor, emptyColor }: CellProps) {
+export function Cell({ size, clueValue, clueColor, state, edges, fillColor, borderColor, emptyColor, gapColor }: CellProps) {
   const isFilled = state !== 'empty';
-  const bg = state === 'empty' ? (emptyColor ?? '#fffefd') : state === 'correct' ? (fillColor ?? '#f2eee9') : 'rgba(113,140,195,0.12)';
+  const bg = state === 'empty' ? emptyColor : state === 'correct' ? (fillColor ?? emptyColor) : 'rgba(113,140,195,0.12)';
   const fontSize = size >= 40 ? 17 : size >= 34 ? 14 : size >= 28 ? 12 : 10;
 
   return (
@@ -40,10 +40,10 @@ export function Cell({ size, clueValue, clueColor, state, edges, fillColor, bord
           borderBottomWidth: edges.bottom ? BORDER_W : isFilled ? 0 : 0.75,
           borderLeftWidth: edges.left ? BORDER_W : isFilled ? 0 : 0.75,
           borderRightWidth: edges.right ? BORDER_W : isFilled ? 0 : 0.75,
-          borderTopColor: edges.top && borderColor ? borderColor : GAP_COLOR,
-          borderBottomColor: edges.bottom && borderColor ? borderColor : GAP_COLOR,
-          borderLeftColor: edges.left && borderColor ? borderColor : GAP_COLOR,
-          borderRightColor: edges.right && borderColor ? borderColor : GAP_COLOR,
+          borderTopColor: edges.top && borderColor ? borderColor : gapColor,
+          borderBottomColor: edges.bottom && borderColor ? borderColor : gapColor,
+          borderLeftColor: edges.left && borderColor ? borderColor : gapColor,
+          borderRightColor: edges.right && borderColor ? borderColor : gapColor,
           borderTopLeftRadius: edges.top && edges.left ? 10 : 0,
           borderTopRightRadius: edges.top && edges.right ? 10 : 0,
           borderBottomLeftRadius: edges.bottom && edges.left ? 10 : 0,
@@ -51,12 +51,19 @@ export function Cell({ size, clueValue, clueColor, state, edges, fillColor, bord
         },
       ]}
     >
-      {clueValue != null && <Text style={[styles.clue, { fontSize, color: clueColor ?? '#3a2d45' }]}>{clueValue}</Text>}
+      {/* The only capped text in the app: a cell is sized from the board, not from the clue,
+          so an unbounded multiplier would push two-digit clues outside their own square.
+          1.4 is the most a clue can grow and still sit inside the smallest cell. */}
+      {clueValue != null && (
+        <Text style={[styles.clue, { fontSize, color: clueColor }]} maxFontSizeMultiplier={1.4}>
+          {clueValue}
+        </Text>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   cell: { alignItems: 'center', justifyContent: 'center' },
-  clue: { fontWeight: '800', color: '#3a2d45' },
+  clue: { fontWeight: '800' },
 });

@@ -8,6 +8,7 @@ import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BootLogo } from '@/components/BootLogo';
+import { useAppearance } from '@/state/appearanceStore';
 import { useAuthStore } from '@/state/authStore';
 import { initProgressSync } from '@/state/progressSync';
 import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
@@ -25,6 +26,7 @@ export default function RootLayout() {
   const setPendingChallenge = useChallengeStore(s => s.setPendingChallenge);
   const setPendingDailyChallenge = useChallengeStore(s => s.setPendingDailyChallenge);
   const dailyReminderEnabled = useProgressStore(s => s.dailyReminderEnabled);
+  const appearance = useAppearance();
   const { language } = useI18n();
 
   useEffect(() => {
@@ -77,7 +79,8 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <BottomSheetModalProvider>
-            <StatusBar style="auto" />
+            {/* `auto` would read the device appearance, which the in-app override can contradict. */}
+            <StatusBar style={appearance === 'dark' ? 'light' : 'dark'} />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Protected guard={loading}>
                 <Stack.Screen name="loading" />

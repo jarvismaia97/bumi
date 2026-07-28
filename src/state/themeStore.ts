@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { THEMES, type ThemeName, type ThemeTokens } from '@/theme/themes';
+import { useAppearance } from '@/state/appearanceStore';
+import { SEMANTIC, THEMES, type SemanticTokens, type ThemeName, type ThemeTokens } from '@/theme/themes';
 
 interface ThemeState {
   themeName: ThemeName;
@@ -22,5 +23,10 @@ export const useThemeStore = create<ThemeState>()(
 );
 
 export function useThemeTokens(): ThemeTokens {
-  return useThemeStore(s => THEMES[s.themeName] ?? THEMES.classic);
+  const appearance = useAppearance();
+  return useThemeStore(s => (THEMES[s.themeName] ?? THEMES.classic)[appearance]);
+}
+
+export function useSemanticTokens(): SemanticTokens {
+  return SEMANTIC[useAppearance()];
 }

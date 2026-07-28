@@ -342,7 +342,8 @@ export default function GameScreen() {
         topInset={insets.top}
       />
 
-      {shareNotice && <View style={[styles.shareNotice, { top: insets.top + 42 }]}><Text style={styles.shareNoticeText}>{shareNotice}</Text></View>}
+      {/* The toast inverts the theme so it reads as a layer over the board in both appearances. */}
+      {shareNotice && <View style={[styles.shareNotice, { top: insets.top + 42, backgroundColor: theme.text }]}><Text style={[styles.shareNoticeText, { color: theme.bg }]}>{shareNotice}</Text></View>}
 
       <View style={styles.gridWrap}>
         <Grid
@@ -429,6 +430,6 @@ export default function GameScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center' },
   gridWrap: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 12, width: '100%', maxWidth: 480 },
-  shareNotice: { position: 'absolute', alignSelf: 'center', zIndex: 2, backgroundColor: '#292827', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
-  shareNoticeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  shareNotice: { position: 'absolute', alignSelf: 'center', zIndex: 2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
+  shareNoticeText: { fontSize: 12, fontWeight: '700' },
 });

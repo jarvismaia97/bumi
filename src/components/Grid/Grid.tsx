@@ -90,7 +90,8 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
                   edges={info?.edges ?? EMPTY_EDGES}
                   fillColor={fillColor}
                   borderColor={borderColor}
-                  emptyColor={level.emptyFillColor}
+                  emptyColor={level.emptyFillColor ?? theme.surface}
+                  gapColor={theme.gridSep}
                 />
               );
             })}

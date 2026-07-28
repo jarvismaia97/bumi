@@ -59,7 +59,7 @@ function FooterBtn({
       accessibilityState={{ disabled: !!disabled }}
     >
       <Icon size={20} color={theme.text} strokeWidth={2.1} />
-      <Text style={[styles.btnLabel, { color: theme.text }]} numberOfLines={1}>
+      <Text style={[styles.btnLabel, { color: theme.text }]}>
         {label}
       </Text>
     </Pressable>
@@ -77,5 +77,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
   },
-  btnLabel: { fontSize: 11, fontWeight: '600' },
+  // Wraps instead of truncating: the three buttons only have a third of the width each, so
+  // at the accessibility sizes "Desfazer" would otherwise become "Desfa…".
+  btnLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
 });

@@ -5,11 +5,12 @@ import { GoogleMark } from '@/components/GoogleMark';
 import { Logo } from '@/components/Logo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/state/authStore';
-import { useThemeTokens } from '@/state/themeStore';
+import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
 
 export default function LoginScreen() {
   const theme = useThemeTokens();
+  const semantic = useSemanticTokens();
   const signInWithGoogle = useAuthStore(s => s.signInWithGoogle);
   const signInWithApple = useAuthStore(s => s.signInWithApple);
   const authError = useAuthStore(s => s.error);
@@ -75,7 +76,7 @@ export default function LoginScreen() {
         />
       ) : null}
 
-      {authError ? <Text style={styles.error}>{authError}</Text> : null}
+      {authError ? <Text style={[styles.error, { color: semantic.danger }]}>{authError}</Text> : null}
     </View>
   );
 }
@@ -87,5 +88,5 @@ const styles = StyleSheet.create({
   signInButton: { width: '100%', maxWidth: 300, borderRadius: 14, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   appleButton: { width: '100%', maxWidth: 300, height: 48 },
   signInText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  error: { color: '#b03060', fontSize: 12, lineHeight: 17, maxWidth: 300, textAlign: 'center' },
+  error: { fontSize: 12, lineHeight: 17, maxWidth: 300, textAlign: 'center' },
 });

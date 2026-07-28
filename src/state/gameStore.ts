@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { checkWin, rectOk, rectsOverlap } from '../game/geometry';
 import type { Level, PlacedRect, RectColors, SolutionRect } from '../game/types';
-import { playGameHaptic } from '../lib/gameHaptics';
+import { playHaptic } from '../lib/haptics';
 
 interface GameState {
   level: Level | null;
@@ -35,13 +35,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!level) return false;
     if (placed.some(p => rectsOverlap(p, rect)) || !rectOk(rect, level)) {
       set(s => ({ mistakes: s.mistakes + 1 }));
-      playGameHaptic('error');
+      playHaptic('error');
       return false;
     }
     const next = [...placed, { ...rect, ci: colorN, colors: getRectColors(level, rect) }];
     const won = checkWin(next, level);
     set({ placed: next, colorN: colorN + 1, won });
-    playGameHaptic(won ? 'success' : 'selection');
+    playHaptic(won ? 'success' : 'selection');
     return true;
   },
 
@@ -49,7 +49,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { placed, level } = get();
     const next = placed.filter((_, i) => i !== index);
     set({ placed: next, won: level ? checkWin(next, level) : false });
-    playGameHaptic('selection');
+    playHaptic('selection');
   },
 
   undo: () => {
@@ -57,7 +57,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!placed.length) return;
     const next = placed.slice(0, -1);
     set({ placed: next, won: level ? checkWin(next, level) : false });
-    playGameHaptic('selection');
+    playHaptic('selection');
   },
 
   clear: () => set({ placed: [], colorN: 0, won: false }),
@@ -71,7 +71,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const next = [...placed, { ...pick, ci: colorN, colors: getRectColors(level, pick) }];
     const won = checkWin(next, level);
     set({ placed: next, colorN: colorN + 1, hintsUsed: get().hintsUsed + 1, won });
-    playGameHaptic(won ? 'success' : 'selection');
+    playHaptic(won ? 'success' : 'selection');
     return pick;
   },
 }));

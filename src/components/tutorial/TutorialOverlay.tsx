@@ -1,9 +1,14 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
+import { useAppearance } from '@/state/appearanceStore';
+import { useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
 
 /** Copy lives in the message catalogue under `tutorial.<lesson>.*`. */
 const LESSONS = ['lesson1', 'lesson2', 'lesson3'] as const;
+
+/** The card lifts off a pale board by going deep; on a dark board it has to go the other way. */
+const LIGHT_CARD = { bg: '#3a2d45', text: '#fffefd', mutedText: 'rgba(255,255,255,0.72)', idleDot: 'rgba(255,255,255,0.3)' };
 
 interface TutorialOverlayProps {
   visible: boolean;
@@ -16,8 +21,14 @@ interface TutorialOverlayProps {
 }
 
 export function TutorialOverlay({ visible, lessonIndex, readyToPlay, won, onStartLesson, onNextLesson, onPlayLevel1 }: TutorialOverlayProps) {
+  const theme = useThemeTokens();
+  const appearance = useAppearance();
   const { t } = useI18n();
   if (!visible) return null;
+
+  const card = appearance === 'dark'
+    ? { bg: theme.surface, text: theme.text, mutedText: theme.sub, idleDot: theme.gridSep }
+    : LIGHT_CARD;
 
   const lesson = LESSONS[lessonIndex] ?? LESSONS.at(-1)!;
   const finalLesson = lessonIndex === LESSONS.length - 1;
@@ -30,14 +41,14 @@ export function TutorialOverlay({ visible, lessonIndex, readyToPlay, won, onStar
 
   return (
     <View style={styles.card} pointerEvents="box-none">
-      <View style={styles.inner}>
+      <View style={[styles.inner, { backgroundColor: card.bg }]}>
         <View style={styles.progress}>
-          {LESSONS.map((_, index) => <View key={index} style={[styles.dot, { backgroundColor: index <= lessonIndex ? '#a8b9d8' : 'rgba(255,255,255,0.3)' }]} />)}
-          <Text style={styles.progressText}>{lessonIndex + 1} / {LESSONS.length}</Text>
+          {LESSONS.map((_, index) => <View key={index} style={[styles.dot, { backgroundColor: index <= lessonIndex ? theme.accent : card.idleDot }]} />)}
+          <Text style={[styles.progressText, { color: card.mutedText }]}>{lessonIndex + 1} / {LESSONS.length}</Text>
         </View>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.body}>{body}</Text>
-        <Pressable accessibilityRole="button" style={styles.button} onPress={onPress}>
+        <Text style={[styles.title, { color: card.text }]}>{title}</Text>
+        <Text style={[styles.body, { color: card.text }]}>{body}</Text>
+        <Pressable accessibilityRole="button" style={[styles.button, { backgroundColor: theme.accent }]} onPress={onPress}>
           <Text style={styles.buttonText}>{button}</Text>
           <ArrowRight size={18} color="#fff" strokeWidth={2.4} />
         </Pressable>
@@ -48,12 +59,12 @@ export function TutorialOverlay({ visible, lessonIndex, readyToPlay, won, onStar
 
 const styles = StyleSheet.create({
   card: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 300 },
-  inner: { backgroundColor: '#3a2d45', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, paddingBottom: 32, maxWidth: 480, width: '100%', alignSelf: 'center' },
+  inner: { borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, paddingBottom: 32, maxWidth: 480, width: '100%', alignSelf: 'center' },
   progress: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  progressText: { marginLeft: 'auto', fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.72)' },
-  title: { fontSize: 17, fontWeight: '800', color: '#fffefd', marginBottom: 8 },
-  body: { fontSize: 14, color: '#fffefd', opacity: 0.82, lineHeight: 21, marginBottom: 18 },
-  button: { backgroundColor: '#718cc3', borderRadius: 8, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  progressText: { marginLeft: 'auto', fontSize: 11, fontWeight: '800' },
+  title: { fontSize: 17, fontWeight: '800', marginBottom: 8 },
+  body: { fontSize: 14, opacity: 0.82, lineHeight: 21, marginBottom: 18 },
+  button: { borderRadius: 8, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   buttonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

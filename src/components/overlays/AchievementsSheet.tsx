@@ -12,8 +12,12 @@ import Trophy from 'lucide-react-native/icons/trophy';
 import Zap from 'lucide-react-native/icons/zap';
 import { getAchievements, type AchievementProgress } from '@/game/achievements';
 import { useProgressStore } from '@/state/progressStore';
-import { useThemeTokens } from '@/state/themeStore';
+import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
+import { hitSlopFor } from '@/lib/touchTarget';
 import { useI18n } from '@/i18n';
+
+const BACK_BUTTON_SIZE = 36;
+const BACK_BUTTON_HIT_SLOP = hitSlopFor({ width: BACK_BUTTON_SIZE, height: BACK_BUTTON_SIZE });
 
 export interface AchievementsSheetHandle {
   present: () => void;
@@ -40,6 +44,7 @@ function AchievementIcon({ achievement, color }: { achievement: AchievementProgr
 export const AchievementsSheet = forwardRef<AchievementsSheetHandle, AchievementsSheetProps>(function AchievementsSheet({ onBack }, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const theme = useThemeTokens();
+  const semantic = useSemanticTokens();
   const { t } = useI18n();
   const solvedMap = useProgressStore(state => state.solvedMap);
   const solvedDateMap = useProgressStore(state => state.solvedDateMap);
@@ -71,7 +76,7 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle, Achievement
     >
       <BottomSheetScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Pressable accessibilityRole="button" style={[styles.backButton, { borderColor: theme.gridSep }]} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
+          <Pressable accessibilityRole="button" style={[styles.backButton, { borderColor: theme.gridSep }]} hitSlop={BACK_BUTTON_HIT_SLOP} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
             <ArrowLeft size={18} color={theme.text} strokeWidth={2.3} />
           </Pressable>
           <View style={styles.headerCopy}>
@@ -79,7 +84,7 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle, Achievement
             <Text style={[styles.subtitle, { color: theme.sub }]}>{t('achievements.subtitle', { done: unlockedCount, total: achievements.length })}</Text>
           </View>
           <View style={[styles.count, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
-            <Trophy size={18} color="#d6a72f" strokeWidth={2.4} />
+            <Trophy size={18} color={semantic.gold} strokeWidth={2.4} />
             <Text style={[styles.countText, { color: theme.text }]}>{unlockedCount}</Text>
           </View>
         </View>
@@ -90,16 +95,16 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle, Achievement
             {achievements.filter(achievement => achievement.category === category).map(achievement => {
               const complete = achievement.current >= achievement.target;
               const progress = Math.min(achievement.current / achievement.target, 1);
-              const accent = complete ? '#3d9b67' : theme.accent;
+              const accent = complete ? semantic.success : theme.accent;
               return (
-                <View key={achievement.id} style={[styles.card, { backgroundColor: theme.surface, borderColor: complete ? '#94d1aa' : theme.gridSep }]}>
-                  <View style={[styles.icon, { backgroundColor: complete ? '#e8f5ee' : `${theme.accent}18` }]}>
+                <View key={achievement.id} style={[styles.card, { backgroundColor: theme.surface, borderColor: complete ? semantic.successBorder : theme.gridSep }]}>
+                  <View style={[styles.icon, { backgroundColor: complete ? semantic.successSurface : `${theme.accent}18` }]}>
                     <AchievementIcon achievement={achievement} color={accent} />
                   </View>
                   <View style={styles.copy}>
                     <View style={styles.titleRow}>
                       <Text style={[styles.cardTitle, { color: theme.text }]}>{t(`achievement.${achievement.id}.title`)}</Text>
-                      <Text style={[styles.progressLabel, { color: complete ? '#2e8a50' : theme.sub }]}>{Math.min(achievement.current, achievement.target)} / {achievement.target}</Text>
+                      <Text style={[styles.progressLabel, { color: complete ? semantic.success : theme.sub }]}>{Math.min(achievement.current, achievement.target)} / {achievement.target}</Text>
                     </View>
                     <Text style={[styles.description, { color: theme.sub }]}>{t(`achievement.${achievement.id}.description`)}</Text>
                     <View style={[styles.bar, { backgroundColor: theme.gridSep }]}>
@@ -119,11 +124,12 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle, Achievement
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 36 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 22, gap: 10 },
-  backButton: { width: 36, height: 36, borderWidth: 1.5, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  headerCopy: { flex: 1 },
+  // Painted at 36 beside a 22pt title; hitSlop, not size, takes the tap area to 44.
+  backButton: { width: BACK_BUTTON_SIZE, height: BACK_BUTTON_SIZE, borderWidth: 1.5, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  headerCopy: { flex: 1, minWidth: 0 },
   title: { fontSize: 22, fontWeight: '800' },
   subtitle: { fontSize: 12, fontWeight: '600', marginTop: 3 },
-  count: { minWidth: 54, height: 38, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
+  count: { flexShrink: 0, minWidth: 54, minHeight: 38, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
   countText: { fontSize: 14, fontWeight: '800' },
   section: { gap: 8, marginBottom: 20 },
   sectionTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8, marginBottom: 1 },
@@ -131,8 +137,8 @@ const styles = StyleSheet.create({
   icon: { width: 38, height: 38, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1, minWidth: 0 },
   titleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
-  cardTitle: { flex: 1, fontSize: 14, fontWeight: '800' },
-  progressLabel: { fontSize: 11, fontWeight: '800' },
+  cardTitle: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: '800' },
+  progressLabel: { flexShrink: 0, fontSize: 11, fontWeight: '800' },
   description: { fontSize: 11, lineHeight: 15, marginTop: 2 },
   bar: { height: 5, borderRadius: 3, overflow: 'hidden', marginTop: 8 },
   barFill: { height: '100%', borderRadius: 3 },

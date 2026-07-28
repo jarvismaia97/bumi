@@ -42,6 +42,16 @@ describe('FooterButtons', () => {
     expect(onHint).not.toHaveBeenCalled();
   });
 
+  // A third of the screen each, so at the accessibility text sizes the labels have to wrap
+  // down rather than be cut to "Desfa…".
+  it('wraps the button labels instead of truncating them', () => {
+    render(<FooterButtons {...props} />);
+    for (const text of ['Desfazer', 'Limpar', 'Dica · 3']) {
+      // react-native-web renders numberOfLines as an ellipsis, on one line or clamped to many.
+      expect(getComputedStyle(screen.getByText(text)).textOverflow).not.toBe('ellipsis');
+    }
+  });
+
   it('fires undo and clear when tapped', () => {
     const onUndo = vi.fn();
     const onClear = vi.fn();

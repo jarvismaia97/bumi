@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authClient } from '@/lib/auth-client';
+import { playHaptic } from '@/lib/haptics';
 import { useProgressStore } from '@/state/progressStore';
 import { Platform } from 'react-native';
 import { resolveLanguage, translate } from '@/i18n/messages';
@@ -86,6 +87,15 @@ function setSession(
   });
 }
 
+/**
+ * Signing in is felt at the outcome rather than at the button, because only here is a real
+ * session distinguishable from a provider sheet the player simply dismissed. Restoring a
+ * session on launch runs through `setSession` directly and stays silent — nobody tapped.
+ */
+function signedIn(data: { user: AuthUser } | null): void {
+  if (data?.user) playHaptic('success');
+}
+
 export const useAuthStore = create<AuthState>()((set) => ({
   session: null,
   user: null,
@@ -112,6 +122,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
         // A dismissed sheet is not a failure; leave the screen untouched.
         if ((error as Error).message === GOOGLE_CANCELLED) return;
         set({ error: (error as Error).message });
+        playHaptic('error');
         throw error;
       }
 
@@ -121,11 +132,13 @@ export const useAuthStore = create<AuthState>()((set) => ({
       });
       if (error) {
         set({ error: error.message });
+        playHaptic('error');
         throw error;
       }
 
       const session = await authClient.getSession();
       setSession(set, session.data ?? null, session.error);
+      signedIn(session.data ?? null);
       return;
     }
 
@@ -135,11 +148,13 @@ export const useAuthStore = create<AuthState>()((set) => ({
     });
     if (error) {
       set({ error: error.message });
+      playHaptic('error');
       throw error;
     }
 
     const session = await authClient.getSession();
     setSession(set, session.data ?? null, session.error);
+    signedIn(session.data ?? null);
   },
 
   signInWithApple: async () => {
@@ -151,24 +166,32 @@ export const useAuthStore = create<AuthState>()((set) => ({
     });
     if (!credential.identityToken) throw new Error(translate(currentLanguage(), 'auth.appleFailed'));
 
+    // Everything above throws on a cancelled Apple sheet as well as on a real failure, and
+    // the two are not told apart here, so only the server's verdict below is felt.
     const { error } = await authClient.signIn.social({
       provider: 'apple',
       idToken: { token: credential.identityToken },
     });
     if (error) {
       set({ error: error.message });
+      playHaptic('error');
       throw error;
     }
     const session = await authClient.getSession();
     setSession(set, session.data ?? null, session.error);
+    signedIn(session.data ?? null);
   },
 
   signOut: async () => {
     const { error } = await authClient.signOut();
     if (error) {
       set({ error: error.message });
+      playHaptic('error');
       throw error;
     }
+    // A committed account change, not an achievement: the flat thud of impact rather than
+    // the rising notification pattern that would congratulate someone for leaving.
+    playHaptic('medium');
     set({ session: null, user: null, error: null });
   },
 
@@ -177,8 +200,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
     const { error } = await authClient.deleteUser({});
     if (error) {
       set({ error: error.message });
+      playHaptic('error');
       throw error;
     }
+    // Deliberately silent on success: the confirmation tap already fired `warning`, and the
+    // sheet closing onto a signed-out menu says the rest.
     useProgressStore.getState().reset();
     set({ session: null, user: null, error: null });
   },
