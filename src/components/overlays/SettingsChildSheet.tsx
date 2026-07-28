@@ -14,6 +14,8 @@ export interface SettingsChildSheetHandle {
 
 interface SettingsChildSheetProps {
   title: string;
+  /** Present it and the header left-aligns, since a centred two-line block reads as adrift. */
+  subtitle?: string;
   /** Sits where the back button's counterweight would be, keeping the title centred. */
   headerRight?: ReactNode;
   /** Omit to size the sheet to its content. */
@@ -35,7 +37,7 @@ const BACK_BUTTON_HIT_SLOP = hitSlopFor({ width: BACK_BUTTON_SIZE, height: BACK_
  * restores the settings sheet underneath on its own.
  */
 export const SettingsChildSheet = forwardRef<SettingsChildSheetHandle, SettingsChildSheetProps>(
-  function SettingsChildSheet({ title, headerRight, snapPoints, scrollable = false, children }, ref) {
+  function SettingsChildSheet({ title, subtitle, headerRight, snapPoints, scrollable = false, children }, ref) {
     const sheetRef = useRef<BottomSheetModal>(null);
     const theme = useThemeTokens();
     const { t } = useI18n();
@@ -72,7 +74,14 @@ export const SettingsChildSheet = forwardRef<SettingsChildSheetHandle, SettingsC
             >
               <ArrowLeft size={18} color={theme.text} strokeWidth={2.3} />
             </AnimatedPressable>
-            <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+            {subtitle ? (
+              <View style={styles.headerCopy}>
+                <Text style={[styles.titleLeading, { color: theme.text }]}>{title}</Text>
+                <Text style={[styles.subtitle, { color: theme.sub }]}>{subtitle}</Text>
+              </View>
+            ) : (
+              <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+            )}
             {headerRight ?? <View style={styles.headerSpacer} />}
           </View>
 
@@ -88,5 +97,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   backButton: { minWidth: BACK_BUTTON_SIZE, minHeight: BACK_BUTTON_SIZE, borderWidth: 1.5, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   title: { flexShrink: 1, minWidth: 0, fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  headerCopy: { flex: 1, minWidth: 0 },
+  titleLeading: { fontSize: 22, fontWeight: '800' },
+  subtitle: { fontSize: 12, fontWeight: '600', marginTop: 3 },
   headerSpacer: { width: BACK_BUTTON_SIZE, flexShrink: 0 },
 });

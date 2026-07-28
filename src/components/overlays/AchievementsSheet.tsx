@@ -1,7 +1,5 @@
-import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import Flag from 'lucide-react-native/icons/flag';
 import Flame from 'lucide-react-native/icons/flame';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
@@ -10,19 +8,13 @@ import Mountain from 'lucide-react-native/icons/mountain';
 import Route from 'lucide-react-native/icons/route';
 import Trophy from 'lucide-react-native/icons/trophy';
 import Zap from 'lucide-react-native/icons/zap';
-import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { getAchievements, type AchievementProgress } from '@/game/achievements';
+import { SettingsChildSheet, type SettingsChildSheetHandle } from '@/components/overlays/SettingsChildSheet';
 import { useProgressStore } from '@/state/progressStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
-import { hitSlopFor } from '@/lib/touchTarget';
 import { useI18n } from '@/i18n';
 
-const BACK_BUTTON_SIZE = 36;
-const BACK_BUTTON_HIT_SLOP = hitSlopFor({ width: BACK_BUTTON_SIZE, height: BACK_BUTTON_SIZE });
-
-export interface AchievementsSheetHandle {
-  present: () => void;
-}
+export type AchievementsSheetHandle = SettingsChildSheetHandle;
 
 function AchievementIcon({ achievement, color }: { achievement: AchievementProgress; color: string }) {
   const props = { size: 19, color, strokeWidth: 2.3 };
@@ -39,7 +31,7 @@ function AchievementIcon({ achievement, color }: { achievement: AchievementProgr
 }
 
 export const AchievementsSheet = forwardRef<AchievementsSheetHandle>(function AchievementsSheet(_, ref) {
-  const sheetRef = useRef<BottomSheetModal>(null);
+  const sheetRef = useRef<SettingsChildSheetHandle>(null);
   const theme = useThemeTokens();
   const semantic = useSemanticTokens();
   const { t } = useI18n();
@@ -55,37 +47,23 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle>(function Ac
 
   useImperativeHandle(ref, () => ({
     present: () => sheetRef.current?.present(),
+    dismiss: () => sheetRef.current?.dismiss(),
   }));
 
-  // Dismissing is enough: the provider restores the settings sheet underneath.
-  function goBack() {
-    sheetRef.current?.dismiss();
-  }
-
   return (
-    <BottomSheetModal
+    <SettingsChildSheet
       ref={sheetRef}
+      title={t('achievements.title')}
+      subtitle={t('achievements.subtitle', { done: unlockedCount, total: achievements.length })}
       snapPoints={['82%']}
-      enableDynamicSizing={false}
-      enablePanDownToClose
-      backgroundStyle={{ backgroundColor: theme.bg }}
-      handleIndicatorStyle={{ backgroundColor: theme.gridSep }}
-    >
-      <BottomSheetScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <AnimatedPressable accessibilityRole="button" feedback="icon" style={[styles.backButton, { borderColor: theme.gridSep }]} hitSlop={BACK_BUTTON_HIT_SLOP} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
-            <ArrowLeft size={18} color={theme.text} strokeWidth={2.3} />
-          </AnimatedPressable>
-          <View style={styles.headerCopy}>
-            <Text style={[styles.title, { color: theme.text }]}>{t('achievements.title')}</Text>
-            <Text style={[styles.subtitle, { color: theme.sub }]}>{t('achievements.subtitle', { done: unlockedCount, total: achievements.length })}</Text>
-          </View>
-          <View style={[styles.count, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
-            <Trophy size={18} color={semantic.gold} strokeWidth={2.4} />
-            <Text style={[styles.countText, { color: theme.text }]}>{unlockedCount}</Text>
-          </View>
+      scrollable
+      headerRight={
+        <View style={[styles.count, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
+          <Trophy size={18} color={semantic.gold} strokeWidth={2.4} />
+          <Text style={[styles.countText, { color: theme.text }]}>{unlockedCount}</Text>
         </View>
-
+      }
+    >
         {(['campaign', 'islands', 'mastery'] as const).map(category => (
           <View key={category} style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.sub }]}>{t(`achievement.category.${category}`)}</Text>
@@ -113,19 +91,12 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle>(function Ac
             })}
           </View>
         ))}
-      </BottomSheetScrollView>
-    </BottomSheetModal>
+    </SettingsChildSheet>
   );
 });
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 36 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 22, gap: 10 },
   // Painted at 36 beside a 22pt title; hitSlop, not size, takes the tap area to 44.
-  backButton: { width: BACK_BUTTON_SIZE, height: BACK_BUTTON_SIZE, borderWidth: 1.5, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  headerCopy: { flex: 1, minWidth: 0 },
-  title: { fontSize: 22, fontWeight: '800' },
-  subtitle: { fontSize: 12, fontWeight: '600', marginTop: 3 },
   count: { flexShrink: 0, minWidth: 54, minHeight: 38, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
   countText: { fontSize: 14, fontWeight: '800' },
   section: { gap: 8, marginBottom: 20 },
