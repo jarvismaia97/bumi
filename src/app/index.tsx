@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Grid } from '@/components/Grid/Grid';
 import { celebrationDurationMs, highestTier, type CelebrationTier } from '@/components/Grid/celebration';
+import { difficultyLabel, hintLabel, isFirstCampaignLevel, isHintDisabled, levelLabel, nextLabel, type LabelContext } from '@/game/labels';
 import { FooterButtons } from '@/components/hud/FooterButtons';
 import { Header } from '@/components/hud/Header';
 import { MenuScreen } from '@/components/menu/MenuScreen';
@@ -285,37 +286,24 @@ export default function GameScreen() {
 
   const meta = mode === 'campaign' ? LEVEL_META[curLvl] : null;
   const isTodayDaily = mode === 'daily' && dailyChallengeDate === getDailyDateKey();
-  const levelLabel =
-    mode === 'daily'
-      ? t('game.today')
-      : mode === 'tutorial'
-        ? t('game.tutorialLevel', { current: tutorialLevelIndex + 1, total: TUTORIAL_LEVELS.length })
-        : t('game.level', { level: curLvl + 1 });
-  const diffLabel =
-    mode === 'daily'
-      ? t('game.dailyLabel')
-      : mode === 'tutorial'
-        ? t('game.learnMeta', { rows: levelRows, columns: levelColumns })
-        : meta
-          ? `${meta.milestone ? `${t('game.extraHard')} · ` : ''}${t(`difficulty.${meta.label}`)} · ${meta.size}×${meta.size}`
-          : '';
-
+  const labels: LabelContext = {
+    mode,
+    levelIndex: curLvl,
+    meta,
+    tutorialIndex: tutorialLevelIndex,
+    tutorialTotal: TUTORIAL_LEVELS.length,
+    rows: levelRows,
+    columns: levelColumns,
+    hints: progress.hints,
+  };
   const isNewSolve = mode === 'campaign' && progress.isSolved(curLvl);
-  const hintDisabled =
-    won || (mode !== 'tutorial' && (curLvl === 0 && mode === 'campaign' ? true : progress.hints <= 0));
-  const hintLabel =
-    mode === 'tutorial'
-      ? t('game.hint')
-      : mode === 'campaign' && curLvl === 0
-        ? t('game.noHint')
-        : t('game.hintWithCount', { count: progress.hints });
 
   function onHintPress() {
     if (mode === 'tutorial') {
       if (hint()) showShareNotice(t('game.hintApplied'));
       return;
     }
-    if (mode === 'campaign' && curLvl === 0) return;
+    if (isFirstCampaignLevel(labels)) return;
     if (progress.hints <= 0) return;
     if (!hint()) return;
     progress.spendHint();
@@ -346,8 +334,8 @@ export default function GameScreen() {
     <Animated.View style={[styles.container, { backgroundColor: theme.bg }]} entering={SCREEN_FADE}>
       <Header
         mode={mode}
-        levelLabel={levelLabel}
-        diffLabel={diffLabel}
+        levelLabel={levelLabel(labels, t)}
+        diffLabel={difficultyLabel(labels, t)}
         onMenu={goToMenu}
         onLevels={mode === 'tutorial' ? undefined : () => levelsSheetRef.current?.present()}
         onShare={mode === 'campaign' ? onShareChallenge : mode === 'daily' ? onShareDailyChallenge : undefined}
@@ -370,8 +358,8 @@ export default function GameScreen() {
       </View>
 
       <FooterButtons
-        hintLabel={hintLabel}
-        hintDisabled={hintDisabled}
+        hintLabel={hintLabel(labels, t)}
+        hintDisabled={isHintDisabled(labels, won)}
         onUndo={undo}
         onClear={clear}
         onHint={onHintPress}
@@ -396,9 +384,7 @@ export default function GameScreen() {
         dailySummary={mode === 'daily' ? dailyResult ?? undefined : undefined}
         dailyStreak={progress.dailyStreak()}
         dailyCountdown={dailyCountdown}
-        nextLabel={
-          mode === 'daily' ? t('win.backToMenu') : t('win.nextLevel')
-        }
+        nextLabel={nextLabel(mode, t)}
         onReview={() => winSheetRef.current?.dismiss()}
         onNext={onNextLevel}
         onShareDailyResult={mode === 'daily' && !!dailyResult ? onShareDailyResult : undefined}
