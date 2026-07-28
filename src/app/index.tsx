@@ -410,7 +410,6 @@ export default function GameScreen() {
         isLevelLocked={idx => !isCampaignLevelUnlocked(idx, progress.solvedMap)}
         isLevelLoginRequired={idx => requiresCampaignLogin(idx, !!user)}
         onSelectLevel={startCampaign}
-        onGoMenu={goToMenu}
       />
 
       <TutorialOverlay

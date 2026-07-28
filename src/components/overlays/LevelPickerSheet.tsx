@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, interpolate, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
 import Flame from 'lucide-react-native/icons/flame';
-import House from 'lucide-react-native/icons/house';
 import Lock from 'lucide-react-native/icons/lock';
 import { DIFFS } from '@/game/difficulty';
 import { useI18n } from '@/i18n';
@@ -27,7 +26,6 @@ interface LevelPickerSheetProps {
   isLevelLocked?: (idx: number) => boolean;
   isLevelLoginRequired?: (idx: number) => boolean;
   onSelectLevel: (idx: number) => void;
-  onGoMenu: () => void;
 }
 
 interface TierRange {
@@ -126,7 +124,7 @@ function LevelButton({ idx, active, done, medal, locked, progressionLocked, isla
 }
 
 export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSheetProps>(function LevelPickerSheet(
-  { curLvl, isSolved, getLevelMedal, solvedCount, isLevelLocked = () => false, isLevelLoginRequired = () => false, onSelectLevel, onGoMenu },
+  { curLvl, isSolved, getLevelMedal, solvedCount, isLevelLocked = () => false, isLevelLoginRequired = () => false, onSelectLevel },
   ref,
 ) {
   const sheetRef = useRef<BottomSheetModal>(null);
@@ -168,18 +166,7 @@ export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSh
         showsVerticalScrollIndicator
       >
         <View style={[styles.topRow, { backgroundColor: theme.bg }]}>
-          <Text style={[styles.h2, { color: theme.text }]}>{t('levels.path')}</Text>
-          <Pressable
-            accessibilityRole="button"
-            style={[styles.backMenuBtn, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}
-            onPress={() => {
-              sheetRef.current?.dismiss();
-              onGoMenu();
-            }}
-          >
-            <House size={15} color={theme.text} strokeWidth={2.2} />
-            <Text style={[styles.backMenuText, { color: theme.text }]}>{t('levels.menu')}</Text>
-          </Pressable>
+          <Text style={[styles.h2, { color: theme.text }]}>{t('levels.title')}</Text>
         </View>
 
         <View style={[styles.hero, { backgroundColor: `${theme.accent}26` }]}>
@@ -280,10 +267,9 @@ const styles = StyleSheet.create({
   handle: { width: 38 },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 112 },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 8, zIndex: 1 },
-  h2: { flex: 1, minWidth: 0, fontSize: 18, fontWeight: '700' },
-  backMenuBtn: { flexShrink: 0, flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1.5, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12 },
-  backMenuText: { flexShrink: 1, minWidth: 0, fontSize: 13, fontWeight: '600' },
+  // Sticky sheet header: the drag handle and pan-down-to-close already dismiss it.
+  topRow: { marginBottom: 12, paddingBottom: 8, zIndex: 1 },
+  h2: { fontSize: 18, fontWeight: '700' },
   hero: {
     borderRadius: 18,
     paddingHorizontal: 18,
