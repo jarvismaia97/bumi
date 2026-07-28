@@ -1,23 +1,12 @@
 import { useAuthStore } from './authStore';
 import { useProgressStore } from './progressStore';
-import { isBetterMedal, type Medal } from '@/game/medals';
-import { normalizeHintCount } from '@/game/hints';
+import type { Medal } from '@/game/medals';
+import { mergeProgress, type RemoteProgressState } from './progressMerge';
 import { authClient } from '@/lib/auth-client';
 import { useSyncStore } from '@/state/syncStore';
 import { AppState, Platform } from 'react-native';
 
-type RemoteProgress = {
-  hints: number;
-  dailyCompletedDate: string | null;
-  dailyCompletionDates: string[];
-};
-
-type RemoteState = {
-  progress: RemoteProgress | null;
-  solvedLevelIdxs: number[];
-  solvedLevelDates: Record<number, string>;
-  levelMedals: Record<number, Medal>;
-};
+type RemoteState = RemoteProgressState;
 
 function apiUrl(): string {
   if (Platform.OS === 'web') return '/api/progress';
@@ -69,50 +58,10 @@ async function pushLevelMedals(levelMedals: Record<number, Medal>): Promise<void
 
 async function mergeFromRemote(): Promise<void> {
   const remote = await apiRequest<RemoteState>('GET');
+  const merged = mergeProgress(useProgressStore.getState(), remote);
+  const { newlyLocalSolved, newlyLocalMedals, ...state } = merged;
 
-  const local = useProgressStore.getState();
-  const remoteSolvedMap: Record<number, true> = {};
-  remote.solvedLevelIdxs.forEach(idx => {
-    remoteSolvedMap[idx] = true;
-  });
-
-  const mergedSolvedMap = { ...local.solvedMap, ...remoteSolvedMap };
-  const mergedSolvedDateMap = { ...local.solvedDateMap, ...remote.solvedLevelDates };
-  const remoteDaily = remote.progress?.dailyCompletedDate ?? null;
-  const localDates = local.dailyCompletionDates.length
-    ? local.dailyCompletionDates
-    : local.dailyCompletedDate
-      ? [local.dailyCompletedDate]
-      : [];
-  const remoteDates = remote.progress?.dailyCompletionDates?.length
-    ? remote.progress.dailyCompletionDates
-    : remoteDaily
-      ? [remoteDaily]
-      : [];
-  const mergedDailyDates = Array.from(new Set([...localDates, ...remoteDates])).sort();
-  const mergedDaily = mergedDailyDates.at(-1) ?? null;
-  const mergedLevelMedals = { ...remote.levelMedals };
-  for (const [idx, medal] of Object.entries(local.levelMedals)) {
-    const levelIdx = Number(idx);
-    if (isBetterMedal(medal, mergedLevelMedals[levelIdx])) mergedLevelMedals[levelIdx] = medal;
-  }
-
-  useProgressStore.setState({
-    solvedMap: mergedSolvedMap,
-    solvedDateMap: mergedSolvedDateMap,
-    hints: normalizeHintCount(Math.max(local.hints, remote.progress?.hints ?? 0)),
-    dailyCompletedDate: mergedDaily,
-    dailyCompletionDates: mergedDailyDates,
-    levelMedals: mergedLevelMedals,
-  });
-
-  const newlyLocalSolved = Object.keys(local.solvedMap)
-    .map(Number)
-    .filter(idx => !remoteSolvedMap[idx]);
-
-  const newlyLocalMedals = Object.fromEntries(
-    Object.entries(local.levelMedals).filter(([idx, medal]) => isBetterMedal(medal, remote.levelMedals[Number(idx)])),
-  ) as Record<number, Medal>;
+  useProgressStore.setState(state);
 
   await Promise.all([pushProgress(), pushSolvedLevels(newlyLocalSolved), pushLevelMedals(newlyLocalMedals)]);
 }
