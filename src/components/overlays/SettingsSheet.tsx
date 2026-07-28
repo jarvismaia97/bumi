@@ -127,7 +127,6 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
                 <PlayerAvatarTile userId={user.id} size={44} />
                 <View style={styles.accountIdentityCopy}>
                   <Text style={[styles.accountName, { color: theme.text }]}>{playerName(user.id, language)}</Text>
-                  <Text style={[styles.accountDetail, { color: theme.sub }]}>{t('settings.playerHint')}</Text>
                 </View>
               </View>
               <AnimatedPressable accessibilityRole="button" style={[styles.accountSignOut, { borderColor: theme.gridSep }]} onPress={() => signOut().then(() => sheetRef.current?.dismiss()).catch(() => {})}>
@@ -205,11 +204,10 @@ const styles = StyleSheet.create({
   // One 4px scale throughout: 4 / 8 / 12 / 14 / 20 / 28.
   content: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32, gap: 8 },
   title: { fontSize: 20, fontWeight: '800', marginBottom: 12 },
-  account: { borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, paddingTop: 14 },
+  account: { borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, paddingTop: 16 },
   accountIdentity: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   accountIdentityCopy: { flex: 1, minWidth: 0 },
   accountName: { fontSize: 15, fontWeight: '800' },
-  accountDetail: { fontSize: 12, marginTop: 4 },
   // Negative margin pulls the divider out to the card edges instead of stopping at the padding.
   // minHeight (not height) keeps the 44pt touch target while letting the label grow.
   accountSignOut: {
