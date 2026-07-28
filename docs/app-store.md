@@ -89,13 +89,14 @@ Invoke it as `npx eas-cli`; plain `npx eas` cannot resolve the binary.
 1. **Disable the old Google client secret.** A new secret was added alongside it, so
    both currently authenticate. Until the old one is disabled in Google Auth Platform >
    Clients, the value leaked into a chat transcript still works.
-2. **App ID capability.** Confirm `pt.jogarbumi.app` has Sign in with Apple enabled in
-   the developer portal. EAS synced Push Notifications but did not report Sign in with
-   Apple. Missing capability fails at runtime, not at build.
-3. **Verify Google login end to end** on the web, with a pre-existing account, and
+2. **Verify Google login end to end** on the web, with a pre-existing account, and
    confirm it does not create a duplicate user row.
-4. `suporte@jogarbumi.pt` created and receiving mail; the support URL still points at
+3. `suporte@jogarbumi.pt` created and receiving mail; the support URL still points at
    the privacy page.
+
+Sign in with Apple was the other open item and is now closed: signing in works on a real
+device, so the App ID carries the capability. That one could only be checked at runtime —
+EAS synced Push Notifications but never reported the Apple capability either way.
 
 ## Before submission
 
