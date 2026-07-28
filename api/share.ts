@@ -1,3 +1,4 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getDailyChallengeDateKey } from '../src/game/challenge';
 import { resolveLanguage, translate, type SupportedLanguage } from '../src/i18n/messages';
 
@@ -18,7 +19,7 @@ function first(value: unknown): string | undefined {
   return typeof raw === 'string' ? raw : undefined;
 }
 
-export default function handler(req: any, res: any) {
+export default function handler(req: VercelRequest, res: VercelResponse) {
   const kind = first(req.query.kind);
   const value = first(req.query.value);
   // `lang` is stamped on the URL by whoever shared it: the card is rendered once, server

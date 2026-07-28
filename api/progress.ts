@@ -1,11 +1,11 @@
 import { neon } from '@neondatabase/serverless';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuth } from '../src/lib/auth';
 import type { Medal } from '../src/game/medals';
 import { normalizeHintCount } from '../src/game/hints';
 
 type ProgressPayload = {
   hints?: number;
-  infiniteBest?: number;
   dailyCompletedDate?: string | null;
   dailyCompletionDates?: string[];
 };
@@ -16,14 +16,20 @@ type PostBody = {
   levelMedals?: Record<string, Medal>;
 };
 
+/** Neon returns untyped rows, so the shape of each query is declared where it is read. */
+type ProgressRow = { hints: number; daily_completed_date: string | Date | null };
+type DailyRow = { completed_date: string | Date | null };
+type SolvedRow = { level_idx: number; solved_at: string | Date | null };
+type MedalRow = { level_idx: number; medal: Medal };
+
 const databaseUrl = process.env.DATABASE_URL;
 
-function sendJson(res: any, status: number, body: unknown) {
+function sendJson(res: VercelResponse, status: number, body: unknown) {
   res.status(status).setHeader('content-type', 'application/json');
   res.send(JSON.stringify(body));
 }
 
-function setCors(req: any, res: any) {
+function setCors(req: VercelRequest, res: VercelResponse) {
   const origin = req.headers.origin;
   if (origin) res.setHeader('access-control-allow-origin', origin);
   res.setHeader('vary', 'origin');
@@ -45,20 +51,20 @@ function fromPgDate(value: unknown): string | null {
   return null;
 }
 
-function parseBody(req: any): PostBody {
+function parseBody(req: VercelRequest): PostBody {
   if (!req.body) return {};
   if (typeof req.body === 'string') return JSON.parse(req.body) as PostBody;
   return req.body as PostBody;
 }
 
-async function getUserId(req: any): Promise<string | null> {
+async function getUserId(req: VercelRequest): Promise<string | null> {
   const { fromNodeHeaders } = await import('better-auth/node');
   const auth = await getAuth();
   const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
   return session?.user.id ?? null;
 }
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCors(req, res);
 
   if (req.method === 'OPTIONS') {
@@ -82,7 +88,7 @@ export default async function handler(req: any, res: any) {
   if (req.method === 'GET') {
     const [progressRows, solvedRows, dailyRows, medalRows] = await Promise.all([
       sql`
-        select hints, infinite_best, daily_completed_date
+        select hints, daily_completed_date
         from user_progress
         where user_id = ${userId}
       `,
@@ -105,22 +111,19 @@ export default async function handler(req: any, res: any) {
       `,
     ]);
 
-    const progress = progressRows[0] as
-      | { hints: number; infinite_best: number; daily_completed_date: string | Date | null }
-      | undefined;
+    const progress = progressRows[0] as ProgressRow | undefined;
 
     sendJson(res, 200, {
       progress: progress
         ? {
             hints: normalizeHintCount(progress.hints),
-            infiniteBest: progress.infinite_best,
             dailyCompletedDate: fromPgDate(progress.daily_completed_date),
-            dailyCompletionDates: dailyRows.map((row: any) => fromPgDate(row.completed_date)).filter(Boolean),
+            dailyCompletionDates: (dailyRows as DailyRow[]).map(row => fromPgDate(row.completed_date)).filter(Boolean),
           }
         : null,
-      solvedLevelIdxs: solvedRows.map((row: any) => row.level_idx as number),
-      solvedLevelDates: Object.fromEntries(solvedRows.map((row: any) => [row.level_idx, fromPgDate(row.solved_at)]).filter(([, date]) => date)),
-      levelMedals: Object.fromEntries(medalRows.map((row: any) => [row.level_idx, row.medal])),
+      solvedLevelIdxs: (solvedRows as SolvedRow[]).map(row => row.level_idx),
+      solvedLevelDates: Object.fromEntries((solvedRows as SolvedRow[]).map(row => [row.level_idx, fromPgDate(row.solved_at)]).filter(([, date]) => date)),
+      levelMedals: Object.fromEntries((medalRows as MedalRow[]).map(row => [row.level_idx, row.medal])),
     });
     return;
   }
@@ -131,18 +134,18 @@ export default async function handler(req: any, res: any) {
 
     if (body.progress) {
       const progress = body.progress;
+      // infinite_best is left alone rather than named: the column still exists and still
+      // has a not-null default, but no client writes it since the mode was removed.
       writes.push(sql`
-        insert into user_progress (user_id, hints, infinite_best, daily_completed_date, updated_at)
+        insert into user_progress (user_id, hints, daily_completed_date, updated_at)
         values (
           ${userId},
           ${normalizeHintCount(progress.hints ?? 0)},
-          ${Math.max(0, progress.infiniteBest ?? 0)},
           ${toPgDate(progress.dailyCompletedDate)},
           now()
         )
         on conflict (user_id) do update set
           hints = excluded.hints,
-          infinite_best = excluded.infinite_best,
           daily_completed_date = excluded.daily_completed_date,
           updated_at = now()
       `);

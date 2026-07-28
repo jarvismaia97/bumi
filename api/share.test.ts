@@ -19,7 +19,9 @@ function render(query: Record<string, string | string[]>): { status: number; htm
       return res;
     },
   };
-  handler({ query }, res);
+  // Only `query` is read; the rest of VercelRequest is Node's IncomingMessage and would
+  // be 70 fields of noise to build here.
+  handler({ query } as unknown as Parameters<typeof handler>[0], res);
   return { status, html, headers };
 }
 
