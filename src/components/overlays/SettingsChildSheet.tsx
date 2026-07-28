@@ -1,0 +1,92 @@
+import { BottomSheetModal, BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet';
+import { forwardRef, useImperativeHandle, useRef, type ReactNode } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { hitSlopFor } from '@/lib/touchTarget';
+import { useThemeTokens } from '@/state/themeStore';
+import { useI18n } from '@/i18n';
+
+export interface SettingsChildSheetHandle {
+  present: () => void;
+  dismiss: () => void;
+}
+
+interface SettingsChildSheetProps {
+  title: string;
+  /** Sits where the back button's counterweight would be, keeping the title centred. */
+  headerRight?: ReactNode;
+  /** Omit to size the sheet to its content. */
+  snapPoints?: string[];
+  scrollable?: boolean;
+  children: ReactNode;
+}
+
+const BACK_BUTTON_SIZE = 36;
+const BACK_BUTTON_HIT_SLOP = hitSlopFor({ width: BACK_BUTTON_SIZE, height: BACK_BUTTON_SIZE });
+
+/**
+ * Everything Settings opens — themes, achievements, language, the privacy policy — is the
+ * same sheet with different contents: a back arrow that returns to Settings, a centred
+ * title, and a body. That shell was copied into all four, so a change to the header meant
+ * four edits and three chances to miss one.
+ *
+ * Dismissing is all the back arrow does: the modal provider's 'switch' stack behaviour
+ * restores the settings sheet underneath on its own.
+ */
+export const SettingsChildSheet = forwardRef<SettingsChildSheetHandle, SettingsChildSheetProps>(
+  function SettingsChildSheet({ title, headerRight, snapPoints, scrollable = false, children }, ref) {
+    const sheetRef = useRef<BottomSheetModal>(null);
+    const theme = useThemeTokens();
+    const { t } = useI18n();
+
+    useImperativeHandle(ref, () => ({
+      present: () => sheetRef.current?.present(),
+      dismiss: () => sheetRef.current?.dismiss(),
+    }));
+
+    const Body = scrollable ? BottomSheetScrollView : BottomSheetView;
+
+    return (
+      <BottomSheetModal
+        ref={sheetRef}
+        snapPoints={snapPoints}
+        enableDynamicSizing={!snapPoints}
+        enablePanDownToClose
+        backgroundStyle={{ backgroundColor: theme.bg }}
+        handleIndicatorStyle={{ backgroundColor: theme.gridSep }}
+      >
+        <Body
+          style={scrollable ? undefined : styles.content}
+          contentContainerStyle={scrollable ? styles.content : undefined}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <AnimatedPressable
+              accessibilityRole="button"
+              feedback="icon"
+              style={[styles.backButton, { borderColor: theme.gridSep }]}
+              hitSlop={BACK_BUTTON_HIT_SLOP}
+              onPress={() => sheetRef.current?.dismiss()}
+              accessibilityLabel={t('a11y.backToSettings')}
+            >
+              <ArrowLeft size={18} color={theme.text} strokeWidth={2.3} />
+            </AnimatedPressable>
+            <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+            {headerRight ?? <View style={styles.headerSpacer} />}
+          </View>
+
+          {children}
+        </Body>
+      </BottomSheetModal>
+    );
+  },
+);
+
+const styles = StyleSheet.create({
+  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 34 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  backButton: { minWidth: BACK_BUTTON_SIZE, minHeight: BACK_BUTTON_SIZE, borderWidth: 1.5, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  title: { flexShrink: 1, minWidth: 0, fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  headerSpacer: { width: BACK_BUTTON_SIZE, flexShrink: 0 },
+});
