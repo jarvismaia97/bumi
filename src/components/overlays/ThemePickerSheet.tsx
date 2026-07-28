@@ -1,29 +1,21 @@
-import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import Check from 'lucide-react-native/icons/check';
 import Lock from 'lucide-react-native/icons/lock';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { SettingsChildSheet, type SettingsChildSheetHandle } from '@/components/overlays/SettingsChildSheet';
 import { useAppearance } from '@/state/appearanceStore';
-import { useThemeStore, useThemeTokens } from '@/state/themeStore';
+import { useThemeStore } from '@/state/themeStore';
 import { THEME_OPTIONS, THEMES } from '@/theme/themes';
 import { getUnlockStats, isThemeUnlocked, remainingFor, THEME_REQUIREMENTS } from '@/game/unlocks';
 import { useProgressStore } from '@/state/progressStore';
 import { playHaptic } from '@/lib/haptics';
-import { hitSlopFor } from '@/lib/touchTarget';
 import { useI18n } from '@/i18n';
 
-const BACK_BUTTON_SIZE = 36;
-const BACK_BUTTON_HIT_SLOP = hitSlopFor({ width: BACK_BUTTON_SIZE, height: BACK_BUTTON_SIZE });
-
-export interface ThemePickerSheetHandle {
-  present: () => void;
-}
+export type ThemePickerSheetHandle = SettingsChildSheetHandle;
 
 export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle>(function ThemePickerSheet(_, ref) {
-  const sheetRef = useRef<BottomSheetModal>(null);
-  const theme = useThemeTokens();
+  const sheetRef = useRef<SettingsChildSheetHandle>(null);
   const appearance = useAppearance();
   const { t } = useI18n();
   const solvedMap = useProgressStore(state => state.solvedMap);
@@ -45,6 +37,7 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle>(function Them
 
   useImperativeHandle(ref, () => ({
     present: () => sheetRef.current?.present(),
+    dismiss: () => sheetRef.current?.dismiss(),
   }));
 
   function selectTheme(name: typeof themeName) {
@@ -54,29 +47,8 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle>(function Them
     sheetRef.current?.dismiss();
   }
 
-  // Dismissing is enough: the provider restores the settings sheet underneath.
-  function goBack() {
-    sheetRef.current?.dismiss();
-  }
-
   return (
-    <BottomSheetModal
-      ref={sheetRef}
-      snapPoints={['70%']}
-      enableDynamicSizing={false}
-      enablePanDownToClose
-      backgroundStyle={{ backgroundColor: theme.bg }}
-      handleIndicatorStyle={{ backgroundColor: theme.gridSep }}
-    >
-      <BottomSheetView style={styles.content}>
-        <View style={styles.header}>
-          <AnimatedPressable accessibilityRole="button" feedback="icon" style={[styles.backButton, { borderColor: theme.gridSep }]} hitSlop={BACK_BUTTON_HIT_SLOP} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
-            <ArrowLeft size={18} color={theme.text} strokeWidth={2.3} />
-          </AnimatedPressable>
-          <Text style={[styles.title, { color: theme.text }]}>{t('theme.title')}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
+    <SettingsChildSheet ref={sheetRef} title={t('theme.title')} snapPoints={['70%']}>
         <View style={styles.list}>
           {THEME_OPTIONS.map(name => {
             const selected = name === themeName;
@@ -112,20 +84,14 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle>(function Them
             );
           })}
         </View>
-      </BottomSheetView>
-    </BottomSheetModal>
+    </SettingsChildSheet>
   );
 });
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   // Painted at 36 beside a 20pt title; hitSlop, not size, takes the tap area to 44.
-  backButton: { width: BACK_BUTTON_SIZE, height: BACK_BUTTON_SIZE, borderWidth: 1.5, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  headerSpacer: { width: BACK_BUTTON_SIZE },
   // Centred between two 36pt buttons; flex lets a long translated title wrap instead of
   // shoving the back button off the sheet.
-  title: { flex: 1, minWidth: 0, fontSize: 20, fontWeight: '800', textAlign: 'center' },
   list: { gap: 8, marginTop: 18 },
   option: { minHeight: 48, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 13, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   optionCopy: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
