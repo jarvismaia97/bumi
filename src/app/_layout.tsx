@@ -12,9 +12,10 @@ import { useAppearance } from '@/state/appearanceStore';
 import { useAuthStore } from '@/state/authStore';
 import { initProgressSync } from '@/state/progressSync';
 import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
+import { getDailyDateKey } from '@/game/daily';
 import { LEVEL_META } from '@/game/levels';
 import { useChallengeStore } from '@/state/challengeStore';
-import { configureNotificationHandler, setDailyReminder } from '@/lib/dailyReminder';
+import { configureNotificationHandler, onNotificationOpened, REMINDER_SCREEN, setDailyReminder } from '@/lib/dailyReminder';
 import { useProgressStore } from '@/state/progressStore';
 import { useI18n } from '@/i18n';
 
@@ -41,6 +42,20 @@ export default function RootLayout() {
     if (!dailyReminderEnabled) return;
     setDailyReminder(true, language, { promptForPermission: false }).catch(() => {});
   }, [dailyReminderEnabled, language]);
+
+  // The reminder carries the screen it wants opened; without this the payload was written
+  // and never read, so tapping it just landed on the menu like the app icon does.
+  useEffect(() => {
+    let teardown: (() => void) | undefined;
+    onNotificationOpened(screen => {
+      if (screen === REMINDER_SCREEN) setPendingDailyChallenge(getDailyDateKey());
+    })
+      .then(unsubscribe => {
+        teardown = unsubscribe;
+      })
+      .catch(() => {});
+    return () => teardown?.();
+  }, [setPendingDailyChallenge]);
 
   useEffect(() => {
     if (!linkingUrl) return;

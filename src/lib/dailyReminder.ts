@@ -5,6 +5,32 @@ import { translate, type SupportedLanguage } from '@/i18n/messages';
 const REMINDER_ID = 'bumi-daily-reminder';
 const REMINDER_HOUR = 19;
 
+/** What the reminder asks the app to open when it is tapped. */
+export const REMINDER_SCREEN = 'daily';
+
+/**
+ * Calls back with the screen a tapped notification asked for, including the one that
+ * launched the app from cold. Returns a teardown, or a no-op where notifications cannot run.
+ */
+export async function onNotificationOpened(open: (screen: string) => void): Promise<() => void> {
+  if (Platform.OS === 'web') return () => {};
+
+  const Notifications = await import('expo-notifications');
+
+  // A notification that launched the app has already been delivered, so the listener below
+  // never fires for it — without this the reminder only works while the app is running.
+  const launched = await Notifications.getLastNotificationResponseAsync();
+  const launchedScreen = launched?.notification.request.content.data?.screen;
+  if (typeof launchedScreen === 'string') open(launchedScreen);
+
+  const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+    const screen = response.notification.request.content.data?.screen;
+    if (typeof screen === 'string') open(screen);
+  });
+
+  return () => subscription.remove();
+}
+
 export async function configureNotificationHandler(): Promise<void> {
   if (Platform.OS === 'web') return;
 
@@ -64,7 +90,7 @@ export async function setDailyReminder(
     content: {
       title: translate(language, 'reminder.title'),
       body: translate(language, 'reminder.body'),
-      data: { screen: 'daily' },
+      data: { screen: REMINDER_SCREEN },
     },
     trigger: Platform.OS === 'ios' ? iosTrigger : androidTrigger,
   });
