@@ -1,6 +1,7 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import { router } from 'expo-router';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeTokens } from '@/state/themeStore';
 import { hitSlopFor } from '@/lib/touchTarget';
@@ -18,9 +19,9 @@ export default function PrivacyScreen() {
 
   return (
     <ScrollView style={[styles.screen, { backgroundColor: theme.bg }]} contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}>
-      <Pressable accessibilityRole="button" style={[styles.back, { borderColor: theme.gridSep, backgroundColor: theme.surface }]} hitSlop={BACK_BUTTON_HIT_SLOP} onPress={() => router.back()} accessibilityLabel={t('a11y.back')}>
+      <AnimatedPressable accessibilityRole="button" feedback="icon" style={[styles.back, { borderColor: theme.gridSep, backgroundColor: theme.surface }]} hitSlop={BACK_BUTTON_HIT_SLOP} onPress={() => router.back()} accessibilityLabel={t('a11y.back')}>
         <ArrowLeft size={19} color={theme.text} strokeWidth={2.3} />
-      </Pressable>
+      </AnimatedPressable>
       <Text style={[styles.title, { color: theme.text }]}>{t('privacy.title')}</Text>
       <Text style={[styles.updated, { color: theme.sub }]}>{t('privacy.updated')}</Text>
 

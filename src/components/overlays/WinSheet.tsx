@@ -1,8 +1,9 @@
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
 import Share2 from 'lucide-react-native/icons/share-2';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { Logo } from '@/components/Logo';
 import type { Medal } from '@/game/medals';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
@@ -91,16 +92,16 @@ export const WinSheet = forwardRef<WinSheetHandle, WinSheetProps>(function WinSh
 
         <View style={styles.actions}>
           {onShareDailyResult && (
-            <Pressable accessibilityRole="button" style={[styles.shareBtn, { backgroundColor: `${theme.accent}26` }]} onPress={onShareDailyResult} accessibilityLabel={t('a11y.shareResult')}>
+            <AnimatedPressable accessibilityRole="button" feedback="icon" style={[styles.shareBtn, { backgroundColor: `${theme.accent}26` }]} onPress={onShareDailyResult} accessibilityLabel={t('a11y.shareResult')}>
               <Share2 size={19} color={theme.text} strokeWidth={2.3} />
-            </Pressable>
+            </AnimatedPressable>
           )}
-          <Pressable accessibilityRole="button" style={[styles.secondaryBtn, { backgroundColor: `${theme.accent}26` }]} onPress={onReview}>
+          <AnimatedPressable accessibilityRole="button" feedback="control" style={[styles.secondaryBtn, { backgroundColor: `${theme.accent}26` }]} onPress={onReview}>
             <Text style={[styles.secondaryBtnText, { color: theme.text }]}>{t('win.review')}</Text>
-          </Pressable>
-          <Pressable accessibilityRole="button" style={[styles.primaryBtn, { backgroundColor: theme.accent }]} onPress={onNext}>
+          </AnimatedPressable>
+          <AnimatedPressable accessibilityRole="button" style={[styles.primaryBtn, { backgroundColor: theme.accent }]} onPress={onNext}>
             <Text style={styles.primaryBtnText}>{nextLabel}</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
       </BottomSheetView>
     </BottomSheetModal>

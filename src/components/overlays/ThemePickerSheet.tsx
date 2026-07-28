@@ -1,8 +1,9 @@
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import Check from 'lucide-react-native/icons/check';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { useAppearance } from '@/state/appearanceStore';
 import { useThemeStore, useThemeTokens } from '@/state/themeStore';
 import { THEME_OPTIONS, THEMES } from '@/theme/themes';
@@ -56,9 +57,9 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle, ThemePickerSh
     >
       <BottomSheetView style={styles.content}>
         <View style={styles.header}>
-          <Pressable accessibilityRole="button" style={[styles.backButton, { borderColor: theme.gridSep }]} hitSlop={BACK_BUTTON_HIT_SLOP} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
+          <AnimatedPressable accessibilityRole="button" feedback="icon" style={[styles.backButton, { borderColor: theme.gridSep }]} hitSlop={BACK_BUTTON_HIT_SLOP} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
             <ArrowLeft size={18} color={theme.text} strokeWidth={2.3} />
-          </Pressable>
+          </AnimatedPressable>
           <Text style={[styles.title, { color: theme.text }]}>{t('theme.title')}</Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -70,7 +71,7 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle, ThemePickerSh
             // appearance the app is painting rather than always showing the light palette.
             const optionTheme = THEMES[name][appearance];
             return (
-              <Pressable
+              <AnimatedPressable
                 accessibilityRole="button"
                 key={name}
                 style={[
@@ -88,7 +89,7 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle, ThemePickerSh
                   <Text style={[styles.optionLabel, { color: optionTheme.text }]}>{t(`theme.${name}`)}</Text>
                 </View>
                 {selected && <Check size={19} color={optionTheme.accent} strokeWidth={2.8} />}
-              </Pressable>
+              </AnimatedPressable>
             );
           })}
         </View>

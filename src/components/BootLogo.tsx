@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, Text, useWindowDimensions } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { useThemeTokens } from '@/state/themeStore';
 
 type Direction = 'horizontal' | 'vertical';
@@ -71,35 +72,51 @@ function LogoSegment({
 export function BootLogo() {
   const theme = useThemeTokens();
   const { width } = useWindowDimensions();
+  const reduceMotion = useReducedMotion();
   const [visible, setVisible] = useState(true);
-  const [build] = useState(() => new Animated.Value(0));
+  // Starting at 1 puts every segment at rest on the first frame, which is the reduced build:
+  // there is no honest slower version of a panel crossing half the screen and stretching 12x.
+  const [build] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
   const [exit] = useState(() => new Animated.Value(0));
   const sideTravel = Math.max(150, width / 2 + 58);
 
   useEffect(() => {
     const useNativeDriver = Platform.OS !== 'web';
-    const animation = Animated.sequence([
-      Animated.timing(build, {
-        toValue: 1,
-        duration: 2300,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver,
-      }),
-      Animated.delay(520),
-      Animated.timing(exit, {
-        toValue: 1,
-        duration: 460,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver,
-      }),
-    ]);
+    // Nothing is assembling any more, so the 2.3s build plus its 520ms hold would just be a wait
+    // in front of the app. What the screen is for — the mark, then handing over — is kept: a
+    // beat on the finished logo, then a cross-fade, which is movement-free by nature.
+    const animation = reduceMotion
+      ? Animated.sequence([
+          Animated.delay(900),
+          Animated.timing(exit, {
+            toValue: 1,
+            duration: 300,
+            easing: Easing.linear,
+            useNativeDriver,
+          }),
+        ])
+      : Animated.sequence([
+          Animated.timing(build, {
+            toValue: 1,
+            duration: 2300,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver,
+          }),
+          Animated.delay(520),
+          Animated.timing(exit, {
+            toValue: 1,
+            duration: 460,
+            easing: Easing.in(Easing.cubic),
+            useNativeDriver,
+          }),
+        ]);
 
     animation.start(({ finished }) => {
       if (finished) setVisible(false);
     });
 
     return () => animation.stop();
-  }, [build, exit]);
+  }, [build, exit, reduceMotion]);
 
   if (!visible) return null;
 
@@ -110,7 +127,9 @@ export function BootLogo() {
 
   return (
     <Animated.View style={[styles.overlay, { backgroundColor: theme.bg, opacity: overlayOpacity }]}>
-      <Animated.View style={[styles.mark, { transform: [{ scale: markScale }] }]}>
+      {/* The exit already reads as a hand-off through opacity alone; the shrink is the part of it
+          that is movement, so it is the part that goes. */}
+      <Animated.View style={[styles.mark, reduceMotion ? null : { transform: [{ scale: markScale }] }]}>
         <LogoSegment
           build={build}
           inputRange={[0, 0.14, 0.26, 0.32]}

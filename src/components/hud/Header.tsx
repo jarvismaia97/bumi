@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Map from 'lucide-react-native/icons/map';
 import Share2 from 'lucide-react-native/icons/share-2';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { Logo } from '@/components/Logo';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import type { Mode } from '@/state/uiStore';
@@ -55,7 +56,7 @@ export function Header({ mode, levelLabel, diffLabel, onMenu, onLevels, onShare,
 
   return (
     <View style={[styles.header, { paddingTop: Math.max(12, topInset) }]}>
-      <Pressable accessibilityRole="button" style={styles.brand} hitSlop={BRAND_HIT_SLOP} onPress={onMenu} accessibilityLabel={t('a11y.backToMenu')}>
+      <AnimatedPressable accessibilityRole="button" feedback="control" style={styles.brand} hitSlop={BRAND_HIT_SLOP} onPress={onMenu} accessibilityLabel={t('a11y.backToMenu')}>
         <Logo size={compact ? 23 : 28} />
         <Text style={[styles.title, compact && styles.titleCompact, { color: theme.text }]} numberOfLines={1}>Bumi</Text>
         {badge && badgeStyle && (
@@ -63,7 +64,7 @@ export function Header({ mode, levelLabel, diffLabel, onMenu, onLevels, onShare,
             <Text style={[styles.badgeText, { color: badgeStyle.fg }]}>{t(badge.labelKey)}</Text>
           </View>
         )}
-      </Pressable>
+      </AnimatedPressable>
 
       <View style={styles.actions}>
         {/* Fixed game chrome: the level meta gets a measured slot beside the buttons and
@@ -73,14 +74,14 @@ export function Header({ mode, levelLabel, diffLabel, onMenu, onLevels, onShare,
           <Text style={[styles.levelDiff, { color: theme.sub }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{diffLabel}</Text>
         </View>
         {onLevels && (
-          <Pressable accessibilityRole="button" style={[styles.iconButton, { borderColor: theme.gridSep }]} hitSlop={ICON_BUTTON_HIT_SLOP} onPress={onLevels} accessibilityLabel={t('a11y.openLevels')}>
+          <AnimatedPressable accessibilityRole="button" feedback="icon" style={[styles.iconButton, { borderColor: theme.gridSep }]} hitSlop={ICON_BUTTON_HIT_SLOP} onPress={onLevels} accessibilityLabel={t('a11y.openLevels')}>
             <Map size={18} color={theme.text} strokeWidth={2.2} />
-          </Pressable>
+          </AnimatedPressable>
         )}
         {onShare && (
-          <Pressable accessibilityRole="button" style={[styles.iconButton, { borderColor: theme.gridSep }]} hitSlop={ICON_BUTTON_HIT_SLOP} onPress={onShare} accessibilityLabel={t('a11y.shareChallenge')}>
+          <AnimatedPressable accessibilityRole="button" feedback="icon" style={[styles.iconButton, { borderColor: theme.gridSep }]} hitSlop={ICON_BUTTON_HIT_SLOP} onPress={onShare} accessibilityLabel={t('a11y.shareChallenge')}>
             <Share2 size={18} color={theme.text} strokeWidth={2.2} />
-          </Pressable>
+          </AnimatedPressable>
         )}
       </View>
     </View>

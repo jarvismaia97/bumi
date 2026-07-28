@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
-import Animated, { interpolate, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { interpolate, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 import { rectOk } from '@/game/geometry';
 import type { Level, PlacedRect, SolutionRect } from '@/game/types';
 import { BD_PAL, BG_PAL } from '@/theme/palette';
@@ -122,20 +122,34 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
   );
 }
 
+// Solving the puzzle is what the whole app is for, so the celebration is not allowed to become
+// nothing. Reanimated disables a timing outright under the system setting, which for a sequence
+// that returns to 0 means the win passes unmarked — hence `Never` plus a version with no movement
+// left in it: the rectangles hold a lit border and fade, all at once. The stagger goes because a
+// wave crossing the grid is apparent motion even when nothing in it moves.
+const REDUCED_CELEBRATION = {
+  in: { duration: 260, reduceMotion: ReduceMotion.Never },
+  out: { duration: 520, reduceMotion: ReduceMotion.Never },
+} as const;
+
 function CelebrationRect({ rect, cellSize, color, active, index }: { rect: PlacedRect; cellSize: number; color: string; active: boolean; index: number }) {
   const progress = useSharedValue(0);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     progress.value = 0;
-    if (active) {
-      progress.value = withDelay(index * 85, withSequence(withTiming(1, { duration: 230 }), withTiming(0, { duration: 280 })));
-    }
-  }, [active, index, progress]);
+    if (!active) return;
+    progress.value = reduceMotion
+      ? withSequence(withTiming(1, REDUCED_CELEBRATION.in), withTiming(0, REDUCED_CELEBRATION.out))
+      : withDelay(index * 85, withSequence(withTiming(1, { duration: 230 }), withTiming(0, { duration: 280 })));
+  }, [active, index, progress, reduceMotion]);
 
-  const style = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.3, 1], [0, 0.95, 0]),
-    transform: [{ scale: interpolate(progress.value, [0, 0.35, 1], [0.92, 1.04, 1.1]) }],
-  }));
+  const style = useAnimatedStyle(() => (reduceMotion
+    ? { opacity: interpolate(progress.value, [0, 1], [0, 0.95]) }
+    : {
+        opacity: interpolate(progress.value, [0, 0.3, 1], [0, 0.95, 0]),
+        transform: [{ scale: interpolate(progress.value, [0, 0.35, 1], [0.92, 1.04, 1.1]) }],
+      }));
 
   return (
     <Animated.View
@@ -157,16 +171,24 @@ function CelebrationRect({ rect, cellSize, color, active, index }: { rect: Place
 
 function CompletionGlow({ active, color }: { active: boolean; color: string }) {
   const progress = useSharedValue(0);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     progress.value = 0;
-    if (active) progress.value = withDelay(180, withSequence(withTiming(1, { duration: 280 }), withTiming(0, { duration: 420 })));
-  }, [active, progress]);
+    if (!active) return;
+    // The 180ms lead-in exists to let the rectangles start first; with the stagger gone that
+    // would only split one glow into two beats, so the reduced grid lights as a single event.
+    progress.value = reduceMotion
+      ? withSequence(withTiming(1, REDUCED_CELEBRATION.in), withTiming(0, REDUCED_CELEBRATION.out))
+      : withDelay(180, withSequence(withTiming(1, { duration: 280 }), withTiming(0, { duration: 420 })));
+  }, [active, progress, reduceMotion]);
 
-  const style = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.35, 1], [0, 0.45, 0]),
-    transform: [{ scale: interpolate(progress.value, [0, 0.4, 1], [0.98, 1.025, 1.05]) }],
-  }));
+  const style = useAnimatedStyle(() => (reduceMotion
+    ? { opacity: interpolate(progress.value, [0, 1], [0, 0.45]) }
+    : {
+        opacity: interpolate(progress.value, [0, 0.35, 1], [0, 0.45, 0]),
+        transform: [{ scale: interpolate(progress.value, [0, 0.4, 1], [0.98, 1.025, 1.05]) }],
+      }));
 
   return <Animated.View pointerEvents="none" style={[styles.completionGlow, style, { borderColor: color }]} />;
 }

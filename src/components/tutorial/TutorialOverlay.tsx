@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { useAppearance } from '@/state/appearanceStore';
 import { useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
@@ -48,10 +49,10 @@ export function TutorialOverlay({ visible, lessonIndex, readyToPlay, won, onStar
         </View>
         <Text style={[styles.title, { color: card.text }]}>{title}</Text>
         <Text style={[styles.body, { color: card.text }]}>{body}</Text>
-        <Pressable accessibilityRole="button" style={[styles.button, { backgroundColor: theme.accent }]} onPress={onPress}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.button, { backgroundColor: theme.accent }]} onPress={onPress}>
           <Text style={styles.buttonText}>{button}</Text>
           <ArrowRight size={18} color="#fff" strokeWidth={2.4} />
-        </Pressable>
+        </AnimatedPressable>
       </View>
     </View>
   );

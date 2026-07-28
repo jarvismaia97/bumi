@@ -1,6 +1,6 @@
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import Flag from 'lucide-react-native/icons/flag';
 import Flame from 'lucide-react-native/icons/flame';
@@ -10,6 +10,7 @@ import Mountain from 'lucide-react-native/icons/mountain';
 import Route from 'lucide-react-native/icons/route';
 import Trophy from 'lucide-react-native/icons/trophy';
 import Zap from 'lucide-react-native/icons/zap';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { getAchievements, type AchievementProgress } from '@/game/achievements';
 import { useProgressStore } from '@/state/progressStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
@@ -76,9 +77,9 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle, Achievement
     >
       <BottomSheetScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Pressable accessibilityRole="button" style={[styles.backButton, { borderColor: theme.gridSep }]} hitSlop={BACK_BUTTON_HIT_SLOP} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
+          <AnimatedPressable accessibilityRole="button" feedback="icon" style={[styles.backButton, { borderColor: theme.gridSep }]} hitSlop={BACK_BUTTON_HIT_SLOP} onPress={goBack} accessibilityLabel={t('a11y.backToSettings')}>
             <ArrowLeft size={18} color={theme.text} strokeWidth={2.3} />
-          </Pressable>
+          </AnimatedPressable>
           <View style={styles.headerCopy}>
             <Text style={[styles.title, { color: theme.text }]}>{t('achievements.title')}</Text>
             <Text style={[styles.subtitle, { color: theme.sub }]}>{t('achievements.subtitle', { done: unlockedCount, total: achievements.length })}</Text>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { GoogleMark } from '@/components/GoogleMark';
 import { Logo } from '@/components/Logo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,18 +54,15 @@ export default function LoginScreen() {
         {t('auth.description')}
       </Text>
 
-      <Pressable
+      <AnimatedPressable
         accessibilityRole="button"
         disabled={submitting}
-        style={({ pressed }) => [
-          styles.signInButton,
-          { backgroundColor: theme.accent, opacity: submitting || pressed ? 0.78 : 1 },
-        ]}
+        style={[styles.signInButton, { backgroundColor: theme.accent, opacity: submitting ? 0.78 : 1 }]}
         onPress={onSignIn}
       >
         <GoogleMark size={18} />
         <Text style={styles.signInText}>{submitting ? t('auth.opening') : t('auth.signInGoogle')}</Text>
-      </Pressable>
+      </AnimatedPressable>
 
       {appleAvailable ? (
         <AppleAuthentication.AppleAuthenticationButton

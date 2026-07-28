@@ -1,8 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Eraser from 'lucide-react-native/icons/eraser';
 import Lightbulb from 'lucide-react-native/icons/lightbulb';
 import Undo2 from 'lucide-react-native/icons/undo-2';
 import type { LucideIcon } from 'lucide-react-native';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
 
@@ -51,8 +52,9 @@ function FooterBtn({
   disabled?: boolean;
 }) {
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
+      feedback="control"
       style={[styles.btn, { backgroundColor: theme.surface, borderColor: theme.gridSep, opacity: disabled ? 0.4 : 1 }]}
       onPress={onPress}
       disabled={disabled}
@@ -62,7 +64,7 @@ function FooterBtn({
       <Text style={[styles.btnLabel, { color: theme.text }]}>
         {label}
       </Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

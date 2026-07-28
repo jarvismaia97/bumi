@@ -1,10 +1,11 @@
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, interpolate, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, { Easing, interpolate, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
 import Flame from 'lucide-react-native/icons/flame';
 import Lock from 'lucide-react-native/icons/lock';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { DIFFS } from '@/game/difficulty';
 import { useI18n } from '@/i18n';
 import { ISLANDS } from '@/game/islands';
@@ -35,22 +36,31 @@ interface TierRange {
 
 function CascadeCard({ index, entranceKey, children }: { index: number; entranceKey: number; children: React.ReactNode }) {
   const progress = useSharedValue(0);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     progress.value = 0;
-    progress.value = withDelay(
-      Math.min(index * 65, 520),
-      withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) }),
-    );
-  }, [entranceKey, index, progress]);
+    // Thirteen cards lifting into place one after another is the shape reduced motion exists to
+    // stop, and the stagger is the worse half: a wave travelling down the list is read as motion
+    // even once each card stops moving. What survives is one cross-fade, all cards together, so
+    // the list still announces itself instead of being there before the sheet finishes opening.
+    progress.value = reduceMotion
+      ? withTiming(1, { duration: 160, reduceMotion: ReduceMotion.Never })
+      : withDelay(
+          Math.min(index * 65, 520),
+          withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) }),
+        );
+  }, [entranceKey, index, progress, reduceMotion]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [
-      { translateY: interpolate(progress.value, [0, 1], [14, 0]) },
-      { scale: interpolate(progress.value, [0, 1], [0.98, 1]) },
-    ],
-  }));
+  const animatedStyle = useAnimatedStyle(() => (reduceMotion
+    ? { opacity: progress.value }
+    : {
+        opacity: progress.value,
+        transform: [
+          { translateY: interpolate(progress.value, [0, 1], [14, 0]) },
+          { scale: interpolate(progress.value, [0, 1], [0.98, 1]) },
+        ],
+      }));
 
   return <Animated.View style={animatedStyle}>{children}</Animated.View>;
 }
@@ -72,54 +82,40 @@ function LevelButton({ idx, active, done, medal, locked, progressionLocked, isla
   // Island cards are painted from the island art, which stays light in both appearances,
   // so everything sitting on one reads against the light palette.
   const semantic = SEMANTIC.light;
-  const press = useSharedValue(0);
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(press.value, [0, 1], [1, 0.91]) }],
-  }));
 
   return (
-    <Animated.View style={animatedStyle}>
-      <Pressable
-        accessibilityRole="button"
-        style={[
-          styles.lvlBtn,
-          active && { backgroundColor: islandColor, borderColor: islandColor },
-          !active && done && { backgroundColor: `${islandColor}30`, borderColor: islandColor },
-          locked && styles.lvlBtnLocked,
-        ]}
-        disabled={progressionLocked}
-        onPressIn={() => {
-          // Reanimated shared values intentionally mutate outside React state.
-          // eslint-disable-next-line react-hooks/immutability
-          press.value = withTiming(1, { duration: 80, easing: Easing.out(Easing.quad) });
-        }}
-        onPressOut={() => {
-          // eslint-disable-next-line react-hooks/immutability
-          press.value = withTiming(0, { duration: 150, easing: Easing.out(Easing.back(1.5)) });
-        }}
-        onPress={onPress}
-        accessibilityLabel={t(
-          progressionLocked
-            ? 'a11y.levelLocked'
-            : locked
-              ? 'a11y.levelLoginRequired'
-              : milestone
-                ? 'a11y.levelMilestone'
-                : 'a11y.levelButton',
-          { level: idx + 1 },
-        )}
-      >
-        {locked ? (
-          <Lock size={13} color="#827d78" strokeWidth={2.4} />
-        ) : (
-          <>
-            <Text style={[styles.lvlBtnText, { color: active ? '#fff' : islandColor }]}>{idx + 1}</Text>
-            {milestone && <Flame style={styles.milestoneIcon} size={10} color={active ? '#fff' : semantic.streak} strokeWidth={2.6} />}
-            {medal && <View style={[styles.medalDot, { backgroundColor: semantic[medal] }]} />}
-          </>
-        )}
-      </Pressable>
-    </Animated.View>
+    <AnimatedPressable
+      accessibilityRole="button"
+      feedback="icon"
+      style={[
+        styles.lvlBtn,
+        active && { backgroundColor: islandColor, borderColor: islandColor },
+        !active && done && { backgroundColor: `${islandColor}30`, borderColor: islandColor },
+        locked && styles.lvlBtnLocked,
+      ]}
+      disabled={progressionLocked}
+      onPress={onPress}
+      accessibilityLabel={t(
+        progressionLocked
+          ? 'a11y.levelLocked'
+          : locked
+            ? 'a11y.levelLoginRequired'
+            : milestone
+              ? 'a11y.levelMilestone'
+              : 'a11y.levelButton',
+        { level: idx + 1 },
+      )}
+    >
+      {locked ? (
+        <Lock size={13} color="#827d78" strokeWidth={2.4} />
+      ) : (
+        <>
+          <Text style={[styles.lvlBtnText, { color: active ? '#fff' : islandColor }]}>{idx + 1}</Text>
+          {milestone && <Flame style={styles.milestoneIcon} size={10} color={active ? '#fff' : semantic.streak} strokeWidth={2.6} />}
+          {medal && <View style={[styles.medalDot, { backgroundColor: semantic[medal] }]} />}
+        </>
+      )}
+    </AnimatedPressable>
   );
 }
 

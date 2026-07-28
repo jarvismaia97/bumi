@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Gesture } from 'react-native-gesture-handler';
-import { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { ReduceMotion, runOnJS, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import type { PlacedRect, SolutionRect } from '@/game/types';
 
 // Drag-to-draw + tap-to-delete. Row/col are derived from the gesture's view-local
@@ -36,6 +36,7 @@ function rectIndexAt(rects: PlacedRect[], row: number, col: number): number {
 }
 
 export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, onRemoveAt }: Options) {
+  const reduceMotion = useReducedMotion();
   const placedShared = useSharedValue<PlacedRect[]>([]);
   useEffect(() => {
     placedShared.value = placed;
@@ -102,12 +103,25 @@ export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, o
     const r2 = Math.max(startRow.value, curRow.value) + 1;
     const c1 = Math.min(startCol.value, curCol.value);
     const c2 = Math.max(startCol.value, curCol.value) + 1;
+    const width = (c2 - c1) * cellSize;
+    const height = (r2 - r1) * cellSize;
+    // Opacity is the one property here that carries no movement, so it keeps its fade under the
+    // setting: `Never` overrides Reanimated's default, which would otherwise blink the preview.
+    const opacity = withTiming(dragging.value ? 1 : 0, {
+      duration: dragging.value ? 90 : 130,
+      reduceMotion: ReduceMotion.Never,
+    });
+
+    // This rectangle is where the player's finger is, not a flourish about it, so reduced motion
+    // takes away only the entrance scale and the 90ms tween that let the edges lag the drag.
+    if (reduceMotion) return { opacity, top: r1 * cellSize, left: c1 * cellSize, width, height };
+
     return {
-      opacity: withTiming(dragging.value ? 1 : 0, { duration: dragging.value ? 90 : 130 }),
+      opacity,
       top: r1 * cellSize,
       left: c1 * cellSize,
-      width: withTiming((c2 - c1) * cellSize, { duration: 90 }),
-      height: withTiming((r2 - r1) * cellSize, { duration: 90 }),
+      width: withTiming(width, { duration: 90 }),
+      height: withTiming(height, { duration: 90 }),
       transform: [{ scale: withTiming(dragging.value ? 1 : 0.96, { duration: 110 }) }],
     };
   });

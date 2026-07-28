@@ -1,9 +1,10 @@
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import SquarePlus from 'lucide-react-native/icons/square-plus';
 import Share from 'lucide-react-native/icons/share';
 import X from 'lucide-react-native/icons/x';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { Logo } from '@/components/Logo';
 import { useThemeTokens } from '@/state/themeStore';
 import { hitSlopFor } from '@/lib/touchTarget';
@@ -50,22 +51,22 @@ export const IOSInstallPromptSheet = forwardRef<IOSInstallPromptSheetHandle>(fun
       handleIndicatorStyle={{ backgroundColor: theme.gridSep }}
     >
       <BottomSheetView style={styles.content}>
-        <Pressable style={[styles.close, { borderColor: theme.gridSep }]} hitSlop={CLOSE_HIT_SLOP} onPress={() => sheetRef.current?.dismiss()} accessibilityLabel={t('a11y.close')}>
+        <AnimatedPressable feedback="icon" style={[styles.close, { borderColor: theme.gridSep }]} hitSlop={CLOSE_HIT_SLOP} onPress={() => sheetRef.current?.dismiss()} accessibilityLabel={t('a11y.close')}>
           <X size={17} color={theme.sub} strokeWidth={2.4} />
-        </Pressable>
+        </AnimatedPressable>
         <View style={[styles.logo, { backgroundColor: theme.surface }]}><Logo size={40} /></View>
         <Text style={[styles.title, { color: theme.text }]}>{t('install.title')}</Text>
         <Text style={[styles.subtitle, { color: theme.sub }]}>{t('install.subtitle')}</Text>
         <View style={styles.steps}>
-          <Pressable
-            style={({ pressed }) => [styles.step, styles.shareAction, { backgroundColor: theme.surface, borderColor: theme.gridSep, opacity: pressed ? 0.72 : 1 }]}
+          <AnimatedPressable
+            style={[styles.step, styles.shareAction, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}
             onPress={openShareMenu}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.openShareMenu')}
           >
             <Share size={19} color={theme.accent} strokeWidth={2.4} />
             <Text style={[styles.stepText, { color: theme.text }]}>{t('install.step1')}</Text>
-          </Pressable>
+          </AnimatedPressable>
           <View style={[styles.step, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
             <SquarePlus size={19} color={theme.accent} strokeWidth={2.4} />
             <Text style={[styles.stepText, { color: theme.text }]}>{t('install.step2')}</Text>

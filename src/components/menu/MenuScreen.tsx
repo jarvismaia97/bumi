@@ -1,11 +1,12 @@
 import { useRef } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
 import Check from 'lucide-react-native/icons/check';
 import Flame from 'lucide-react-native/icons/flame';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
 import Settings from 'lucide-react-native/icons/settings';
 import Trophy from 'lucide-react-native/icons/trophy';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { GoogleMark } from '@/components/GoogleMark';
 import { Logo } from '@/components/Logo';
 import { PlayerAvatarTile } from '@/components/PlayerAvatar';
@@ -45,22 +46,22 @@ function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
 
   if (!user) {
     return (
-      <Pressable accessibilityRole="button" style={[styles.authPill, { borderColor: theme.gridSep }]} onPress={() => signInWithGoogle().catch(() => {})}>
+      <AnimatedPressable accessibilityRole="button" feedback="control" style={[styles.authPill, { borderColor: theme.gridSep }]} onPress={() => signInWithGoogle().catch(() => {})}>
         <GoogleMark size={16} />
         <Text style={[styles.authPillText, { color: theme.text }]}>{t('auth.signInGoogle')}</Text>
-      </Pressable>
+      </AnimatedPressable>
     );
   }
 
   return (
-    <Pressable accessibilityRole="button" style={[styles.accountButton, { backgroundColor: theme.surface, borderColor: theme.gridSep }]} onPress={onOpenSettings} accessibilityLabel={t('menu.settings')}>
+    <AnimatedPressable accessibilityRole="button" style={[styles.accountButton, { backgroundColor: theme.surface, borderColor: theme.gridSep }]} onPress={onOpenSettings} accessibilityLabel={t('menu.settings')}>
       <PlayerAvatarTile userId={user.id} size={38} />
       <View style={styles.accountCopy}>
         <Text style={[styles.accountName, { color: theme.text }]}>{playerName(user.id, language)}</Text>
         <Text style={[styles.accountDetail, { color: theme.sub }]}>{t('menu.settings')}</Text>
       </View>
       <Settings size={20} color={theme.sub} strokeWidth={2.2} />
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -142,16 +143,16 @@ export function MenuScreen({
       </View>
 
       <View style={styles.menuBtns}>
-        <Pressable accessibilityRole="button" style={[styles.playBtn, { backgroundColor: theme.accent }]} onPress={onStartGame}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.playBtn, { backgroundColor: theme.accent }]} onPress={onStartGame}>
           <View style={styles.campaignCopy}>
             <Text style={styles.campaignLabel}>{t('menu.campaign')}</Text>
             <Text style={styles.playBtnText}>{campaignComplete ? t('menu.playAgain') : solvedCount === 0 ? t('menu.startCampaign') : t('menu.continueLevel', { level: campaignLevel })}</Text>
             <Text style={styles.campaignDetail}>{campaignComplete ? t('menu.levelsComplete', { count: campaignTotal }) : t('menu.levelsExplore', { count: campaignTotal - campaignLevel + 1 })}</Text>
           </View>
           <ArrowRight size={20} color="#fff" strokeWidth={2.4} />
-        </Pressable>
+        </AnimatedPressable>
 
-        <Pressable accessibilityRole="button" style={[styles.dailyBtn, { backgroundColor: daily.bg, borderColor: daily.border }]} onPress={onStartDaily}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.dailyBtn, { backgroundColor: daily.bg, borderColor: daily.border }]} onPress={onStartDaily}>
           <View style={styles.dailyTitleRow}>
             {dailyDone && <Check size={16} color={daily.fg} strokeWidth={2.8} />}
             <Text style={[styles.dailyBtnText, { color: daily.fg }]}>{dailyDone ? t('menu.dailyDone') : t('menu.daily')}</Text>
@@ -159,7 +160,7 @@ export function MenuScreen({
           <Text style={[styles.dailyStreak, { color: daily.fg }]}>
             {dailyStreak ? t('menu.streak', { count: dailyStreak, label: t(dailyStreak === 1 ? 'menu.day' : 'menu.days') }) : t('menu.startStreak')}
           </Text>
-        </Pressable>
+        </AnimatedPressable>
       </View>
 
         <AuthPill onOpenSettings={() => settingsRef.current?.present()} />

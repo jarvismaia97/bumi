@@ -9,5 +9,9 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
   default: { getItem: async () => null, setItem: async () => {}, removeItem: async () => {} },
 }));
 
+// Reanimated now sits under every pressable in the app, and its worklet runtime cannot load
+// outside a Metro build. See the stub for what it stands in for.
+vi.mock('react-native-reanimated', () => import('./reanimated-stub'));
+
 // Auto-cleanup only kicks in with vitest globals, which this project does not enable.
 afterEach(cleanup);

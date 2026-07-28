@@ -1,6 +1,6 @@
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Linking, Platform, StyleSheet, Switch, Text, View } from 'react-native';
 import Check from 'lucide-react-native/icons/check';
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
@@ -14,6 +14,7 @@ import Trash2 from 'lucide-react-native/icons/trash-2';
 import Trophy from 'lucide-react-native/icons/trophy';
 import Animated, { FadeIn, FadeOut, ReduceMotion, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { router } from 'expo-router';
+import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { PlayerAvatarTile } from '@/components/PlayerAvatar';
 import { playerName } from '@/lib/identity';
 import { useAuthStore } from '@/state/authStore';
@@ -153,10 +154,10 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
                   <Text style={[styles.accountDetail, { color: theme.sub }]}>{t('settings.playerHint')}</Text>
                 </View>
               </View>
-              <Pressable accessibilityRole="button" style={[styles.accountSignOut, { borderColor: theme.gridSep }]} onPress={() => signOut().then(() => sheetRef.current?.dismiss()).catch(() => {})}>
+              <AnimatedPressable accessibilityRole="button" style={[styles.accountSignOut, { borderColor: theme.gridSep }]} onPress={() => signOut().then(() => sheetRef.current?.dismiss()).catch(() => {})}>
                 <LogOut size={17} color={theme.text} strokeWidth={2.2} />
                 <Text style={[styles.accountSignOutText, { color: theme.text }]}>{t('settings.signOut')}</Text>
-              </Pressable>
+              </AnimatedPressable>
             </View>
 
             <View style={styles.syncRow}>
@@ -168,19 +169,19 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         ) : null}
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.game')}</Text>
-        <Pressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => closeAndOpen(onOpenAchievements)}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => closeAndOpen(onOpenAchievements)}>
           <View style={styles.rowCopy}><Trophy size={18} color={semantic.gold} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.achievements')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
-        </Pressable>
+        </AnimatedPressable>
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.appearance')}</Text>
-        <Pressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => closeAndOpen(onOpenThemes)}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => closeAndOpen(onOpenThemes)}>
           <View style={styles.rowCopy}><Palette size={18} color={theme.accent} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.themes')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
-        </Pressable>
+        </AnimatedPressable>
 
         <View style={[styles.group, { borderColor: languageOpen ? theme.accent : theme.gridSep }]}>
-          <Pressable
+          <AnimatedPressable
             accessibilityRole="button"
             accessibilityState={{ expanded: languageOpen }}
             style={styles.groupTrigger}
@@ -199,7 +200,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
               <Text style={[styles.groupValueText, { color: theme.sub }]}>{languageValueLabel}</Text>
               <DisclosureChevron open={languageOpen} color={theme.sub} />
             </View>
-          </Pressable>
+          </AnimatedPressable>
 
           {languageOpen && (
             <Animated.View
@@ -209,7 +210,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
               {LANGUAGE_OPTIONS.map(option => {
                 const selected = option.value === languagePreference;
                 return (
-                  <Pressable
+                  <AnimatedPressable
                     accessibilityRole="button"
                     key={option.value}
                     style={[styles.groupOption, { borderTopColor: theme.gridSep }]}
@@ -229,7 +230,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
                       )}
                     </View>
                     {selected && <Check size={18} color={theme.accent} strokeWidth={2.8} />}
-                  </Pressable>
+                  </AnimatedPressable>
                 );
               })}
             </Animated.View>
@@ -238,14 +239,14 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
 
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.privacySupport')}</Text>
-        <Pressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={closeAndOpenPrivacy}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={closeAndOpenPrivacy}>
           <View style={styles.rowCopy}><ShieldCheck size={18} color={theme.text} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.privacy')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
-        </Pressable>
-        <Pressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => Linking.openURL('mailto:suporte@jogarbumi.pt')}>
+        </AnimatedPressable>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => Linking.openURL('mailto:suporte@jogarbumi.pt')}>
           <View style={styles.rowCopy}><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.support')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
-        </Pressable>
+        </AnimatedPressable>
 
         {Platform.OS !== 'web' ? (
           <>
@@ -262,10 +263,10 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         {user ? (
           <>
             <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.account')}</Text>
-            <Pressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={confirmDeleteAccount}>
+            <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={confirmDeleteAccount}>
               <View style={styles.rowCopy}><Trash2 size={18} color={semantic.danger} strokeWidth={2.2} /><Text style={[styles.dangerText, { color: semantic.danger }]}>{t('settings.delete')}</Text></View>
               <ChevronRight size={18} color={semantic.danger} />
-            </Pressable>
+            </AnimatedPressable>
             {error ? <Text style={[styles.error, { color: semantic.danger }]}>{error}</Text> : null}
           </>
         ) : null}

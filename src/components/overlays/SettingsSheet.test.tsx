@@ -38,23 +38,6 @@ vi.mock('@gorhom/bottom-sheet', () => ({
   BottomSheetView: View,
 }));
 
-// Reanimated drives the disclosure chevron and the option list's fade. Dropping the
-// animation props leaves the rows themselves, which is all these tests press.
-vi.mock('react-native-reanimated', () => {
-  const passThrough = { duration: () => passThrough, reduceMotion: () => passThrough };
-  function AnimatedView({ entering: _entering, exiting: _exiting, ...props }: Record<string, unknown>) {
-    return <View {...props} />;
-  }
-  return {
-    default: { View: AnimatedView },
-    FadeIn: passThrough,
-    FadeOut: passThrough,
-    ReduceMotion: { System: 'system' },
-    useAnimatedStyle: () => ({}),
-    withTiming: (value: unknown) => value,
-  };
-});
-
 // The reminder row only exists off the web build, and Alert is native chrome whose buttons
 // the tests need to press.
 const { alert } = vi.hoisted(() => ({ alert: vi.fn() }));
