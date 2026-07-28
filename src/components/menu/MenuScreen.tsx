@@ -15,6 +15,7 @@ import { ThemePickerSheet, type ThemePickerSheetHandle } from '@/components/over
 import { SettingsSheet, type SettingsSheetHandle } from '@/components/overlays/SettingsSheet';
 import { AchievementsSheet, type AchievementsSheetHandle } from '@/components/overlays/AchievementsSheet';
 import { PrivacySheet, type PrivacySheetHandle } from '@/components/overlays/PrivacySheet';
+import { LanguageSheet, type LanguageSheetHandle } from '@/components/overlays/LanguageSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
@@ -126,6 +127,7 @@ export function MenuScreen({
   const settingsRef = useRef<SettingsSheetHandle>(null);
   const achievementsRef = useRef<AchievementsSheetHandle>(null);
   const privacyRef = useRef<PrivacySheetHandle>(null);
+  const languageRef = useRef<LanguageSheetHandle>(null);
 
   const daily = dailyDone
     ? { fg: semantic.success, bg: semantic.successSurface, border: semantic.successBorder }
@@ -206,9 +208,11 @@ export function MenuScreen({
         onOpenAchievements={() => achievementsRef.current?.present()}
         onOpenThemes={() => themePickerRef.current?.present()}
         onOpenPrivacy={() => privacyRef.current?.present()}
+        onOpenLanguage={() => languageRef.current?.present()}
       />
       <AchievementsSheet ref={achievementsRef} />
       <PrivacySheet ref={privacyRef} />
+      <LanguageSheet ref={languageRef} />
     </>
   );
 }

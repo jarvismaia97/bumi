@@ -53,7 +53,7 @@ function confirmDestructive() {
 }
 
 function renderSheet() {
-  return render(<SettingsSheet onOpenAchievements={() => {}} onOpenThemes={() => {}} onOpenPrivacy={() => {}} />);
+  return render(<SettingsSheet onOpenAchievements={() => {}} onOpenThemes={() => {}} onOpenPrivacy={() => {}} onOpenLanguage={() => {}} />);
 }
 
 beforeEach(() => {
@@ -75,23 +75,12 @@ afterEach(() => {
 });
 
 describe('SettingsSheet haptics', () => {
-  it('answers the language disclosure with selection feedback', () => {
+  it('stays silent opening the language sheet, like every other row that navigates', () => {
     renderSheet();
 
     fireEvent.click(screen.getByText('Idioma'));
 
-    expect(playHaptic).toHaveBeenCalledExactlyOnceWith('selection');
-  });
-
-  it('answers picking a language with selection feedback', () => {
-    renderSheet();
-    fireEvent.click(screen.getByText('Idioma'));
-    vi.mocked(playHaptic).mockClear();
-
-    fireEvent.click(screen.getByText('English'));
-
-    expect(playHaptic).toHaveBeenCalledExactlyOnceWith('selection');
-    expect(useLanguageStore.getState().preference).toBe('en');
+    expect(playHaptic).not.toHaveBeenCalled();
   });
 
   it('answers a reminder that was scheduled with selection feedback', async () => {

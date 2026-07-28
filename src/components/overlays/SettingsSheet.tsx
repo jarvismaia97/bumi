@@ -1,8 +1,6 @@
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { Alert, Linking, Platform, StyleSheet, Switch, Text, View } from 'react-native';
-import Check from 'lucide-react-native/icons/check';
-import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Cloud from 'lucide-react-native/icons/cloud';
 import CloudOff from 'lucide-react-native/icons/cloud-off';
@@ -12,12 +10,12 @@ import Palette from 'lucide-react-native/icons/palette';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import Trash2 from 'lucide-react-native/icons/trash-2';
 import Trophy from 'lucide-react-native/icons/trophy';
-import Animated, { FadeIn, FadeOut, ReduceMotion, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { LANGUAGE_OPTIONS } from '@/components/overlays/LanguageSheet';
 import { PlayerAvatarTile } from '@/components/PlayerAvatar';
 import { playerName } from '@/lib/identity';
 import { useAuthStore } from '@/state/authStore';
-import { useLanguageStore, type LanguagePreference } from '@/state/languageStore';
+import { useLanguageStore } from '@/state/languageStore';
 import { useSyncStore } from '@/state/syncStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { setDailyReminder } from '@/lib/dailyReminder';
@@ -33,30 +31,10 @@ interface SettingsSheetProps {
   onOpenAchievements: () => void;
   onOpenThemes: () => void;
   onOpenPrivacy: () => void;
+  onOpenLanguage: () => void;
 }
 
-/** Native names, so a player who lands in the wrong language can still find their own. */
-const LANGUAGE_OPTIONS: { value: LanguagePreference; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'pt-PT', label: 'Português' },
-  { value: 'en', label: 'English' },
-];
-
-/** Points at the list it reveals. Rotation only — transform is the cheap property. */
-function DisclosureChevron({ open, color }: { open: boolean; color: string }) {
-  const style = useAnimatedStyle(() => ({
-    transform: [
-      { rotate: withTiming(open ? '180deg' : '0deg', { duration: 180, reduceMotion: ReduceMotion.System }) },
-    ],
-  }));
-  return (
-    <Animated.View style={style}>
-      <ChevronDown size={18} color={color} strokeWidth={2.2} />
-    </Animated.View>
-  );
-}
-
-export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>(function SettingsSheet({ onOpenAchievements, onOpenThemes, onOpenPrivacy }, ref) {
+export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>(function SettingsSheet({ onOpenAchievements, onOpenThemes, onOpenPrivacy, onOpenLanguage }, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const theme = useThemeTokens();
   const semantic = useSemanticTokens();
@@ -67,16 +45,11 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
   const status = useSyncStore(s => s.status);
   const hasPendingChanges = useSyncStore(s => s.hasPendingChanges);
   const languagePreference = useLanguageStore(state => state.preference);
-  const setLanguagePreference = useLanguageStore(state => state.setPreference);
   const dailyReminderEnabled = useProgressStore(state => state.dailyReminderEnabled);
   const setDailyReminderEnabled = useProgressStore(state => state.setDailyReminderEnabled);
   const { t, language } = useI18n();
-  const [languageOpen, setLanguageOpen] = useState(false);
-  const optionLabel = (option: (typeof LANGUAGE_OPTIONS)[number]) =>
-    option.value === 'auto' ? t('settings.languageAuto') : option.label;
-  const languageValueLabel = optionLabel(
-    LANGUAGE_OPTIONS.find(option => option.value === languagePreference) ?? LANGUAGE_OPTIONS[0],
-  );
+  const selectedLanguage = LANGUAGE_OPTIONS.find(option => option.value === languagePreference) ?? LANGUAGE_OPTIONS[0];
+  const languageValueLabel = selectedLanguage.value === 'auto' ? t('settings.languageAuto') : selectedLanguage.label;
 
   useImperativeHandle(ref, () => ({
     present: () => sheetRef.current?.present(),
@@ -177,63 +150,13 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
           <ChevronRight size={18} color={theme.sub} />
         </AnimatedPressable>
 
-        <View style={[styles.group, { borderColor: languageOpen ? theme.accent : theme.gridSep }]}>
-          <AnimatedPressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: languageOpen }}
-            style={styles.groupTrigger}
-            onPress={() => {
-              // The row changes state in place rather than handing off to another screen,
-              // so unlike the rows that open a sheet this one is felt.
-              playHaptic('selection');
-              setLanguageOpen(open => !open);
-            }}
-          >
-            <View style={styles.rowCopy}>
-              <Languages size={18} color={theme.accent} strokeWidth={2.2} />
-              <Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.language')}</Text>
-            </View>
-            <View style={styles.groupValue}>
-              <Text style={[styles.groupValueText, { color: theme.sub }]}>{languageValueLabel}</Text>
-              <DisclosureChevron open={languageOpen} color={theme.sub} />
-            </View>
-          </AnimatedPressable>
-
-          {languageOpen && (
-            <Animated.View
-              entering={FadeIn.duration(140).reduceMotion(ReduceMotion.System)}
-              exiting={FadeOut.duration(100).reduceMotion(ReduceMotion.System)}
-            >
-              {LANGUAGE_OPTIONS.map(option => {
-                const selected = option.value === languagePreference;
-                return (
-                  <AnimatedPressable
-                    accessibilityRole="button"
-                    key={option.value}
-                    style={[styles.groupOption, { borderTopColor: theme.gridSep }]}
-                    onPress={() => {
-                      // Fires even when the option was already selected: the list still
-                      // collapses, and a picker that answers only some taps feels broken.
-                      playHaptic('selection');
-                      setLanguagePreference(option.value);
-                      setLanguageOpen(false);
-                    }}
-                    accessibilityState={{ selected }}
-                  >
-                    <View style={styles.groupOptionCopy}>
-                      <Text style={[styles.rowLabel, { color: theme.text }]}>{optionLabel(option)}</Text>
-                      {option.value === 'auto' && (
-                        <Text style={[styles.rowDetail, { color: theme.sub }]}>{t('settings.languageAutoDetail')}</Text>
-                      )}
-                    </View>
-                    {selected && <Check size={18} color={theme.accent} strokeWidth={2.8} />}
-                  </AnimatedPressable>
-                );
-              })}
-            </Animated.View>
-          )}
-        </View>
-
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenLanguage)}>
+          <View style={styles.rowCopy}><Languages size={18} color={theme.accent} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.language')}</Text></View>
+          <View style={styles.rowValue}>
+            <Text style={[styles.rowValueText, { color: theme.sub }]}>{languageValueLabel}</Text>
+            <ChevronRight size={18} color={theme.sub} />
+          </View>
+        </AnimatedPressable>
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.privacySupport')}</Text>
         <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenPrivacy)}>
@@ -307,14 +230,10 @@ const styles = StyleSheet.create({
   // Shared by row and column parents, so it shrinks rather than claiming flex on either axis.
   rowLabel: { flexShrink: 1, minWidth: 0, fontSize: 14, fontWeight: '700' },
   rowDetail: { fontSize: 11, lineHeight: 15, marginTop: 2 },
-  group: { borderWidth: 1.5, borderRadius: 8, overflow: 'hidden' },
-  groupTrigger: { minHeight: 52, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  groupValue: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
-  groupValueText: { flexShrink: 1, minWidth: 0, fontSize: 13, fontWeight: '600' },
+  rowValue: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
+  rowValueText: { fontSize: 13, fontWeight: '600' },
   // 44 = 14 padding + the 18pt icon column + its 12pt gap, so option labels sit under
   // the trigger's label instead of under its icon.
-  groupOption: { minHeight: 52, paddingLeft: 44, paddingRight: 14, paddingVertical: 10, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  groupOptionCopy: { flex: 1, minWidth: 0 },
   dangerText: { flexShrink: 1, minWidth: 0, fontSize: 14, fontWeight: '700' },
   error: { fontSize: 12, lineHeight: 17, marginTop: 4 },
 });
