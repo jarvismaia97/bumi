@@ -6,6 +6,7 @@ import Cloud from 'lucide-react-native/icons/cloud';
 import CloudOff from 'lucide-react-native/icons/cloud-off';
 import LogOut from 'lucide-react-native/icons/log-out';
 import Languages from 'lucide-react-native/icons/languages';
+import Mail from 'lucide-react-native/icons/mail';
 import Palette from 'lucide-react-native/icons/palette';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import Trash2 from 'lucide-react-native/icons/trash-2';
@@ -169,7 +170,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
           <ChevronRight size={18} color={theme.sub} />
         </AnimatedPressable>
         <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => Linking.openURL('mailto:suporte@jogarbumi.pt')}>
-          <View style={styles.rowCopy}><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.support')}</Text></View>
+          <View style={styles.rowCopy}><Mail size={18} color={theme.text} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.support')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
         </AnimatedPressable>
 
