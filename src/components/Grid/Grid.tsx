@@ -8,6 +8,9 @@ import { BD_PAL, BG_PAL } from '@/theme/palette';
 import { useThemeTokens } from '@/state/themeStore';
 import { Cell, type CellEdges, type CellState } from './Cell';
 import {
+  type CelebrationTier,
+  GLOW_REPEAT_GAP_MS,
+  GLOW_REPEAT_OUT_MS,
   CELEBRATION_IN_MS,
   CELEBRATION_OUT_MS,
   CELEBRATION_STAGGER_MS,
@@ -17,6 +20,7 @@ import {
   REDUCED_IN_MS,
   REDUCED_OUT_MS,
 } from './celebration';
+import { RectBurst } from './RectBurst';
 import { useDragToPlaceRect } from './useDragToPlaceRect';
 
 interface GridProps {
@@ -26,6 +30,8 @@ interface GridProps {
   onPlace: (rect: SolutionRect) => void;
   onRemoveAt: (index: number) => void;
   celebrating?: boolean;
+  /** What the solve was worth. Anything above 'normal' is deliberately rare. */
+  celebrationTier?: CelebrationTier;
 }
 
 interface CellInfo {
@@ -37,7 +43,7 @@ interface CellInfo {
 
 const EMPTY_EDGES: CellEdges = { top: false, bottom: false, left: false, right: false };
 
-export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating = false }: GridProps) {
+export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating = false, celebrationTier = 'normal' }: GridProps) {
   const { size, clues } = level;
   const rows = level.rows ?? size;
   const columns = level.columns ?? size;
@@ -126,7 +132,8 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
             index={index}
           />
         ))}
-        <CompletionGlow active={celebrating} color={theme.accent} />
+        <CompletionGlow active={celebrating} color={theme.accent} repeat={celebrationTier === 'milestone'} />
+        <RectBurst tier={celebrationTier} active={celebrating} width={gridWidth} height={gridHeight} />
       </View>
     </GestureDetector>
   );
@@ -182,7 +189,9 @@ function CelebrationRect({ rect, cellSize, color, active, index }: { rect: Place
   );
 }
 
-function CompletionGlow({ active, color }: { active: boolean; color: string }) {
+// A milestone level earns a second glow rather than a new effect on screen: it reads as
+// emphasis on what already happened, and costs no extra vocabulary.
+function CompletionGlow({ active, color, repeat = false }: { active: boolean; color: string; repeat?: boolean }) {
   const progress = useSharedValue(0);
   const reduceMotion = useReducedMotion();
 
@@ -191,13 +200,22 @@ function CompletionGlow({ active, color }: { active: boolean; color: string }) {
     if (!active) return;
     // The 180ms lead-in exists to let the rectangles start first; with the stagger gone that
     // would only split one glow into two beats, so the reduced grid lights as a single event.
-    progress.value = reduceMotion
-      ? withSequence(withTiming(1, REDUCED_CELEBRATION.in), withTiming(0, REDUCED_CELEBRATION.out))
-      : withDelay(
-          GLOW_DELAY_MS,
-          withSequence(withTiming(1, { duration: GLOW_IN_MS }), withTiming(0, { duration: GLOW_OUT_MS })),
-        );
-  }, [active, progress, reduceMotion]);
+    if (reduceMotion) {
+      progress.value = withSequence(withTiming(1, REDUCED_CELEBRATION.in), withTiming(0, REDUCED_CELEBRATION.out));
+      return;
+    }
+    const beat = [withTiming(1, { duration: GLOW_IN_MS }), withTiming(0, { duration: GLOW_OUT_MS })] as const;
+    progress.value = withDelay(
+      GLOW_DELAY_MS,
+      repeat
+        ? withSequence(
+            ...beat,
+            withDelay(GLOW_REPEAT_GAP_MS, withTiming(1, { duration: GLOW_IN_MS })),
+            withTiming(0, { duration: GLOW_REPEAT_OUT_MS }),
+          )
+        : withSequence(...beat),
+    );
+  }, [active, progress, reduceMotion, repeat]);
 
   const style = useAnimatedStyle(() => (reduceMotion
     ? { opacity: interpolate(progress.value, [0, 1], [0, 0.45]) }

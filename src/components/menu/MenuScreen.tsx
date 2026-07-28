@@ -8,7 +8,7 @@ import Settings from 'lucide-react-native/icons/settings';
 import Trophy from 'lucide-react-native/icons/trophy';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { GoogleMark } from '@/components/GoogleMark';
-import { Logo } from '@/components/Logo';
+import { BrandMark } from '@/components/BrandMark';
 import { PlayerAvatarTile } from '@/components/PlayerAvatar';
 import { playerName } from '@/lib/identity';
 import { ThemePickerSheet, type ThemePickerSheetHandle } from '@/components/overlays/ThemePickerSheet';
@@ -102,7 +102,7 @@ export function MenuScreen({
       >
         <View style={styles.brandRow}>
           <View style={styles.brandBlock}>
-            <Logo size={48} />
+            <BrandMark size={48} assemble />
             <Text style={[styles.title, { color: theme.text }]}>Bumi</Text>
           </View>
         </View>

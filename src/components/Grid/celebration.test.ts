@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { celebrationDurationMs, GLOW_DELAY_MS, GLOW_IN_MS, GLOW_OUT_MS } from './celebration';
+import { BURST_DELAY_MS, BURST_TRAVEL_MS, burstParticleCount, celebrationDurationMs, GLOW_DELAY_MS, GLOW_IN_MS, GLOW_OUT_MS, highestTier } from './celebration';
 
 const GLOW_TOTAL = GLOW_DELAY_MS + GLOW_IN_MS + GLOW_OUT_MS;
 
@@ -26,5 +26,47 @@ describe('celebrationDurationMs', () => {
     const reduced = celebrationDurationMs(4, true);
     expect(celebrationDurationMs(20, true)).toBe(reduced);
     expect(reduced).toBeLessThan(celebrationDurationMs(20, false));
+  });
+});
+
+describe('celebration tiers', () => {
+  it('ranks a discovered island above a gold medal above a milestone', () => {
+    expect(highestTier('island', 'gold', 'milestone')).toBe('island');
+    expect(highestTier('gold', 'milestone')).toBe('gold');
+    expect(highestTier('milestone')).toBe('milestone');
+  });
+
+  it('falls back to normal when nothing special happened', () => {
+    expect(highestTier()).toBe('normal');
+    expect(highestTier(null, undefined)).toBe('normal');
+  });
+
+  it('bursts only for the two rare tiers, and more for the rarer one', () => {
+    expect(burstParticleCount('normal')).toBe(0);
+    expect(burstParticleCount('milestone')).toBe(0);
+    expect(burstParticleCount('island')).toBeGreaterThan(burstParticleCount('gold'));
+  });
+
+  it('holds longer for the milestone double beat', () => {
+    // Small board, so the tier rather than the stagger decides the hold.
+    expect(celebrationDurationMs(3, false, 'milestone')).toBeGreaterThan(celebrationDurationMs(3, false, 'normal'));
+  });
+
+  it('never lets the win sheet cover a burst still in flight', () => {
+    // The burst is shorter than the glow, so it does not extend the hold — but if either
+    // timing is ever retuned, the sheet must not arrive first.
+    const burstEnds = BURST_DELAY_MS + BURST_TRAVEL_MS;
+    for (const tier of ['gold', 'island'] as const) {
+      for (const rects of [1, 3, 8, 20]) {
+        expect(celebrationDurationMs(rects, false, tier)).toBeGreaterThanOrEqual(burstEnds);
+      }
+    }
+  });
+
+  it('drops the extra hold under reduced motion, where the burst does not play', () => {
+    const reduced = celebrationDurationMs(3, true, 'normal');
+    for (const tier of ['milestone', 'gold', 'island'] as const) {
+      expect(celebrationDurationMs(3, true, tier)).toBe(reduced);
+    }
   });
 });

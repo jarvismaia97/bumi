@@ -4,7 +4,7 @@ import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Grid } from '@/components/Grid/Grid';
-import { celebrationDurationMs } from '@/components/Grid/celebration';
+import { celebrationDurationMs, highestTier, type CelebrationTier } from '@/components/Grid/celebration';
 import { FooterButtons } from '@/components/hud/FooterButtons';
 import { Header } from '@/components/hud/Header';
 import { MenuScreen } from '@/components/menu/MenuScreen';
@@ -78,6 +78,7 @@ export default function GameScreen() {
   const [tutorialLevelIndex, setTutorialLevelIndex] = useState(0);
   const [dailyCountdown, setDailyCountdown] = useState(formatDuration(getNextDailyInMs()));
   const [campaignResult, setCampaignResult] = useState<{ medal: Medal; summary: string; unlockedIslandName?: string } | null>(null);
+  const [celebrationTier, setCelebrationTier] = useState<CelebrationTier>('normal');
   const [dailyResult, setDailyResult] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [dailyChallengeDate, setDailyChallengeDate] = useState(getDailyDateKey());
@@ -102,6 +103,7 @@ export default function GameScreen() {
     }
     loginRequestedRef.current = false;
     setCampaignResult(null);
+    setCelebrationTier('normal');
     setDailyResult(null);
     setCurLvl(idx);
     loadLevel(getLevel(idx));
@@ -111,6 +113,7 @@ export default function GameScreen() {
 
   function startDaily(date: Date = new Date()) {
     setCampaignResult(null);
+    setCelebrationTier('normal');
     setDailyResult(null);
     setDailyChallengeDate(getDailyDateKey(date));
     loadLevel(getDailyLevel(date));
@@ -119,6 +122,7 @@ export default function GameScreen() {
 
   function startTutorial() {
     setCampaignResult(null);
+    setCelebrationTier('normal');
     setTutorialStep(0);
     setTutorialWon(false);
     setTutorialLevelIndex(0);
@@ -135,9 +139,9 @@ export default function GameScreen() {
 
   // Let the board finish celebrating before covering it. The old fixed 620ms cut the
   // rectangles off mid-stagger on anything larger than a two-piece level.
-  function presentWinSheet() {
+  function presentWinSheet(tier: CelebrationTier = 'normal') {
     if (winTimeoutRef.current) clearTimeout(winTimeoutRef.current);
-    const holdMs = celebrationDurationMs(placed.length, reduceMotion);
+    const holdMs = celebrationDurationMs(placed.length, reduceMotion, tier);
     winTimeoutRef.current = setTimeout(() => winSheetRef.current?.present(), holdMs);
   }
 
@@ -211,6 +215,15 @@ export default function GameScreen() {
           summary: formatSummary(durationMs, hintsUsed, mistakes, t),
           unlockedIslandName: unlockedIslandIndex == null ? undefined : t(`island.${ISLANDS[unlockedIslandIndex].id}.name`),
         });
+        // Only the fresh result earns the big celebration; replaying a solved level does not.
+        const tier = highestTier(
+          unlockedIslandIndex != null ? 'island' : null,
+          medal === 'gold' ? 'gold' : null,
+          LEVEL_META[curLvl]?.milestone ? 'milestone' : null,
+        );
+        setCelebrationTier(tier);
+        presentWinSheet(tier);
+        return;
       }
       presentWinSheet();
     }, 0);
@@ -361,6 +374,7 @@ export default function GameScreen() {
           onPlace={placeRect}
           onRemoveAt={removeRectAt}
           celebrating={won}
+          celebrationTier={celebrationTier}
         />
       </View>
 
