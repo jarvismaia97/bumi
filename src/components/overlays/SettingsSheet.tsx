@@ -13,7 +13,6 @@ import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import Trash2 from 'lucide-react-native/icons/trash-2';
 import Trophy from 'lucide-react-native/icons/trophy';
 import Animated, { FadeIn, FadeOut, ReduceMotion, useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import { router } from 'expo-router';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { PlayerAvatarTile } from '@/components/PlayerAvatar';
 import { playerName } from '@/lib/identity';
@@ -33,6 +32,7 @@ export interface SettingsSheetHandle {
 interface SettingsSheetProps {
   onOpenAchievements: () => void;
   onOpenThemes: () => void;
+  onOpenPrivacy: () => void;
 }
 
 /** Native names, so a player who lands in the wrong language can still find their own. */
@@ -56,7 +56,7 @@ function DisclosureChevron({ open, color }: { open: boolean; color: string }) {
   );
 }
 
-export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>(function SettingsSheet({ onOpenAchievements, onOpenThemes }, ref) {
+export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>(function SettingsSheet({ onOpenAchievements, onOpenThemes, onOpenPrivacy }, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const theme = useThemeTokens();
   const semantic = useSemanticTokens();
@@ -90,11 +90,6 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
       ? t('settings.syncing')
       : t('settings.synced');
   const SyncIcon = hasPendingChanges ? CloudOff : Cloud;
-
-  function closeAndOpenPrivacy() {
-    sheetRef.current?.dismiss();
-    router.push('../privacidade');
-  }
 
   // No dismiss first: the modal provider's default 'switch' stack behaviour minimises
   // this sheet and restores it when the child is dismissed, so the old dismiss-wait-open
@@ -241,7 +236,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
 
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.privacySupport')}</Text>
-        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={closeAndOpenPrivacy}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenPrivacy)}>
           <View style={styles.rowCopy}><ShieldCheck size={18} color={theme.text} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.privacy')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
         </AnimatedPressable>

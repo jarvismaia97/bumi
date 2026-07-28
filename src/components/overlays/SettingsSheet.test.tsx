@@ -53,7 +53,7 @@ function confirmDestructive() {
 }
 
 function renderSheet() {
-  return render(<SettingsSheet onOpenAchievements={() => {}} onOpenThemes={() => {}} />);
+  return render(<SettingsSheet onOpenAchievements={() => {}} onOpenThemes={() => {}} onOpenPrivacy={() => {}} />);
 }
 
 beforeEach(() => {

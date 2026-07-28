@@ -14,6 +14,7 @@ import { playerName } from '@/lib/identity';
 import { ThemePickerSheet, type ThemePickerSheetHandle } from '@/components/overlays/ThemePickerSheet';
 import { SettingsSheet, type SettingsSheetHandle } from '@/components/overlays/SettingsSheet';
 import { AchievementsSheet, type AchievementsSheetHandle } from '@/components/overlays/AchievementsSheet';
+import { PrivacySheet, type PrivacySheetHandle } from '@/components/overlays/PrivacySheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
@@ -87,6 +88,7 @@ export function MenuScreen({
   const themePickerRef = useRef<ThemePickerSheetHandle>(null);
   const settingsRef = useRef<SettingsSheetHandle>(null);
   const achievementsRef = useRef<AchievementsSheetHandle>(null);
+  const privacyRef = useRef<PrivacySheetHandle>(null);
   const weeklyProgress = Math.min(weeklyDailyCount / weeklyDailyTarget, 1);
   const remainingWeekly = Math.max(weeklyDailyTarget - weeklyDailyCount, 0);
   const daily = dailyDone
@@ -170,8 +172,10 @@ export function MenuScreen({
         ref={settingsRef}
         onOpenAchievements={() => achievementsRef.current?.present()}
         onOpenThemes={() => themePickerRef.current?.present()}
+        onOpenPrivacy={() => privacyRef.current?.present()}
       />
       <AchievementsSheet ref={achievementsRef} />
+      <PrivacySheet ref={privacyRef} />
     </>
   );
 }
