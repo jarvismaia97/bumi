@@ -18,7 +18,8 @@
       "infoPlist": {
         "CFBundleLocalizations": [
           "pt-PT",
-          "en"
+          "en",
+          "es"
         ]
       }
     },
