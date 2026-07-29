@@ -62,6 +62,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "vitest run",
+    "db:schema": "tsx scripts/applySchema.ts",
     "generate-levels": "tsx scripts/generateLevels.ts",
     "generate-apple-secret": "tsx scripts/generateAppleSecret.ts",
     "generate-social-clip": "tsx scripts/generateSocialClip.ts"

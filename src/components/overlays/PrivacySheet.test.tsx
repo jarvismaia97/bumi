@@ -25,7 +25,7 @@ describe('PrivacySheet', () => {
 
   it('carries the whole policy, not just the heading', () => {
     render(<PrivacySheet />);
-    for (const section of ['stored', 'purpose', 'location', 'delete', 'contact']) {
+    for (const section of ['stored', 'purpose', 'location', 'friends', 'delete', 'contact']) {
       expect(screen.getByText(translate('pt-PT', `privacy.${section}Title`))).toBeTruthy();
     }
   });

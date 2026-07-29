@@ -2,7 +2,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
 
-const SECTIONS = ['stored', 'purpose', 'location', 'delete', 'contact'] as const;
+// Friends sits after location and before deletion: it is the one place data reaches another
+// person, so it is stated before the paragraph about taking it all back.
+const SECTIONS = ['stored', 'purpose', 'location', 'friends', 'delete', 'contact'] as const;
 
 /**
  * The same copy is served two ways: as a sheet from Settings, matching how Achievements and

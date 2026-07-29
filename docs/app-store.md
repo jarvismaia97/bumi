@@ -148,7 +148,10 @@ support URL to provide.
    also yields an Issuer ID) would make this non-interactive and is required for CI.
 8. Capture the 6.9" screenshots described above, one set per listing language.
 9. Privacy questionnaire: email and name (Google/Apple sign-in) plus game progress,
-   linked to identity.
+   linked to identity. The friends board shares progress *between players* — a painter
+   nickname, points, level count and streak, never a name, email or account id — so the
+   questionnaire's "data used to track you" stays No while progress remains linked to
+   identity. The policy paragraph covering it is `privacy.friends*` in the catalogue.
 
 ## Maintenance
 

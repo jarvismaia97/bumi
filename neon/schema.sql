@@ -5,6 +5,24 @@ create table if not exists profiles (
   created_at timestamptz not null default now()
 );
 
+-- The handle a player gives out to be added to someone's leaderboard. Never the account id:
+-- that one is the auth subject and cannot be rotated once it has been pasted into a chat.
+alter table profiles add column if not exists friend_code text;
+create unique index if not exists profiles_friend_code_idx on profiles (friend_code);
+
+-- Friendship is stored in both directions, one row each way. Adding by code makes the pair
+-- mutual on the spot: handing out the code is the consent, and either side can delete their
+-- row or rotate their code to end it.
+create table if not exists friendships (
+  user_id text not null,
+  friend_id text not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, friend_id),
+  constraint friendships_not_self check (user_id <> friend_id)
+);
+
+create index if not exists friendships_user_id_idx on friendships (user_id);
+
 create table if not exists user_progress (
   user_id text primary key,
   hints integer not null default 0,

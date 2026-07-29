@@ -11,12 +11,14 @@ import Palette from 'lucide-react-native/icons/palette';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import Trash2 from 'lucide-react-native/icons/trash-2';
 import Trophy from 'lucide-react-native/icons/trophy';
+import Users from 'lucide-react-native/icons/users';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { LANGUAGE_OPTIONS } from '@/components/overlays/LanguageSheet';
 import { PlayerAvatarTile } from '@/components/PlayerAvatar';
 import { playerName } from '@/lib/identity';
 import { useAuthStore } from '@/state/authStore';
 import { useLanguageStore } from '@/state/languageStore';
+import { useFriendsStore } from '@/state/friendsStore';
 import { useSyncStore } from '@/state/syncStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { refreshDailyReminders } from '@/lib/dailyReminder';
@@ -33,9 +35,10 @@ interface SettingsSheetProps {
   onOpenThemes: () => void;
   onOpenPrivacy: () => void;
   onOpenLanguage: () => void;
+  onOpenLeaderboard: () => void;
 }
 
-export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>(function SettingsSheet({ onOpenAchievements, onOpenThemes, onOpenPrivacy, onOpenLanguage }, ref) {
+export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>(function SettingsSheet({ onOpenAchievements, onOpenThemes, onOpenPrivacy, onOpenLanguage, onOpenLeaderboard }, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const theme = useThemeTokens();
   const semantic = useSemanticTokens();
@@ -48,12 +51,19 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
   const languagePreference = useLanguageStore(state => state.preference);
   const dailyReminderEnabled = useProgressStore(state => state.dailyReminderEnabled);
   const setDailyReminderEnabled = useProgressStore(state => state.setDailyReminderEnabled);
+  const friendCode = useFriendsStore(state => state.code);
+  const loadFriends = useFriendsStore(state => state.load);
   const { t, language } = useI18n();
   const selectedLanguage = LANGUAGE_OPTIONS.find(option => option.value === languagePreference) ?? LANGUAGE_OPTIONS[0];
   const languageValueLabel = selectedLanguage.value === 'auto' ? t('settings.languageAuto') : selectedLanguage.label;
 
   useImperativeHandle(ref, () => ({
-    present: () => sheetRef.current?.present(),
+    present: () => {
+      // Fetched here so the code is already under the player's name when they look for it,
+      // rather than appearing a beat after the leaderboard is opened.
+      if (user && !friendCode) loadFriends();
+      sheetRef.current?.present();
+    },
   }));
 
   const syncCopy = hasPendingChanges
@@ -128,6 +138,11 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
                 <PlayerAvatarTile userId={user.id} size={44} />
                 <View style={styles.accountIdentityCopy}>
                   <Text style={[styles.accountName, { color: theme.text }]}>{playerName(user.id, language)}</Text>
+                  {/* The code sits under the name because that is the pair a player reads out
+                      to a friend: who they are, and how to be added. */}
+                  {!!friendCode && (
+                    <Text style={[styles.accountCode, { color: theme.sub }]}>{t('leaderboard.yourCode')} · {friendCode}</Text>
+                  )}
                 </View>
               </View>
               <AnimatedPressable accessibilityRole="button" style={[styles.accountSignOut, { borderColor: theme.gridSep }]} onPress={() => signOut().then(() => sheetRef.current?.dismiss()).catch(() => {})}>
@@ -145,6 +160,10 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         ) : null}
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.game')}</Text>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenLeaderboard)}>
+          <View style={styles.rowCopy}><Users size={18} color={theme.accent} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('leaderboard.open')}</Text></View>
+          <ChevronRight size={18} color={theme.sub} />
+        </AnimatedPressable>
         <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenAchievements)}>
           <View style={styles.rowCopy}><Trophy size={18} color={semantic.gold} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.achievements')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
@@ -209,6 +228,7 @@ const styles = StyleSheet.create({
   accountIdentity: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   accountIdentityCopy: { flex: 1, minWidth: 0 },
   accountName: { fontSize: 15, fontWeight: '800' },
+  accountCode: { fontSize: 10, fontWeight: '700', letterSpacing: 0.6, marginTop: 3 },
   // Negative margin pulls the divider out to the card edges instead of stopping at the padding.
   // minHeight (not height) keeps the 44pt touch target while letting the label grow.
   accountSignOut: {

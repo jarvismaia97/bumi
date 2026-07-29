@@ -56,3 +56,4 @@ example
 /android
 .vercel
 content/social/
+.env*.local

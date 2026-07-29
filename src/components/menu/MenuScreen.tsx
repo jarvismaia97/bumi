@@ -16,6 +16,7 @@ import { SettingsSheet, type SettingsSheetHandle } from '@/components/overlays/S
 import { AchievementsSheet, type AchievementsSheetHandle } from '@/components/overlays/AchievementsSheet';
 import { PrivacySheet, type PrivacySheetHandle } from '@/components/overlays/PrivacySheet';
 import { LanguageSheet, type LanguageSheetHandle } from '@/components/overlays/LanguageSheet';
+import { LeaderboardSheet, type LeaderboardSheetHandle } from '@/components/overlays/LeaderboardSheet';
 import { DailyArchiveSheet, type DailyArchiveSheetHandle } from '@/components/overlays/DailyArchiveSheet';
 import { countMissedDays } from '@/game/archive';
 import { useProgressStore } from '@/state/progressStore';
@@ -131,6 +132,7 @@ export function MenuScreen({
   const achievementsRef = useRef<AchievementsSheetHandle>(null);
   const privacyRef = useRef<PrivacySheetHandle>(null);
   const languageRef = useRef<LanguageSheetHandle>(null);
+  const leaderboardRef = useRef<LeaderboardSheetHandle>(null);
   const archiveRef = useRef<DailyArchiveSheetHandle>(null);
   const missedDays = countMissedDays(useProgressStore(state => state.dailyCompletionDates));
 
@@ -227,10 +229,12 @@ export function MenuScreen({
         onOpenThemes={() => themePickerRef.current?.present()}
         onOpenPrivacy={() => privacyRef.current?.present()}
         onOpenLanguage={() => languageRef.current?.present()}
+        onOpenLeaderboard={() => leaderboardRef.current?.present()}
       />
       <AchievementsSheet ref={achievementsRef} />
       <PrivacySheet ref={privacyRef} />
       <LanguageSheet ref={languageRef} />
+      <LeaderboardSheet ref={leaderboardRef} />
       <DailyArchiveSheet ref={archiveRef} onSelectDay={onStartDailyFor} />
     </>
   );

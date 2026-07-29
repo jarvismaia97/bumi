@@ -4,6 +4,7 @@ import { playHaptic } from '@/lib/haptics';
 import { useProgressStore } from '@/state/progressStore';
 import { Platform } from 'react-native';
 import { resolveLanguage, translate } from '@/i18n/messages';
+import { useFriendsStore } from '@/state/friendsStore';
 import { useLanguageStore } from '@/state/languageStore';
 import { getLocales } from 'expo-localization';
 
@@ -192,6 +193,9 @@ export const useAuthStore = create<AuthState>()((set) => ({
     // A committed account change, not an achievement: the flat thud of impact rather than
     // the rising notification pattern that would congratulate someone for leaving.
     playHaptic('medium');
+    // The board belongs to the account, not the device: leaving it behind would show the next
+    // person to sign in a set of friends that are not theirs.
+    useFriendsStore.getState().reset();
     set({ session: null, user: null, error: null });
   },
 
@@ -206,6 +210,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     // Deliberately silent on success: the confirmation tap already fired `warning`, and the
     // sheet closing onto a signed-out menu says the rest.
     useProgressStore.getState().reset();
+    useFriendsStore.getState().reset();
     set({ session: null, user: null, error: null });
   },
 }));
