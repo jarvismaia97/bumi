@@ -373,12 +373,14 @@ export default function GameScreen() {
           onRemoveAt={removeRectAt}
           celebrating={won}
           celebrationTier={celebrationTier}
+          locked={won}
         />
       </View>
 
       <FooterButtons
         hintLabel={hintLabel(labels, t)}
         hintDisabled={isHintDisabled(labels, won)}
+        editDisabled={won}
         onUndo={undo}
         onClear={clear}
         onHint={onHintPress}

@@ -19,6 +19,13 @@ interface GameState {
   hint: () => SolutionRect | null;
 }
 
+/**
+ * Every mutation stops at `won`. The win sheet leaves the top of the board uncovered, so a
+ * solved puzzle used to accept fresh rectangles: taking one apart flipped `won` back to
+ * false, and re-solving it ran the win flow again — which paid the weekly and monthly goal
+ * bonus a second time, since `goalsCompletedBy` reports the transition regardless of whether
+ * that day was already recorded. Locking the board is the fix; the level ends with the solve.
+ */
 export const useGameStore = create<GameState>((set, get) => ({
   level: null,
   placed: [],
@@ -31,8 +38,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   loadLevel: level => set({ level, placed: [], colorN: 0, won: false, startedAt: Date.now(), hintsUsed: 0, mistakes: 0 }),
 
   placeRect: rect => {
-    const { placed, level, colorN } = get();
-    if (!level) return false;
+    const { placed, level, colorN, won: alreadyWon } = get();
+    if (!level || alreadyWon) return false;
     if (placed.some(p => rectsOverlap(p, rect)) || !rectOk(rect, level)) {
       set(s => ({ mistakes: s.mistakes + 1 }));
       playHaptic('error');
@@ -46,25 +53,29 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   removeRectAt: index => {
-    const { placed, level } = get();
+    const { placed, level, won } = get();
+    if (won) return;
     const next = placed.filter((_, i) => i !== index);
     set({ placed: next, won: level ? checkWin(next, level) : false });
     playHaptic('selection');
   },
 
   undo: () => {
-    const { placed, level } = get();
-    if (!placed.length) return;
+    const { placed, level, won } = get();
+    if (won || !placed.length) return;
     const next = placed.slice(0, -1);
     set({ placed: next, won: level ? checkWin(next, level) : false });
     playHaptic('selection');
   },
 
-  clear: () => set({ placed: [], colorN: 0, won: false }),
+  clear: () => {
+    if (get().won) return;
+    set({ placed: [], colorN: 0, won: false });
+  },
 
   hint: () => {
-    const { level, placed, colorN } = get();
-    if (!level) return null;
+    const { level, placed, colorN, won: alreadyWon } = get();
+    if (!level || alreadyWon) return null;
     const avail = level.solution.filter(sol => !placed.some(p => sameRect(p, sol)) && !placed.some(p => rectsOverlap(p, sol)));
     if (!avail.length) return null;
     const pick = avail[0];

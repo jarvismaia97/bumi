@@ -18,6 +18,8 @@ interface Options {
   placed: PlacedRect[];
   onPlace: (rect: SolutionRect) => void;
   onRemoveAt: (index: number) => void;
+  /** A solved board takes no more input; see the `locked` prop on `Grid`. */
+  locked?: boolean;
 }
 
 function clampToGrid(value: number, cellSize: number, count: number): number {
@@ -35,7 +37,7 @@ function rectIndexAt(rects: PlacedRect[], row: number, col: number): number {
   return idx;
 }
 
-export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, onRemoveAt }: Options) {
+export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, onRemoveAt, locked = false }: Options) {
   const reduceMotion = useReducedMotion();
   const placedShared = useSharedValue<PlacedRect[]>([]);
   useEffect(() => {
@@ -64,6 +66,7 @@ export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, o
   }
 
   const pan = Gesture.Pan()
+    .enabled(!locked)
     .minDistance(0)
     .onBegin(e => {
       const row = clampToGrid(e.y, cellSize, rows);
@@ -89,7 +92,7 @@ export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, o
     });
 
   // Only reached when the pan never activated, i.e. a tap with no finger movement.
-  const tap = Gesture.Tap().onEnd((e, success) => {
+  const tap = Gesture.Tap().enabled(!locked).onEnd((e, success) => {
     if (!success) return;
     const row = clampToGrid(e.y, cellSize, rows);
     const col = clampToGrid(e.x, cellSize, columns);

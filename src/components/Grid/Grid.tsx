@@ -32,6 +32,12 @@ interface GridProps {
   celebrating?: boolean;
   /** What the solve was worth. Anything above 'normal' is deliberately rare. */
   celebrationTier?: CelebrationTier;
+  /**
+   * A solved board is over. Without this the win sheet covers only the lower half of the
+   * screen, leaving the grid behind it live: the player could take the puzzle apart while
+   * "Next level" was on offer, and re-solving it ran the whole win flow a second time.
+   */
+  locked?: boolean;
 }
 
 interface CellInfo {
@@ -43,7 +49,7 @@ interface CellInfo {
 
 const EMPTY_EDGES: CellEdges = { top: false, bottom: false, left: false, right: false };
 
-export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating = false, celebrationTier = 'normal' }: GridProps) {
+export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating = false, celebrationTier = 'normal', locked = false }: GridProps) {
   const { size, clues } = level;
   const rows = level.rows ?? size;
   const columns = level.columns ?? size;
@@ -74,7 +80,7 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
     return grid;
   }, [placed, level, rows, columns]);
 
-  const { gesture, previewStyle } = useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, onRemoveAt });
+  const { gesture, previewStyle } = useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, onRemoveAt, locked });
 
   const fillPal = BG_PAL;
   const borderPal = BD_PAL;

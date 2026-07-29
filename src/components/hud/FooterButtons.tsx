@@ -10,6 +10,8 @@ import { useI18n } from '@/i18n';
 interface FooterButtonsProps {
   hintLabel: string;
   hintDisabled: boolean;
+  /** A solved board takes no more edits, so the two that change it go grey with the hint. */
+  editDisabled?: boolean;
   onUndo: () => void;
   onClear: () => void;
   onHint: () => void;
@@ -19,6 +21,7 @@ interface FooterButtonsProps {
 export function FooterButtons({
   hintLabel,
   hintDisabled,
+  editDisabled = false,
   onUndo,
   onClear,
   onHint,
@@ -30,8 +33,8 @@ export function FooterButtons({
   return (
     <View style={[styles.footer, { paddingBottom: Math.max(16, bottomInset) }]}>
       <View style={styles.row}>
-        <FooterBtn Icon={Undo2} label={t('game.undo')} onPress={onUndo} theme={theme} />
-        <FooterBtn Icon={Eraser} label={t('game.clear')} onPress={onClear} theme={theme} />
+        <FooterBtn Icon={Undo2} label={t('game.undo')} onPress={onUndo} theme={theme} disabled={editDisabled} />
+        <FooterBtn Icon={Eraser} label={t('game.clear')} onPress={onClear} theme={theme} disabled={editDisabled} />
         <FooterBtn Icon={Lightbulb} label={hintLabel} onPress={onHint} theme={theme} disabled={hintDisabled} />
       </View>
     </View>
