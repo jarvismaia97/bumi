@@ -17,12 +17,12 @@ import { formatDuration, getDailyDateKey, getDailyLevel, getNextDailyInMs } from
 import { getMonthlyProgress, getWeeklyProgress, goalsCompletedBy, isStreakMilestone } from '@/game/goals';
 import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
 import { isCampaignLevelUnlocked, requiresCampaignLogin } from '@/game/access';
-import { formatResultDuration, getMedalForResult, isBetterMedal, type Medal } from '@/game/medals';
+import { formatResultDuration, getMedalForResult, getMistakeBudget, isBetterMedal, type Medal } from '@/game/medals';
 import { getLevel, LEVEL_META, TUTORIAL_LEVELS } from '@/game/levels';
 import { getCompletedIslandCount, getNewlyCompletedIslandIndex, ISLANDS } from '@/game/islands';
 import { useGameStore } from '@/state/gameStore';
 import { useProgressStore } from '@/state/progressStore';
-import { useThemeTokens } from '@/state/themeStore';
+import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useUIStore } from '@/state/uiStore';
 import { shareChallenge, shareDailyChallenge, shareDailyResult } from '@/lib/challengeShare';
 import { useChallengeStore } from '@/state/challengeStore';
@@ -48,6 +48,7 @@ function formatSummary(durationMs: number, hintsUsed: number, mistakes: number, 
 
 export default function GameScreen() {
   const theme = useThemeTokens();
+  const semantic = useSemanticTokens();
   const insets = useSafeAreaInsets();
   const { t, language } = useI18n();
   const reduceMotion = useReducedMotion();
@@ -60,7 +61,7 @@ export default function GameScreen() {
   const setCurLvl = useUIStore(s => s.setCurLvl);
   const tutorialStep = useUIStore(s => s.tutorialStep);
   const setTutorialStep = useUIStore(s => s.setTutorialStep);
-  const { level, placed, won, startedAt, hintsUsed, mistakes, loadLevel, placeRect, removeRectAt, undo, clear, hint } = useGameStore();
+  const { level, placed, won, elapsedMs, hintsUsed, mistakes, loadLevel, placeRect, removeRectAt, undo, clear, hint } = useGameStore();
   const progress = useProgressStore();
   const user = useAuthStore(s => s.user);
   const pendingChallengeIndex = useChallengeStore(s => s.pendingChallengeIndex);
@@ -195,7 +196,7 @@ export default function GameScreen() {
         return;
       }
       if (mode === 'daily') {
-        const durationMs = Math.max(0, Date.now() - startedAt);
+        const durationMs = elapsedMs();
         setDailyResult(formatSummary(durationMs, hintsUsed, mistakes, t));
 
         let tier: CelebrationTier = 'normal';
@@ -215,8 +216,8 @@ export default function GameScreen() {
         return;
       }
       if (mode === 'campaign') {
-        const durationMs = Math.max(0, Date.now() - startedAt);
-        const medal = getMedalForResult({ durationMs, hintsUsed, mistakes, size: level?.size ?? 4 });
+        const durationMs = elapsedMs();
+        const medal = getMedalForResult({ hintsUsed, mistakes, rects: level?.solution.length ?? 1 });
         const bestMedal = progress.getLevelMedal(curLvl);
         const displayedMedal = isBetterMedal(medal, bestMedal) ? medal : bestMedal ?? medal;
         const unlockedIslandIndex = getNewlyCompletedIslandIndex(curLvl, progress.solvedMap);
@@ -316,6 +317,23 @@ export default function GameScreen() {
     hints: progress.hints,
   };
   const isNewSolve = mode === 'campaign' && progress.isSolved(curLvl);
+  const mistakeStatus = campaignMistakeStatus();
+
+  /**
+   * Which medal the mistakes so far still allow, and how much of that budget is left. The
+   * tutorial has no medals, and the daily is scored on its own summary rather than a medal.
+   */
+  function campaignMistakeStatus(): { label: string; color: string } | null {
+    if (mode !== 'campaign' || won || !level) return null;
+    const budget = getMistakeBudget(level.solution.length);
+    if (mistakes <= budget.gold) {
+      return { label: t('game.mistakeBudget', { used: mistakes, limit: budget.gold }), color: theme.sub };
+    }
+    if (mistakes <= budget.silver) {
+      return { label: t('game.mistakeBudget', { used: mistakes, limit: budget.silver }), color: semantic.warning };
+    }
+    return { label: t('game.mistakeCount', { count: mistakes }), color: semantic.warning };
+  }
 
   function onHintPress() {
     if (mode === 'tutorial') {
@@ -375,6 +393,11 @@ export default function GameScreen() {
           celebrationTier={celebrationTier}
           locked={won}
         />
+        {/* The medal is decided by this number, so the number is on screen. Nobody can play
+            for gold while the budget is a rule they have to infer from the result. */}
+        {mistakeStatus && (
+          <Text style={[styles.mistakeStatus, { color: mistakeStatus.color }]}>{mistakeStatus.label}</Text>
+        )}
       </View>
 
       <FooterButtons
@@ -447,6 +470,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   container: { flex: 1, alignItems: 'center' },
   gridWrap: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 12, width: '100%', maxWidth: 480 },
+  mistakeStatus: { fontSize: 11, fontWeight: '700', marginTop: 12 },
   shareNotice: { position: 'absolute', alignSelf: 'center', zIndex: 2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
   shareNoticeText: { fontSize: 12, fontWeight: '700' },
 });

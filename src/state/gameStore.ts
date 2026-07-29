@@ -12,6 +12,9 @@ interface GameState {
   hintsUsed: number;
   mistakes: number;
   loadLevel: (level: Level) => void;
+  /** Starts the result clock on the player's first action, and is a no-op after that. */
+  startClock: () => void;
+  elapsedMs: () => number;
   placeRect: (rect: SolutionRect) => boolean;
   removeRectAt: (index: number) => void;
   undo: () => void;
@@ -35,11 +38,25 @@ export const useGameStore = create<GameState>((set, get) => ({
   hintsUsed: 0,
   mistakes: 0,
 
-  loadLevel: level => set({ level, placed: [], colorN: 0, won: false, startedAt: Date.now(), hintsUsed: 0, mistakes: 0 }),
+  // `startedAt: 0` means "not started". The clock used to run from the moment the level
+  // appeared, so reading the grid counted against the result; it now starts on the first
+  // thing the player does to the board.
+  loadLevel: level => set({ level, placed: [], colorN: 0, won: false, startedAt: 0, hintsUsed: 0, mistakes: 0 }),
+
+  startClock: () => {
+    if (get().startedAt) return;
+    set({ startedAt: Date.now() });
+  },
+
+  elapsedMs: () => {
+    const { startedAt } = get();
+    return startedAt ? Math.max(0, Date.now() - startedAt) : 0;
+  },
 
   placeRect: rect => {
     const { placed, level, colorN, won: alreadyWon } = get();
     if (!level || alreadyWon) return false;
+    get().startClock();
     if (placed.some(p => rectsOverlap(p, rect)) || !rectOk(rect, level)) {
       set(s => ({ mistakes: s.mistakes + 1 }));
       playHaptic('error');
@@ -55,6 +72,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   removeRectAt: index => {
     const { placed, level, won } = get();
     if (won) return;
+    get().startClock();
     const next = placed.filter((_, i) => i !== index);
     set({ placed: next, won: level ? checkWin(next, level) : false });
     playHaptic('selection');
@@ -76,6 +94,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   hint: () => {
     const { level, placed, colorN, won: alreadyWon } = get();
     if (!level || alreadyWon) return null;
+    get().startClock();
     const avail = level.solution.filter(sol => !placed.some(p => sameRect(p, sol)) && !placed.some(p => rectsOverlap(p, sol)));
     if (!avail.length) return null;
     const pick = avail[0];

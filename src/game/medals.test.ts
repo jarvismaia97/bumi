@@ -1,23 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { getGoldTimeLimitMs, getMedalForResult, isBetterMedal } from './medals';
+import { getMedalForResult, getMistakeBudget, isBetterMedal } from './medals';
 
 describe('level medals', () => {
-  it('awards gold for a clean result within the time target', () => {
-    expect(getGoldTimeLimitMs(4)).toBe(60_000);
-    expect(getGoldTimeLimitMs(6)).toBe(84_000);
-    expect(getMedalForResult({ durationMs: getGoldTimeLimitMs(6), hintsUsed: 0, mistakes: 0, size: 6 })).toBe('gold');
+  it('scales the mistake budget with the number of rectangles', () => {
+    // Medians from the shipped catalogue: 6 rectangles at 4x4, 27 at 9x9, 47 at 12x12.
+    expect(getMistakeBudget(6)).toEqual({ gold: 1, silver: 3 });
+    expect(getMistakeBudget(27)).toEqual({ gold: 3, silver: 7 });
+    expect(getMistakeBudget(47)).toEqual({ gold: 5, silver: 12 });
   });
 
-  it('does not award gold above the tighter time target', () => {
-    expect(getMedalForResult({ durationMs: getGoldTimeLimitMs(6) + 1, hintsUsed: 0, mistakes: 0, size: 6 })).not.toBe('gold');
+  it('never drops the budget below the floor on a tiny board', () => {
+    expect(getMistakeBudget(1)).toEqual({ gold: 1, silver: 3 });
+    expect(getMistakeBudget(0)).toEqual({ gold: 1, silver: 3 });
   });
 
-  it('awards silver when the result is within the allowance', () => {
-    expect(getMedalForResult({ durationMs: 160_000, hintsUsed: 1, mistakes: 2, size: 6 })).toBe('silver');
+  it('awards gold for a hint-free solve inside the budget, however long it took', () => {
+    expect(getMedalForResult({ hintsUsed: 0, mistakes: 0, rects: 47 })).toBe('gold');
+    expect(getMedalForResult({ hintsUsed: 0, mistakes: 5, rects: 47 })).toBe('gold');
   });
 
-  it('awards bronze for a completed level outside the higher targets', () => {
-    expect(getMedalForResult({ durationMs: 211_000, hintsUsed: 0, mistakes: 0, size: 6 })).toBe('bronze');
+  it('refuses gold to a solve that took a hint, clean or not', () => {
+    expect(getMedalForResult({ hintsUsed: 1, mistakes: 0, rects: 47 })).toBe('silver');
+  });
+
+  it('drops to silver past the gold budget and to bronze past silver', () => {
+    expect(getMedalForResult({ hintsUsed: 0, mistakes: 6, rects: 47 })).toBe('silver');
+    expect(getMedalForResult({ hintsUsed: 0, mistakes: 13, rects: 47 })).toBe('bronze');
+    expect(getMedalForResult({ hintsUsed: 2, mistakes: 0, rects: 47 })).toBe('bronze');
   });
 
   it('never replaces a higher medal with a lower one', () => {
