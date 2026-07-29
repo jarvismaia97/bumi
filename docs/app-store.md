@@ -19,7 +19,34 @@ Resolve puzzles de logica dividindo cada grelha em retangulos. Cada numero indic
 
 puzzle,logica,retangulos,numero,cerebro,desafio,diario
 
+## Localised listings
+
+The app ships Portuguese, English and Spanish (`CFBundleLocalizations`), so App Store
+Connect needs a listing per language or the store shows Portuguese to everyone. Portuguese
+above is the primary; these two are the other localizations to paste in. Keywords are a
+single 100-character field, comma separated, no spaces.
+
+### English (en-GB, en-US)
+
+- Subtitle: Rectangle logic puzzle
+- Description: Solve logic puzzles by splitting each grid into rectangles. Every number is
+  the area of the rectangle that contains it. Hundreds of levels, a daily challenge, and
+  progress saved across your devices.
+- Keywords: `puzzle,logic,rectangles,shikaku,brain,daily,numbers,offline`
+
+### Spanish (es-ES)
+
+- Subtitle: Puzle de logica con rectangulos
+- Description: Resuelve puzles de logica dividiendo cada cuadricula en rectangulos. Cada
+  numero indica el area del rectangulo que lo contiene. Cientos de niveles, un reto diario y
+  el progreso guardado entre dispositivos.
+- Keywords: `puzle,logica,rectangulos,shikaku,cerebro,reto,diario,numeros`
+
 ## Screenshots to capture
+
+Apple's required size is the 6.9" set — 1320x2868, which is what the iPhone 17 Pro Max
+simulator produces. `supportsTablet` is false, so there is no iPad set. Each language with
+a listing wants its own set, so capture with the app in that language.
 
 1. Nivel em jogo com uma selecao em curso.
 2. Menu da campanha com progresso e medalhas.
@@ -119,7 +146,7 @@ support URL to provide.
    password. The `.p8` above is a Sign in with Apple key and cannot authenticate
    submission; an App Store Connect API key (Users and Access > Integrations, which
    also yields an Issuer ID) would make this non-interactive and is required for CI.
-8. Capture 6.7" screenshots (1290x2796). `supportsTablet` is false, so no iPad set.
+8. Capture the 6.9" screenshots described above, one set per listing language.
 9. Privacy questionnaire: email and name (Google/Apple sign-in) plus game progress,
    linked to identity.
 
