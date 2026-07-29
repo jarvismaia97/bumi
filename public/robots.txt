@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Share links are per-player and carry no content of their own; api/share.ts already
+# sends `noindex` on them, and this keeps crawlers off the redirect entirely.
+Disallow: /partilha/
+
+Sitemap: https://www.jogarbumi.pt/sitemap.xml

@@ -19,6 +19,12 @@ import { configureNotificationHandler, onNotificationOpened, refreshDailyReminde
 import { useProgressStore } from '@/state/progressStore';
 import { useI18n } from '@/i18n';
 
+// The static document is rendered once, with no locale, so its metadata is Portuguese —
+// the same choice `resolveLanguage` makes without a device language.
+const SITE_URL = 'https://www.jogarbumi.pt';
+const SITE_DESCRIPTION =
+  'Divide a grelha em retângulos e resolve o puzzle. Centenas de níveis, um desafio diário e o progresso guardado entre dispositivos.';
+
 export default function RootLayout() {
   const init = useAuthStore(s => s.init);
   const loading = useAuthStore(s => s.loading);
@@ -86,13 +92,32 @@ export default function RootLayout() {
           `extra.router.origin`, which we do not want to advertise from the app. */}
       {Platform.OS === 'web' && (
         <Head>
-          <title>Bumi</title>
+          <title>Bumi · Puzzle de lógica</title>
+          <meta name="description" content={SITE_DESCRIPTION} />
+          <link rel="canonical" href={SITE_URL} />
           <meta name="apple-mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-status-bar-style" content="default" />
           <meta name="apple-mobile-web-app-title" content="Bumi" />
           <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
           <link rel="manifest" href="/site.webmanifest" />
           <meta name="theme-color" content="#a8b9d8" />
+          {/* Shared challenge links get their card from `api/share.ts`; this is the card for
+              the bare domain, which is what people paste into a chat when they recommend it. */}
+          <meta property="og:type" content="website" />
+          <meta property="og:site_name" content="Bumi" />
+          <meta property="og:title" content="Bumi · Puzzle de lógica" />
+          <meta property="og:description" content={SITE_DESCRIPTION} />
+          <meta property="og:url" content={SITE_URL} />
+          <meta property="og:image" content={`${SITE_URL}/share-card.png`} />
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
+          <meta property="og:locale" content="pt_PT" />
+          <meta property="og:locale:alternate" content="en_GB" />
+          <meta property="og:locale:alternate" content="es_ES" />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content="Bumi · Puzzle de lógica" />
+          <meta name="twitter:description" content={SITE_DESCRIPTION} />
+          <meta name="twitter:image" content={`${SITE_URL}/share-card.png`} />
           <style>{`
             html, body, #root {
               -webkit-user-select: none;
