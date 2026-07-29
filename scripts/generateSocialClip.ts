@@ -4,6 +4,7 @@ import { basename, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { Resvg } from '@resvg/resvg-js';
 import { createDailySocialContent } from '../src/lib/socialContent';
+import { resolveLanguage, translate } from '../src/i18n/messages';
 import { getDailyDateKey, getDailyLevel } from '../src/game/daily';
 import { getDailyChallengeDateKey } from '../src/game/challenge';
 import type { Level, SolutionRect } from '../src/game/types';
@@ -125,7 +126,7 @@ function rectVisibility(index: number, stage: Stage, progress: number): number {
   return clamp((progress * totalNew - ordinal) * 1.7);
 }
 
-function renderFrame(level: Level, stage: Stage, progress: number, logoDataUri: string): string {
+function renderFrame(level: Level, stage: Stage, progress: number, logoDataUri: string, callToAction: string): string {
   const cell = GRID_SIZE / level.size;
   const rects = level.solution
     .map((rect, index) => drawRect(rect, index, cell, rectVisibility(index, stage, progress)))
@@ -166,7 +167,7 @@ function renderFrame(level: Level, stage: Stage, progress: number, logoDataUri: 
     ${clues}
   </g>
   <rect x="110" y="1530" width="860" height="124" rx="28" fill="#718cc3" />
-  <text x="540" y="1608" text-anchor="middle" class="label">JOGA O DESAFIO DE HOJE</text>
+  <text x="540" y="1608" text-anchor="middle" class="label">${xml(callToAction)}</text>
   <text x="540" y="1755" text-anchor="middle" class="footer">jogarbumi.pt</text>
 </svg>`;
 }
@@ -185,19 +186,24 @@ function main() {
   const outputDir = join(outputRoot, dateKey);
   mkdirSync(outputDir, { recursive: true });
 
+  // `--lang es` produces the Spanish clip; anything unrecognised resolves the same way the
+  // app does, so a typo yields English rather than a half-translated video.
+  const language = resolveLanguage(parseArgument('--lang') ?? 'pt-PT');
+  const t = (key: string) => translate(language, key);
+
   const baseUrl = process.env.EXPO_PUBLIC_SHARE_URL ?? 'https://www.jogarbumi.pt';
-  const content = createDailySocialContent(dateKey, baseUrl);
+  const content = createDailySocialContent(dateKey, baseUrl, language);
   const level = getDailyLevel(toDate(dateKey));
   const logoDataUri = `data:image/png;base64,${readFileSync(resolve('public/icon-512.png')).toString('base64')}`;
   const cafeDataUri = `data:image/png;base64,${readFileSync(resolve('assets/social/cafe-opening.png')).toString('base64')}`;
   const cafeForegroundDataUri = `data:image/png;base64,${readFileSync(resolve('assets/social/cafe-foreground-alpha.png')).toString('base64')}`;
   const stages: Stage[] = [
-    { label: 'DESAFIO DIÁRIO', headline: content.hook, fromRects: 0, toRects: 0, duration: 1.8 },
-    { label: 'A REGRA', headline: 'Cada número é a área de um retângulo.', fromRects: 0, toRects: 0, duration: 1.6 },
-    { label: 'PRIMEIRO PASSO', headline: 'Encontra uma área que só encaixa de uma forma.', fromRects: 0, toRects: 1, duration: 1.8 },
-    { label: 'A LIGAÇÃO', headline: 'Um retângulo revela o seguinte.', fromRects: 1, toRects: Math.min(3, level.solution.length), duration: 2.2 },
-    { label: 'SOLUÇÃO', headline: 'Conseguiste chegar até aqui?', fromRects: Math.min(3, level.solution.length), toRects: level.solution.length, duration: 2.6 },
-    { label: 'A TUA VEZ', headline: 'Resolve o desafio de hoje no Bumi.', fromRects: level.solution.length, toRects: level.solution.length, duration: 2 },
+    { label: t('social.stageDaily'), headline: content.hook, fromRects: 0, toRects: 0, duration: 1.8 },
+    { label: t('social.stageRule'), headline: t('social.ruleBody'), fromRects: 0, toRects: 0, duration: 1.6 },
+    { label: t('social.stageFirst'), headline: t('social.firstBody'), fromRects: 0, toRects: 1, duration: 1.8 },
+    { label: t('social.stageLink'), headline: t('social.linkBody'), fromRects: 1, toRects: Math.min(3, level.solution.length), duration: 2.2 },
+    { label: t('social.stageSolution'), headline: t('social.solutionBody'), fromRects: Math.min(3, level.solution.length), toRects: level.solution.length, duration: 2.6 },
+    { label: t('social.stageYourTurn'), headline: t('social.yourTurnBody'), fromRects: level.solution.length, toRects: level.solution.length, duration: 2 },
   ];
   const tempDir = mkdtempSync(join(tmpdir(), 'bumi-social-'));
 
@@ -219,7 +225,7 @@ function main() {
         const svgPath = join(tempDir, `frame-${String(index).padStart(4, '0')}.svg`);
         const pngPath = join(tempDir, `frame-${String(index).padStart(4, '0')}.png`);
         const progress = stage.fromRects === stage.toRects ? 1 : (frame + 1) / frameCount;
-        const svg = renderFrame(level, stage, progress, logoDataUri);
+        const svg = renderFrame(level, stage, progress, logoDataUri, t('social.cta'));
         writeFileSync(svgPath, svg);
         writeFileSync(pngPath, new Resvg(svg).render().asPng());
         framePaths.push(pngPath);
