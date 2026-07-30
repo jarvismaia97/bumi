@@ -2,15 +2,16 @@ import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 
 /**
- * One static document serves all three languages, and it is rendered with no locale at all, so
- * its copy is Portuguese. A browser reporting any other language used to render English or
- * Spanish on the very first client pass, which is a hydration mismatch: React threw #418, threw
- * the server's markup away, and rebuilt the tree.
+ * One static document serves all three languages, and which language it was built in used to be
+ * an accident of the build machine: `useLocales()` under Node answered English on Vercel, so the
+ * shipped markup said "Getting ready..." while the `lang` attribute said pt-PT and a Portuguese
+ * browser rendered Portuguese on the first client pass. React called that a text mismatch, threw
+ * #418, discarded the server's markup and rebuilt the tree.
  *
- * So the first client pass now says what the document says, and the device's language is applied
- * on the pass after hydration. The visible result is the same — a non-Portuguese player still
- * sees the static Portuguese frame the server sent, because that frame is what was downloaded —
- * except React now keeps the markup instead of discarding it.
+ * Both ends now agree on Portuguese: static rendering has no client, so the server snapshot is
+ * always "not yet hydrated", which pins the document — and the first client pass — to the
+ * language the catalogue falls back to. The device's own language is applied from the mount
+ * effect onward.
  *
  * Native has no hydration and no static document, so it starts out already hydrated and nothing
  * about it changes.

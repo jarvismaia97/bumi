@@ -19,8 +19,8 @@ import { configureNotificationHandler, onNotificationOpened, refreshDailyReminde
 import { useProgressStore } from '@/state/progressStore';
 import { markHydrated, useI18n } from '@/i18n';
 
-// The static document is rendered once, with no locale, so its metadata is Portuguese —
-// the same choice `resolveLanguage` makes without a device language.
+// The static document is rendered once and pinned to Portuguese by the hydration gate (see
+// src/i18n/hydration.ts), so its metadata is Portuguese to match.
 const SITE_URL = 'https://www.jogarbumi.pt';
 const SITE_DESCRIPTION =
   'Divide a grelha em retângulos e resolve o puzzle. Centenas de níveis, um desafio diário e o progresso guardado entre dispositivos.';
@@ -98,6 +98,8 @@ export default function RootLayout() {
           <title>Bumi · Puzzle de lógica</title>
           <meta name="description" content={SITE_DESCRIPTION} />
           <link rel="canonical" href={SITE_URL} />
+          {/* Both spellings: Chrome deprecated the apple-prefixed one, iOS only knows it. */}
+          <meta name="mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-status-bar-style" content="default" />
           <meta name="apple-mobile-web-app-title" content="Bumi" />
