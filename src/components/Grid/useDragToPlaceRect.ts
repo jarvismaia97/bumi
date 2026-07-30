@@ -50,6 +50,15 @@ export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, o
   const curRow = useSharedValue(0);
   const curCol = useSharedValue(0);
   const hitRectIndex = useSharedValue(-1);
+  /**
+   * One touch, one placement. Neither `Race` nor `Exclusive` stops the tap from ending after
+   * the pan on the web build: a single drag reached both handlers, so the board took the
+   * rectangle the finger drew *and* a one-cell rectangle at the point it lifted. The second is
+   * never a legal placement, so every drag also buzzed and counted a mistake — which is what
+   * made a quick, correct drag look like it had been ignored until it was held. Whichever
+   * handler commits first closes the door on the other.
+   */
+  const handled = useSharedValue(0);
 
   function commit(sr: number, sc: number, cr: number, cc: number, hitIdx: number) {
     const r1 = Math.min(sr, cr);
@@ -69,6 +78,7 @@ export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, o
     .enabled(!locked)
     .minDistance(0)
     .onBegin(e => {
+      handled.value = 0;
       const row = clampToGrid(e.y, cellSize, rows);
       const col = clampToGrid(e.x, cellSize, columns);
       startRow.value = row;
@@ -78,28 +88,56 @@ export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, o
       dragging.value = 1;
       hitRectIndex.value = rectIndexAt(placedShared.value, row, col);
     })
+    // Touch callbacks run whether or not the gesture has activated yet. `onUpdate` does not,
+    // and a quick drag can be lifted before activation: the preview then never moved and the
+    // rectangle collapsed to the single cell the finger started on — which is not a legal
+    // placement, so a fast, correct drag buzzed and counted as a mistake instead of placing
+    // anything. Holding still worked, which is what made it look like the board was slow.
+    .onTouchesMove(e => {
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+      curRow.value = clampToGrid(touch.y, cellSize, rows);
+      curCol.value = clampToGrid(touch.x, cellSize, columns);
+    })
     .onUpdate(e => {
       curRow.value = clampToGrid(e.y, cellSize, rows);
       curCol.value = clampToGrid(e.x, cellSize, columns);
     })
-    .onEnd((_e, success) => {
-      if (success) {
-        runOnJS(commit)(startRow.value, startCol.value, curRow.value, curCol.value, hitRectIndex.value);
-      }
+    .onEnd((e, success) => {
+      if (!success || handled.value) return;
+      handled.value = 1;
+      // The end event carries where the finger actually left the board, so the commit no longer
+      // depends on an update having been delivered first.
+      runOnJS(commit)(
+        startRow.value,
+        startCol.value,
+        clampToGrid(e.y, cellSize, rows),
+        clampToGrid(e.x, cellSize, columns),
+        hitRectIndex.value,
+      );
     })
     .onFinalize(() => {
       dragging.value = 0;
     });
 
-  // Only reached when the pan never activated, i.e. a tap with no finger movement.
-  const tap = Gesture.Tap().enabled(!locked).onEnd((e, success) => {
-    if (!success) return;
-    const row = clampToGrid(e.y, cellSize, rows);
-    const col = clampToGrid(e.x, cellSize, columns);
-    runOnJS(commit)(row, col, row, col, rectIndexAt(placedShared.value, row, col));
-  });
+  // Covers the touch that never moved, which on iOS never activates the pan and so never
+  // reaches its end.
+  const tap = Gesture.Tap()
+    .enabled(!locked)
+    .onBegin(() => {
+      handled.value = 0;
+    })
+    .onEnd((e, success) => {
+      if (!success || handled.value) return;
+      handled.value = 1;
+      const row = clampToGrid(e.y, cellSize, rows);
+      const col = clampToGrid(e.x, cellSize, columns);
+      runOnJS(commit)(row, col, row, col, rectIndexAt(placedShared.value, row, col));
+    });
 
-  const gesture = Gesture.Race(pan, tap);
+  // Exclusive rather than Race so the pan has priority; the shared flag above is what actually
+  // guarantees a single placement, since neither combinator does on every platform.
+  const gesture = Gesture.Exclusive(pan, tap);
 
   const previewStyle = useAnimatedStyle(() => {
     const r1 = Math.min(startRow.value, curRow.value);
