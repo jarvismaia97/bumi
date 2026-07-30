@@ -29,3 +29,12 @@ export function countMedals(medals: Record<number, Medal> | Medal[]): MedalCount
 export function pointsFromMedals(medals: Record<number, Medal> | Medal[]): number {
   return pointsFromCounts(countMedals(medals));
 }
+
+/**
+ * What a result actually added to the board. A level keeps its best medal, so replaying a gold
+ * pays nothing and improving a silver to gold pays the difference, not the full five — the win
+ * sheet would otherwise promise points the board is never going to show.
+ */
+export function medalPointsGain(earned: Medal, previous?: Medal): number {
+  return Math.max(0, MEDAL_POINTS[earned] - (previous ? MEDAL_POINTS[previous] : 0));
+}

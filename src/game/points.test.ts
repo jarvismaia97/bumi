@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countMedals, pointsFromCounts, pointsFromMedals } from './points';
+import { countMedals, medalPointsGain, pointsFromCounts, pointsFromMedals } from './points';
 
 describe('leaderboard points', () => {
   it('pays five for gold, three for silver, one for bronze', () => {
@@ -12,6 +12,23 @@ describe('leaderboard points', () => {
   it('scores nothing for a player who has solved nothing', () => {
     expect(pointsFromCounts({ gold: 0, silver: 0, bronze: 0 })).toBe(0);
     expect(pointsFromMedals({})).toBe(0);
+  });
+
+  it('pays a first medal in full', () => {
+    expect(medalPointsGain('gold')).toBe(5);
+    expect(medalPointsGain('bronze')).toBe(1);
+  });
+
+  it('pays only the difference when a medal is improved', () => {
+    expect(medalPointsGain('gold', 'silver')).toBe(2);
+    expect(medalPointsGain('gold', 'bronze')).toBe(4);
+    expect(medalPointsGain('silver', 'bronze')).toBe(2);
+  });
+
+  it('pays nothing for repeating or worsening a result', () => {
+    // The store keeps the best medal, so neither of these changes the board.
+    expect(medalPointsGain('gold', 'gold')).toBe(0);
+    expect(medalPointsGain('bronze', 'gold')).toBe(0);
   });
 
   it('counts the medal map the progress store keeps', () => {

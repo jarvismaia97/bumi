@@ -21,6 +21,8 @@ interface WinSheetProps {
   showHintReward: boolean;
   isDaily: boolean;
   campaignMedal?: Medal;
+  /** What this result added to the friends board. Zero on a replay that improved nothing. */
+  campaignPoints?: number;
   campaignSummary?: string;
   unlockedIslandName?: string;
   dailySummary?: string;
@@ -33,7 +35,7 @@ interface WinSheetProps {
 }
 
 export const WinSheet = forwardRef<WinSheetHandle, WinSheetProps>(function WinSheet(
-  { title, subtitle, showHintReward, isDaily, campaignMedal, campaignSummary, unlockedIslandName, dailySummary, dailyStreak, dailyCountdown, nextLabel, onReview, onNext, onShareDailyResult },
+  { title, subtitle, showHintReward, isDaily, campaignMedal, campaignPoints, campaignSummary, unlockedIslandName, dailySummary, dailyStreak, dailyCountdown, nextLabel, onReview, onNext, onShareDailyResult },
   ref,
 ) {
   const sheetRef = useRef<BottomSheetModal>(null);
@@ -71,6 +73,11 @@ export const WinSheet = forwardRef<WinSheetHandle, WinSheetProps>(function WinSh
               <Text style={[styles.medalTitle, { color: theme.text }]}>{t('win.medal', { medal: t(`medal.${campaignMedal}`) })}</Text>
               {!!campaignSummary && <Text style={[styles.medalSummary, { color: theme.sub }]}>{campaignSummary}</Text>}
             </View>
+            {/* Says where the medal goes. A replay that improved nothing gains nothing, and
+                claiming otherwise would promise points the board is never going to show. */}
+            {!!campaignPoints && (
+              <Text style={[styles.medalPoints, { color: semantic.gold }]}>{t('win.points', { count: campaignPoints })}</Text>
+            )}
           </View>
         )}
 
@@ -123,6 +130,7 @@ const styles = StyleSheet.create({
   resultCopy: { flex: 1, minWidth: 0 },
   medalMark: { flexShrink: 0, width: 28, height: 28, borderRadius: 14, borderWidth: 3 },
   medalTitle: { fontSize: 14, fontWeight: '700' },
+  medalPoints: { flexShrink: 0, fontSize: 14, fontWeight: '800' },
   medalSummary: { fontSize: 11, marginTop: 2 },
   islandUnlock: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 10, padding: 12, marginBottom: 14 },
   islandUnlockLabel: { fontSize: 11, fontWeight: '700' },

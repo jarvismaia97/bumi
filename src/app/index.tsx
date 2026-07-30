@@ -18,6 +18,7 @@ import { getMonthlyProgress, getWeeklyProgress, goalsCompletedBy, isStreakMilest
 import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
 import { isCampaignLevelUnlocked, requiresCampaignLogin } from '@/game/access';
 import { formatResultDuration, getMedalForResult, getMistakeBudget, isBetterMedal, type Medal } from '@/game/medals';
+import { medalPointsGain } from '@/game/points';
 import { getLevel, LEVEL_META, TUTORIAL_LEVELS } from '@/game/levels';
 import { getCompletedIslandCount, getNewlyCompletedIslandIndex, ISLANDS } from '@/game/islands';
 import { useGameStore } from '@/state/gameStore';
@@ -79,7 +80,7 @@ export default function GameScreen() {
   const [tutorialWon, setTutorialWon] = useState(false);
   const [tutorialLevelIndex, setTutorialLevelIndex] = useState(0);
   const [dailyCountdown, setDailyCountdown] = useState(formatDuration(getNextDailyInMs()));
-  const [campaignResult, setCampaignResult] = useState<{ medal: Medal; summary: string; unlockedIslandName?: string } | null>(null);
+  const [campaignResult, setCampaignResult] = useState<{ medal: Medal; summary: string; pointsGained: number; unlockedIslandName?: string } | null>(null);
   const [celebrationTier, setCelebrationTier] = useState<CelebrationTier>('normal');
   const [dailyResult, setDailyResult] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
@@ -226,6 +227,9 @@ export default function GameScreen() {
         setCampaignResult({
           medal: displayedMedal,
           summary: formatSummary(durationMs, hintsUsed, mistakes, t),
+          // What the board actually gained: nothing for a replay, the difference for a better
+          // medal, since the level keeps only its best.
+          pointsGained: medalPointsGain(medal, bestMedal),
           unlockedIslandName: unlockedIslandIndex == null ? undefined : t(`island.${ISLANDS[unlockedIslandIndex].id}.name`),
         });
         // Only the fresh result earns the big celebration; replaying a solved level does not.
@@ -423,6 +427,7 @@ export default function GameScreen() {
         showHintReward={mode === 'campaign' && isNewSolve && !!meta?.milestone}
         isDaily={isTodayDaily}
         campaignMedal={mode === 'campaign' ? campaignResult?.medal : undefined}
+        campaignPoints={mode === 'campaign' ? campaignResult?.pointsGained : undefined}
         campaignSummary={mode === 'campaign' ? campaignResult?.summary : undefined}
         unlockedIslandName={mode === 'campaign' ? campaignResult?.unlockedIslandName : undefined}
         dailySummary={mode === 'daily' ? dailyResult ?? undefined : undefined}
