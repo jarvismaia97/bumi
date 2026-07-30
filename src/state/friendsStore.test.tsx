@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from './authStore';
-import { useFriendsStore, type LeaderboardEntry } from './friendsStore';
+import { newFriends, useFriendsStore, type LeaderboardEntry } from './friendsStore';
 
 vi.mock('@/lib/auth-client', () => ({
   authClient: { getCookie: () => null, getSession: vi.fn(), signOut: vi.fn(), deleteUser: vi.fn() },
@@ -10,6 +10,7 @@ vi.mock('@/lib/haptics', () => ({ playHaptic: vi.fn() }));
 function entry(overrides: Partial<LeaderboardEntry> = {}): LeaderboardEntry {
   return {
     code: '7K3QF2',
+    addedAt: '2026-07-30T10:00:00.000Z',
     artist: 0,
     points: 12,
     medals: { gold: 2, silver: 0, bronze: 2 },
@@ -27,6 +28,24 @@ function respond(body: unknown, status = 200) {
     json: async () => body,
   });
 }
+
+describe('new friends since the last visit', () => {
+  const self = entry({ isSelf: true, code: 'MYCODE', addedAt: null });
+  const older = entry({ code: 'AAAAAA', addedAt: '2026-07-29T10:00:00.000Z' });
+  const newer = entry({ code: 'BBBBBB', addedAt: '2026-07-30T10:00:00.000Z' });
+
+  it('counts only what arrived after the mark', () => {
+    expect(newFriends([self, older, newer], '2026-07-29T12:00:00.000Z').map(row => row.code)).toEqual(['BBBBBB']);
+  });
+
+  it('counts everyone on a board the player has never opened', () => {
+    expect(newFriends([self, older, newer], null).map(row => row.code)).toEqual(['AAAAAA', 'BBBBBB']);
+  });
+
+  it('never counts the player themselves', () => {
+    expect(newFriends([self], null)).toEqual([]);
+  });
+});
 
 describe('friends store', () => {
   beforeEach(() => {

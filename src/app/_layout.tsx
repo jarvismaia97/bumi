@@ -16,6 +16,7 @@ import { getDailyDateKey, getDailyStreak } from '@/game/daily';
 import { LEVEL_META } from '@/game/levels';
 import { useChallengeStore } from '@/state/challengeStore';
 import { configureNotificationHandler, onNotificationOpened, refreshDailyReminders, REMINDER_SCREEN } from '@/lib/dailyReminder';
+import { registerPushToken } from '@/lib/pushToken';
 import { useProgressStore } from '@/state/progressStore';
 import { markHydrated, useI18n } from '@/i18n';
 
@@ -46,6 +47,14 @@ export default function RootLayout() {
     initProgressSync();
     configureNotificationHandler().catch(() => {});
   }, [init]);
+
+  // Registered per signed-in session, since the token is what a friend's add is delivered to.
+  // It asks for no permission of its own: a player who never allowed notifications simply is
+  // not reachable, which is the quieter half of the trade.
+  useEffect(() => {
+    if (!user) return;
+    registerPushToken().catch(() => {});
+  }, [user]);
 
   // The reminder is scheduled once with its text baked in, so a language change would
   // otherwise leave the player with a notification in the language they just left.

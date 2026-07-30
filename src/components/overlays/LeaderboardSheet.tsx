@@ -12,7 +12,7 @@ import { FRIEND_CODE_LENGTH } from '@/lib/friendCode';
 import { shareFriendCode } from '@/lib/friendCodeShare';
 import { playHaptic } from '@/lib/haptics';
 import { ARTISTS } from '@/lib/playerName';
-import { useFriendsStore, type LeaderboardEntry } from '@/state/friendsStore';
+import { newFriends, useFriendsStore, type LeaderboardEntry } from '@/state/friendsStore';
 import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useI18n, type SupportedLanguage } from '@/i18n';
@@ -31,13 +31,19 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
   const semantic = useSemanticTokens();
   const { t, language } = useI18n();
   const user = useAuthStore(state => state.user);
-  const { code, entries, loading, busy, error, load, addFriend, removeFriend, rotateCode, clearError } = useFriendsStore();
+  const { code, entries, loading, busy, error, seenAt, markBoardSeen, load, addFriend, removeFriend, rotateCode, clearError } = useFriendsStore();
+  // Read once per opening: marking the board seen must not make the badges vanish while the
+  // player is still looking at them.
+  const [seenAtOnOpen, setSeenAtOnOpen] = useState<string | null>(seenAt);
+  const arrived = new Set(newFriends(entries, seenAtOnOpen).map(entry => entry.code));
   const [input, setInput] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
 
   useImperativeHandle(ref, () => ({
     present: () => {
+      setSeenAtOnOpen(useFriendsStore.getState().seenAt);
       load();
+      markBoardSeen();
       sheetRef.current?.present();
     },
     dismiss: () => sheetRef.current?.dismiss(),
@@ -146,9 +152,16 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                   real mosaic; a friend gets one seeded from the code they handed out. */}
               <PlayerAvatarTile userId={entry.isSelf ? user.id : entry.code ?? ''} size={34} />
               <View style={styles.rowCopy}>
-                <Text style={[styles.rowName, { color: theme.text }]} numberOfLines={1}>
-                  {entryName(entry, language)}
-                </Text>
+                <View style={styles.rowNameLine}>
+                  <Text style={[styles.rowName, { color: theme.text }]} numberOfLines={1}>
+                    {entryName(entry, language)}
+                  </Text>
+                  {arrived.has(entry.code) && (
+                    <Text style={[styles.newBadge, { color: semantic.success, borderColor: semantic.successBorder, backgroundColor: semantic.successSurface }]}>
+                      {t('leaderboard.new')}
+                    </Text>
+                  )}
+                </View>
                 <Text style={[styles.rowDetail, { color: theme.sub }]} numberOfLines={1}>
                   {t('leaderboard.rowDetail', { solved: entry.solved, gold: entry.medals.gold, streak: entry.streak })}
                 </Text>
@@ -193,7 +206,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8 },
   rank: { flexShrink: 0, minWidth: 16, fontSize: 12, fontWeight: '800' },
   rowCopy: { flex: 1, minWidth: 0 },
-  rowName: { fontSize: 13, fontWeight: '800' },
+  rowNameLine: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
+  rowName: { flexShrink: 1, minWidth: 0, fontSize: 13, fontWeight: '800' },
+  newBadge: { flexShrink: 0, fontSize: 9, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase', borderWidth: 1, borderRadius: 20, paddingHorizontal: 6, paddingVertical: 1 },
   rowDetail: { fontSize: 10, marginTop: 2 },
   rowPoints: { flexShrink: 0, flexDirection: 'row', alignItems: 'center', gap: 4 },
   points: { fontSize: 15, fontWeight: '800' },

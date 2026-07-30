@@ -20,7 +20,7 @@ import { playerName } from '@/lib/identity';
 import { useAuthStore } from '@/state/authStore';
 import { useLanguageStore } from '@/state/languageStore';
 import { countMissedDays } from '@/game/archive';
-import { useFriendsStore } from '@/state/friendsStore';
+import { newFriends, useFriendsStore } from '@/state/friendsStore';
 import { useSyncStore } from '@/state/syncStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { refreshDailyReminders } from '@/lib/dailyReminder';
@@ -60,7 +60,10 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
   const hydrated = useHydrated();
   const missedDays = countMissedDays(dailyCompletionDates);
   const friendCode = useFriendsStore(state => state.code);
+  const friendEntries = useFriendsStore(state => state.entries);
+  const friendsSeenAt = useFriendsStore(state => state.seenAt);
   const loadFriends = useFriendsStore(state => state.load);
+  const arrivedCount = newFriends(friendEntries, friendsSeenAt).length;
   const { t, language } = useI18n();
   const selectedLanguage = LANGUAGE_OPTIONS.find(option => option.value === languagePreference) ?? LANGUAGE_OPTIONS[0];
   const languageValueLabel = selectedLanguage.value === 'auto' ? t('settings.languageAuto') : selectedLanguage.label;
@@ -69,7 +72,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
     present: () => {
       // Fetched here so the code is already under the player's name when they look for it,
       // rather than appearing a beat after the leaderboard is opened.
-      if (user && !friendCode) loadFriends();
+      if (user) loadFriends();
       sheetRef.current?.present();
     },
   }));
@@ -171,7 +174,15 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.game')}</Text>
         <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenLeaderboard)}>
           <View style={styles.rowCopy}><Users size={18} color={theme.accent} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('leaderboard.open')}</Text></View>
-          <ChevronRight size={18} color={theme.sub} />
+          <View style={styles.rowValue}>
+            {/* Someone adding you is the one thing on this board that happens without you. */}
+            {arrivedCount > 0 && (
+              <Text style={[styles.rowBadge, { color: semantic.success, borderColor: semantic.successBorder, backgroundColor: semantic.successSurface }]}>
+                {t('leaderboard.newCount', { count: arrivedCount })}
+              </Text>
+            )}
+            <ChevronRight size={18} color={theme.sub} />
+          </View>
         </AnimatedPressable>
         <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenAchievements)}>
           <View style={styles.rowCopy}><Trophy size={18} color={semantic.gold} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.achievements')}</Text></View>
@@ -250,6 +261,7 @@ const styles = StyleSheet.create({
   accountIdentityCopy: { flex: 1, minWidth: 0 },
   accountName: { fontSize: 15, fontWeight: '800' },
   accountCode: { fontSize: 10, fontWeight: '700', letterSpacing: 0.6, marginTop: 3 },
+  rowBadge: { fontSize: 10, fontWeight: '800', borderWidth: 1, borderRadius: 20, paddingHorizontal: 7, paddingVertical: 1 },
   // Negative margin pulls the divider out to the card edges instead of stopping at the padding.
   // minHeight (not height) keeps the 44pt touch target while letting the label grow.
   accountSignOut: {

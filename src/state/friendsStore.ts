@@ -1,5 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { authClient } from '@/lib/auth-client';
 import { normalizeFriendCode } from '@/lib/friendCode';
 import { useAuthStore } from '@/state/authStore';
@@ -7,6 +9,8 @@ import { useAuthStore } from '@/state/authStore';
 /** One row of the board. `artist` indexes ARTISTS, so the nickname is built on the device. */
 export interface LeaderboardEntry {
   code: string | null;
+  /** ISO timestamp of when the pair was made, or null for the player's own row. */
+  addedAt: string | null;
   artist: number;
   points: number;
   medals: { gold: number; silver: number; bronze: number };
@@ -24,12 +28,23 @@ interface FriendsState {
   loading: boolean;
   busy: boolean;
   error: FriendsError | null;
+  /**
+   * When the player last looked at the board. Persisted, because "new since you last looked"
+   * has to survive the app being closed — which is exactly when someone else adds you.
+   */
+  seenAt: string | null;
+  markBoardSeen: () => void;
   load: () => Promise<void>;
   addFriend: (code: string) => Promise<boolean>;
   removeFriend: (code: string) => Promise<void>;
   rotateCode: () => Promise<void>;
   clearError: () => void;
   reset: () => void;
+}
+
+/** Friends added since the player last opened the board. Their own row never counts. */
+export function newFriends(entries: LeaderboardEntry[], seenAt: string | null): LeaderboardEntry[] {
+  return entries.filter(entry => !entry.isSelf && entry.addedAt && (!seenAt || entry.addedAt > seenAt));
 }
 
 type BoardResponse = { code: string; entries: LeaderboardEntry[] };
@@ -70,12 +85,17 @@ function toFriendsError(error: unknown): FriendsError {
   return KNOWN_ERRORS.find(known => known === message) ?? 'offline';
 }
 
-export const useFriendsStore = create<FriendsState>((set, get) => ({
+export const useFriendsStore = create<FriendsState>()(
+  persist(
+    (set, get) => ({
   code: null,
   entries: [],
   loading: false,
   busy: false,
   error: null,
+  seenAt: null,
+
+  markBoardSeen: () => set({ seenAt: new Date().toISOString() }),
 
   load: async () => {
     if (get().loading) return;
@@ -129,6 +149,15 @@ export const useFriendsStore = create<FriendsState>((set, get) => ({
 
   clearError: () => set({ error: null }),
 
-  // Signing out has to drop the board: the next account must not inherit this one's friends.
-  reset: () => set({ code: null, entries: [], loading: false, busy: false, error: null }),
-}));
+  // Signing out has to drop the board: the next account must not inherit this one's friends,
+  // nor the mark of what it had already seen.
+  reset: () => set({ code: null, entries: [], loading: false, busy: false, error: null, seenAt: null }),
+    }),
+    {
+      name: 'bumi-friends-store',
+      storage: createJSONStorage(() => AsyncStorage),
+      // Only the mark is worth keeping: the board itself is refetched on every visit.
+      partialize: state => ({ seenAt: state.seenAt }),
+    },
+  ),
+);

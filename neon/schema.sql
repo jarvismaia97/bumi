@@ -23,6 +23,18 @@ create table if not exists friendships (
 
 create index if not exists friendships_user_id_idx on friendships (user_id);
 
+-- One row per device, not per player: an account signed in on two devices should hear about a
+-- new friend on both. The token is the key, so a device that changes hands stops receiving the
+-- previous owner's notifications.
+create table if not exists push_tokens (
+  token text primary key,
+  user_id text not null,
+  platform text not null default 'unknown',
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists push_tokens_user_id_idx on push_tokens (user_id);
+
 create table if not exists user_progress (
   user_id text primary key,
   hints integer not null default 0,

@@ -3,8 +3,9 @@ import { neon } from '@neondatabase/serverless';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuth } from '../src/lib/auth';
 import { FRIEND_CODE_LENGTH, friendCodeFromBytes, normalizeFriendCode } from '../src/lib/friendCode';
-import { artistIndexFor } from '../src/lib/playerName';
+import { artistIndexFor, ARTISTS } from '../src/lib/playerName';
 import { pointsFromCounts } from '../src/game/points';
+import { resolveLanguage, translate } from '../src/i18n/messages';
 
 /**
  * The friends leaderboard. Two things this deliberately never returns: account ids and the
@@ -159,7 +160,7 @@ async function statsFor(sql: Sql, userIds: string[]): Promise<StatsRow[]> {
   `) as StatsRow[];
 }
 
-function toEntry(row: StatsRow, selfId: string) {
+function toEntry(row: StatsRow, selfId: string, addedAt?: string | null) {
   const counts = {
     gold: Number(row.gold),
     silver: Number(row.silver),
@@ -168,6 +169,8 @@ function toEntry(row: StatsRow, selfId: string) {
   return {
     // The code identifies a row to the client for removal; the account id never leaves here.
     code: row.friend_code,
+    // When the pair was made, so the board can mark the ones the player has not seen yet.
+    addedAt: addedAt ?? null,
     artist: artistIndexFor(row.user_id),
     points: pointsFromCounts(counts),
     medals: counts,
@@ -180,17 +183,56 @@ function toEntry(row: StatsRow, selfId: string) {
 async function board(sql: Sql, userId: string) {
   const code = await ensureFriendCode(sql, userId);
   const friendRows = (await sql`
-    select friend_id from friendships where user_id = ${userId} order by created_at asc
-  `) as { friend_id: string }[];
+    select friend_id, created_at from friendships where user_id = ${userId} order by created_at asc
+  `) as { friend_id: string; created_at: string | Date }[];
   const friendIds = friendRows.map(row => row.friend_id).slice(0, MAX_FRIENDS);
+  const addedAt = new Map(friendRows.map(row => [row.friend_id, new Date(row.created_at).toISOString()]));
   const rows = await statsFor(sql, [userId, ...friendIds]);
 
   return {
     code,
     entries: rows
-      .map(row => toEntry(row, userId))
+      .map(row => toEntry(row, userId, addedAt.get(row.user_id)))
       .sort((a, b) => b.points - a.points || b.solved - a.solved),
   };
+}
+
+/**
+ * Tells the code's owner that someone used it. This is the one thing on the board that happens
+ * to a player rather than because of them, and the pair is mutual the moment it is made, so
+ * being told is what keeps that honest.
+ *
+ * Sending is best-effort and never blocks the response: a friend added is a friend added
+ * whether or not a phone could be reached. Only devices that already granted notifications for
+ * the daily reminder ever registered a token, so this raises no prompt of its own.
+ */
+async function notifyAdded(sql: Sql, targetId: string, adderId: string, acceptLanguage: string | undefined) {
+  try {
+    const tokens = (await sql`
+      select token from push_tokens where user_id = ${targetId}
+    `) as { token: string }[];
+    if (!tokens.length) return;
+
+    // The receiver's own language is not stored, so the adder's request headers are the best
+    // guess available; the catalogue falls back to Portuguese when they say nothing useful.
+    const language = resolveLanguage(acceptLanguage?.split(',')[0]);
+    const artist = ARTISTS[artistIndexFor(adderId)];
+
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(
+        tokens.map(row => ({
+          to: row.token,
+          title: translate(language, 'push.friendAddedTitle'),
+          body: translate(language, 'push.friendAddedBody', { name: artist.name }),
+          sound: 'default',
+        })),
+      ),
+    });
+  } catch {
+    // A push that could not be sent is not a reason to fail the add.
+  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -268,11 +310,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    await sql`
+    const inserted = (await sql`
       insert into friendships (user_id, friend_id)
       values (${userId}, ${targetId}), (${targetId}, ${userId})
       on conflict (user_id, friend_id) do nothing
-    `;
+      returning user_id
+    `) as { user_id: string }[];
+
+    // Only on a pair that did not already exist, so re-entering a code stays quiet.
+    if (inserted.length) await notifyAdded(sql, targetId, userId, req.headers['accept-language']);
+
     sendJson(res, 200, await board(sql, userId));
     return;
   }
