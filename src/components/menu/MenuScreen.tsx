@@ -23,7 +23,7 @@ import { useProgressStore } from '@/state/progressStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
-import { useI18n } from '@/i18n';
+import { useHydrated, useI18n } from '@/i18n';
 import { MONTHLY_REWARD_HINTS, WEEKLY_REWARD_HINTS, type GoalProgress } from '@/game/goals';
 
 interface MenuScreenProps {
@@ -135,6 +135,10 @@ export function MenuScreen({
   const leaderboardRef = useRef<LeaderboardSheetHandle>(null);
   const archiveRef = useRef<DailyArchiveSheetHandle>(null);
   const missedDays = countMissedDays(useProgressStore(state => state.dailyCompletionDates));
+  // How many days are still open depends on today's date, and the static document was built on
+  // some earlier day: rendering the count before hydration would both mismatch the markup and
+  // state a stale number. It arrives with the first client pass instead.
+  const hydrated = useHydrated();
 
   const daily = dailyDone
     ? { fg: semantic.success, bg: semantic.successSurface, border: semantic.successBorder }
@@ -214,9 +218,11 @@ export function MenuScreen({
           onPress={() => archiveRef.current?.present()}
         >
           <Text style={[styles.archiveLabel, { color: theme.text }]}>{t('archive.open')}</Text>
-          <Text style={[styles.archiveDetail, { color: theme.sub }]}>
-            {missedDays ? t('archive.openDetail', { count: missedDays }) : t('archive.allDone')}
-          </Text>
+          {hydrated && (
+            <Text style={[styles.archiveDetail, { color: theme.sub }]}>
+              {missedDays ? t('archive.openDetail', { count: missedDays }) : t('archive.allDone')}
+            </Text>
+          )}
         </AnimatedPressable>
       </View>
 

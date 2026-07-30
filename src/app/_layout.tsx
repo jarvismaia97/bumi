@@ -17,7 +17,7 @@ import { LEVEL_META } from '@/game/levels';
 import { useChallengeStore } from '@/state/challengeStore';
 import { configureNotificationHandler, onNotificationOpened, refreshDailyReminders, REMINDER_SCREEN } from '@/lib/dailyReminder';
 import { useProgressStore } from '@/state/progressStore';
-import { useI18n } from '@/i18n';
+import { markHydrated, useI18n } from '@/i18n';
 
 // The static document is rendered once, with no locale, so its metadata is Portuguese —
 // the same choice `resolveLanguage` makes without a device language.
@@ -39,6 +39,9 @@ export default function RootLayout() {
   const { language } = useI18n();
 
   useEffect(() => {
+    // First effect after mount: from here the tree may render the device's language, because
+    // hydration has already matched the static markup. See src/i18n/hydration.ts.
+    markHydrated();
     init();
     initProgressSync();
     configureNotificationHandler().catch(() => {});
