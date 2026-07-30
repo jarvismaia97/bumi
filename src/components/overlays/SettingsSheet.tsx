@@ -27,6 +27,7 @@ import { refreshDailyReminders } from '@/lib/dailyReminder';
 import { playHaptic } from '@/lib/haptics';
 import { useProgressStore } from '@/state/progressStore';
 import { useHydrated, useI18n } from '@/i18n';
+import { renderSheetBackdrop } from '@/components/overlays/SheetBackdrop';
 
 export interface SettingsSheetHandle {
   present: () => void;
@@ -129,6 +130,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
 
   return (
     <BottomSheetModal
+      backdropComponent={renderSheetBackdrop}
       ref={sheetRef}
       enableDynamicSizing
       enablePanDownToClose

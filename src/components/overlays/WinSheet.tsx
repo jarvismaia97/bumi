@@ -8,6 +8,7 @@ import { Logo } from '@/components/Logo';
 import type { Medal } from '@/game/medals';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
+import { renderStaticSheetBackdrop } from '@/components/overlays/SheetBackdrop';
 
 export interface WinSheetHandle {
   present: () => void;
@@ -47,6 +48,7 @@ export const WinSheet = forwardRef<WinSheetHandle, WinSheetProps>(function WinSh
 
   return (
     <BottomSheetModal
+      backdropComponent={renderStaticSheetBackdrop}
       ref={sheetRef}
       enableDynamicSizing
       snapPoints={undefined}

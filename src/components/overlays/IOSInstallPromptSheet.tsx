@@ -9,6 +9,7 @@ import { Logo } from '@/components/Logo';
 import { useThemeTokens } from '@/state/themeStore';
 import { hitSlopFor } from '@/lib/touchTarget';
 import { useI18n } from '@/i18n';
+import { renderSheetBackdrop } from '@/components/overlays/SheetBackdrop';
 
 const CLOSE_SIZE = 34;
 // The button floats over the sheet corner, so its slop has to stay on the sheet. The 5pt it
@@ -44,6 +45,7 @@ export const IOSInstallPromptSheet = forwardRef<IOSInstallPromptSheetHandle>(fun
 
   return (
     <BottomSheetModal
+      backdropComponent={renderSheetBackdrop}
       ref={sheetRef}
       enableDynamicSizing
       enablePanDownToClose

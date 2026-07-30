@@ -6,6 +6,7 @@ import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { hitSlopFor } from '@/lib/touchTarget';
 import { useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
+import { renderSheetBackdrop } from '@/components/overlays/SheetBackdrop';
 
 export interface SettingsChildSheetHandle {
   present: () => void;
@@ -51,6 +52,7 @@ export const SettingsChildSheet = forwardRef<SettingsChildSheetHandle, SettingsC
 
     return (
       <BottomSheetModal
+        backdropComponent={renderSheetBackdrop}
         ref={sheetRef}
         snapPoints={snapPoints}
         enableDynamicSizing={!snapPoints}

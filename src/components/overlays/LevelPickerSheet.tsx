@@ -13,6 +13,7 @@ import { LEVEL_META } from '@/game/levels';
 import type { Medal } from '@/game/medals';
 import { useThemeTokens } from '@/state/themeStore';
 import { SEMANTIC } from '@/theme/themes';
+import { renderSheetBackdrop } from '@/components/overlays/SheetBackdrop';
 
 export interface LevelPickerSheetHandle {
   present: () => void;
@@ -148,6 +149,7 @@ export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSh
 
   return (
     <BottomSheetModal
+      backdropComponent={renderSheetBackdrop}
       ref={sheetRef}
       snapPoints={['94%']}
       enableDynamicSizing={false}
