@@ -6,6 +6,7 @@ import { playHaptic } from '@/lib/haptics';
 import { refreshDailyReminders } from '@/lib/dailyReminder';
 import { useAuthStore } from '@/state/authStore';
 import { useLanguageStore } from '@/state/languageStore';
+import { translate } from '@/i18n/messages';
 import { useProgressStore } from '@/state/progressStore';
 import { SettingsSheet } from './SettingsSheet';
 
@@ -53,7 +54,7 @@ function confirmDestructive() {
 }
 
 function renderSheet() {
-  return render(<SettingsSheet onOpenAchievements={() => {}} onOpenThemes={() => {}} onOpenPrivacy={() => {}} onOpenLanguage={() => {}} onOpenLeaderboard={() => {}} />);
+  return render(<SettingsSheet onOpenAchievements={() => {}} onOpenThemes={() => {}} onOpenPrivacy={() => {}} onOpenLanguage={() => {}} onOpenLeaderboard={() => {}} onOpenArchive={() => {}} />);
 }
 
 beforeEach(() => {
@@ -72,6 +73,33 @@ afterEach(() => {
   vi.clearAllMocks();
   useLanguageStore.setState({ preference: 'auto' });
   useAuthStore.setState({ user: null, session: null, loading: true, error: null });
+});
+
+describe('SettingsSheet archive row', () => {
+  const key = (day: number) => {
+    const today = new Date();
+    return `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(day).padStart(2, '0')}`;
+  };
+
+  it('counts the days still open, the way the menu button used to', () => {
+    // Every day of the month bar today, which counts as open until it is solved.
+    const played = Array.from({ length: new Date().getDate() - 1 }, (_, index) => key(index + 1));
+    useProgressStore.setState({ dailyReminderEnabled: false, dailyCompletionDates: played });
+
+    renderSheet();
+
+    expect(screen.getByText(translate('pt-PT', 'archive.open'))).toBeTruthy();
+    expect(screen.getByText('1')).toBeTruthy();
+  });
+
+  it('says the month is complete rather than showing a zero', () => {
+    const played = Array.from({ length: new Date().getDate() }, (_, index) => key(index + 1));
+    useProgressStore.setState({ dailyReminderEnabled: false, dailyCompletionDates: played });
+
+    renderSheet();
+
+    expect(screen.getByText(translate('pt-PT', 'archive.allDoneShort'))).toBeTruthy();
+  });
 });
 
 describe('SettingsSheet haptics', () => {

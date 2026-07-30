@@ -119,23 +119,6 @@ describe('MenuScreen', () => {
     expect(screen.getByText(t('menu.streak', { count: 1, label: t('menu.day') }))).toBeTruthy();
   });
 
-  it('says how many archive days are open, or that none are', () => {
-    const today = new Date();
-    const key = (day: number) =>
-      `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(day).padStart(2, '0')}`;
-    // Today counts as open until it is solved, so a full month includes it.
-    const everyDaySoFar = Array.from({ length: today.getDate() }, (_, index) => key(index + 1));
-
-    useProgressStore.setState({ dailyCompletionDates: everyDaySoFar });
-    renderMenu();
-    expect(screen.getByText(t('archive.allDone'))).toBeTruthy();
-
-    cleanup();
-    useProgressStore.setState({ dailyCompletionDates: everyDaySoFar.slice(0, -1) });
-    renderMenu();
-    expect(screen.getByText(t('archive.openDetail', { count: 1 }))).toBeTruthy();
-  });
-
   it('reports island progress out of the total, not as a bare number', () => {
     renderMenu();
 

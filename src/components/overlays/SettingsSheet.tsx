@@ -10,6 +10,7 @@ import Mail from 'lucide-react-native/icons/mail';
 import Palette from 'lucide-react-native/icons/palette';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import Trash2 from 'lucide-react-native/icons/trash-2';
+import CalendarDays from 'lucide-react-native/icons/calendar-days';
 import Trophy from 'lucide-react-native/icons/trophy';
 import Users from 'lucide-react-native/icons/users';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
@@ -18,13 +19,14 @@ import { PlayerAvatarTile } from '@/components/PlayerAvatar';
 import { playerName } from '@/lib/identity';
 import { useAuthStore } from '@/state/authStore';
 import { useLanguageStore } from '@/state/languageStore';
+import { countMissedDays } from '@/game/archive';
 import { useFriendsStore } from '@/state/friendsStore';
 import { useSyncStore } from '@/state/syncStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { refreshDailyReminders } from '@/lib/dailyReminder';
 import { playHaptic } from '@/lib/haptics';
 import { useProgressStore } from '@/state/progressStore';
-import { useI18n } from '@/i18n';
+import { useHydrated, useI18n } from '@/i18n';
 
 export interface SettingsSheetHandle {
   present: () => void;
@@ -36,9 +38,10 @@ interface SettingsSheetProps {
   onOpenPrivacy: () => void;
   onOpenLanguage: () => void;
   onOpenLeaderboard: () => void;
+  onOpenArchive: () => void;
 }
 
-export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>(function SettingsSheet({ onOpenAchievements, onOpenThemes, onOpenPrivacy, onOpenLanguage, onOpenLeaderboard }, ref) {
+export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>(function SettingsSheet({ onOpenAchievements, onOpenThemes, onOpenPrivacy, onOpenLanguage, onOpenLeaderboard, onOpenArchive }, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const theme = useThemeTokens();
   const semantic = useSemanticTokens();
@@ -51,6 +54,10 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
   const languagePreference = useLanguageStore(state => state.preference);
   const dailyReminderEnabled = useProgressStore(state => state.dailyReminderEnabled);
   const setDailyReminderEnabled = useProgressStore(state => state.setDailyReminderEnabled);
+  const dailyCompletionDates = useProgressStore(state => state.dailyCompletionDates);
+  // Derived from today's date, so it waits for hydration like it did on the menu.
+  const hydrated = useHydrated();
+  const missedDays = countMissedDays(dailyCompletionDates);
   const friendCode = useFriendsStore(state => state.code);
   const loadFriends = useFriendsStore(state => state.load);
   const { t, language } = useI18n();
@@ -167,6 +174,18 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenAchievements)}>
           <View style={styles.rowCopy}><Trophy size={18} color={semantic.gold} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.achievements')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
+        </AnimatedPressable>
+
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenArchive)}>
+          <View style={styles.rowCopy}><CalendarDays size={18} color={theme.accent} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('archive.open')}</Text></View>
+          <View style={styles.rowValue}>
+            {hydrated && (
+              <Text style={[styles.rowValueText, { color: theme.sub }]}>
+                {missedDays ? String(missedDays) : t('archive.allDoneShort')}
+              </Text>
+            )}
+            <ChevronRight size={18} color={theme.sub} />
+          </View>
         </AnimatedPressable>
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.appearance')}</Text>
