@@ -13,12 +13,12 @@ import { LevelPickerSheet, type LevelPickerSheetHandle } from '@/components/over
 import { WinSheet, type WinSheetHandle } from '@/components/overlays/WinSheet';
 import { IOSInstallPromptSheet, type IOSInstallPromptSheetHandle } from '@/components/overlays/IOSInstallPromptSheet';
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
-import { formatDuration, getDailyDateKey, getDailyLevel, getNextDailyInMs } from '@/game/daily';
+import { formatDuration, getDailyDateKey, getDailyLevel, getDailyStreak, getNextDailyInMs } from '@/game/daily';
 import { getMonthlyProgress, getWeeklyProgress, goalsCompletedBy, isStreakMilestone } from '@/game/goals';
 import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
 import { isCampaignLevelUnlocked, requiresCampaignLogin } from '@/game/access';
-import { formatResultDuration, getMedalForResult, getMistakeBudget, isBetterMedal, type Medal } from '@/game/medals';
-import { medalPointsGain } from '@/game/points';
+import { formatResultDuration, getMistakeBudget, type Medal } from '@/game/medals';
+import { resolveCampaignSolve } from '@/game/results';
 import { getLevel, LEVEL_META, TUTORIAL_LEVELS } from '@/game/levels';
 import { getCompletedIslandCount, getNewlyCompletedIslandIndex, ISLANDS } from '@/game/islands';
 import { useGameStore } from '@/state/gameStore';
@@ -62,8 +62,23 @@ export default function GameScreen() {
   const setCurLvl = useUIStore(s => s.setCurLvl);
   const tutorialStep = useUIStore(s => s.tutorialStep);
   const setTutorialStep = useUIStore(s => s.setTutorialStep);
+  // Selectors, not the whole store: subscribing to all of progress re-rendered the board on
+  // every write, including the ones that only touch the menu's counters.
   const { level, placed, won, elapsedMs, hintsUsed, mistakes, loadLevel, placeRect, removeRectAt, undo, clear, hint } = useGameStore();
-  const progress = useProgressStore();
+  const solvedMap = useProgressStore(state => state.solvedMap);
+  const levelMedals = useProgressStore(state => state.levelMedals);
+  const hints = useProgressStore(state => state.hints);
+  const dailyCompletionDates = useProgressStore(state => state.dailyCompletionDates);
+  const dailyCompletedDate = useProgressStore(state => state.dailyCompletedDate);
+  const iosInstallPromptSeen = useProgressStore(state => state.iosInstallPromptSeen);
+  // Actions never change identity, so they are read once rather than subscribed to.
+  const progressActions = useProgressStore.getState();
+
+  const solvedCount = Object.keys(solvedMap).length;
+  const dailyStreak = getDailyStreak(dailyCompletionDates);
+  const dailyDoneToday = dailyCompletedDate === getDailyDateKey();
+  const isSolvedByIndex = (idx: number) => !!solvedMap[idx];
+  const getLevelMedalByIndex = (idx: number) => levelMedals[idx];
   const user = useAuthStore(s => s.user);
   const pendingChallengeIndex = useChallengeStore(s => s.pendingChallengeIndex);
   const pendingDailyChallengeDate = useChallengeStore(s => s.pendingDailyChallengeDate);
@@ -89,13 +104,13 @@ export default function GameScreen() {
   const cellSize = useGridCellSize(level?.size ?? 6);
   const levelRows = level?.rows ?? level?.size ?? 6;
   const levelColumns = level?.columns ?? level?.size ?? 6;
-  const nextCampaignIndex = LEVEL_META.findIndex((_, idx) => !progress.isSolved(idx));
+  const nextCampaignIndex = LEVEL_META.findIndex((_, idx) => !!!solvedMap[idx]);
   const campaignComplete = nextCampaignIndex === -1;
   const campaignIndex = campaignComplete ? LEVEL_META.length - 1 : nextCampaignIndex;
 
   // ── Level loading per mode ──────────────────────────────────────────────
   function startCampaign(idx: number): boolean {
-    if (!isCampaignLevelUnlocked(idx, progress.solvedMap)) return false;
+    if (!isCampaignLevelUnlocked(idx, solvedMap)) return false;
     if (requiresCampaignLogin(idx, !!user)) {
       if (!loginRequestedRef.current) {
         loginRequestedRef.current = true;
@@ -177,7 +192,7 @@ export default function GameScreen() {
   async function onShareDailyResult() {
     if (!dailyResult) return;
     try {
-      const result = await shareDailyResult(dailyChallengeDate, dailyResult, progress.dailyStreak(), language);
+      const result = await shareDailyResult(dailyChallengeDate, dailyResult, dailyStreak, language);
       if (result === 'copied') showShareNotice(t('game.resultCopied'));
       if (result === 'unavailable') showShareNotice(t('game.shareUnavailable'));
     } catch {
@@ -204,12 +219,12 @@ export default function GameScreen() {
         {
           // Read before marking: afterwards today is already in the list and the transition
           // that earned the reward is gone.
-          const closed = goalsCompletedBy(progress.dailyCompletionDates, dailyChallengeDate);
-          progress.markDailyDone(dailyChallengeDate);
+          const closed = goalsCompletedBy(dailyCompletionDates, dailyChallengeDate);
+          progressActions.markDailyDone(dailyChallengeDate);
           tier = highestTier(
             closed.monthly ? 'island' : null,
             closed.weekly ? 'gold' : null,
-            isStreakMilestone(progress.dailyStreak()) ? 'gold' : null,
+            isStreakMilestone(dailyStreak) ? 'gold' : null,
           );
         }
         setCelebrationTier(tier);
@@ -218,28 +233,25 @@ export default function GameScreen() {
       }
       if (mode === 'campaign') {
         const durationMs = elapsedMs();
-        const medal = getMedalForResult({ hintsUsed, mistakes, rects: level?.solution.length ?? 1 });
-        const bestMedal = progress.getLevelMedal(curLvl);
-        const displayedMedal = isBetterMedal(medal, bestMedal) ? medal : bestMedal ?? medal;
-        const unlockedIslandIndex = getNewlyCompletedIslandIndex(curLvl, progress.solvedMap);
-        progress.markSolved(curLvl);
-        progress.setLevelMedal(curLvl, medal);
+        const unlockedIslandIndex = getNewlyCompletedIslandIndex(curLvl, solvedMap);
+        const outcome = resolveCampaignSolve({
+          hintsUsed,
+          mistakes,
+          rects: level?.solution.length ?? 1,
+          bestMedal: levelMedals[curLvl],
+          milestone: !!LEVEL_META[curLvl]?.milestone,
+          unlockedIsland: unlockedIslandIndex != null,
+        });
+        progressActions.markSolved(curLvl);
+        progressActions.setLevelMedal(curLvl, outcome.medal);
         setCampaignResult({
-          medal: displayedMedal,
+          medal: outcome.displayedMedal,
           summary: formatSummary(durationMs, hintsUsed, mistakes, t),
-          // What the board actually gained: nothing for a replay, the difference for a better
-          // medal, since the level keeps only its best.
-          pointsGained: medalPointsGain(medal, bestMedal),
+          pointsGained: outcome.pointsGained,
           unlockedIslandName: unlockedIslandIndex == null ? undefined : t(`island.${ISLANDS[unlockedIslandIndex].id}.name`),
         });
-        // Only the fresh result earns the big celebration; replaying a solved level does not.
-        const tier = highestTier(
-          unlockedIslandIndex != null ? 'island' : null,
-          medal === 'gold' ? 'gold' : null,
-          LEVEL_META[curLvl]?.milestone ? 'milestone' : null,
-        );
-        setCelebrationTier(tier);
-        presentWinSheet(tier);
+        setCelebrationTier(outcome.tier);
+        presentWinSheet(outcome.tier);
         return;
       }
       presentWinSheet();
@@ -285,18 +297,18 @@ export default function GameScreen() {
     return (
       <Animated.View style={styles.screen} entering={SCREEN_FADE}>
       <MenuScreen
-        dailyDone={progress.isDailyDoneToday()}
-        dailyStreak={progress.dailyStreak()}
-        weekly={getWeeklyProgress(progress.dailyCompletionDates)}
-        monthly={getMonthlyProgress(progress.dailyCompletionDates)}
-        solvedCount={progress.solvedCount()}
-        goldMedalCount={Object.values(progress.levelMedals).filter(medal => medal === 'gold').length}
-        completedIslandCount={getCompletedIslandCount(progress.solvedMap)}
+        dailyDone={dailyDoneToday}
+        dailyStreak={dailyStreak}
+        weekly={getWeeklyProgress(dailyCompletionDates)}
+        monthly={getMonthlyProgress(dailyCompletionDates)}
+        solvedCount={solvedCount}
+        goldMedalCount={Object.values(levelMedals).filter(medal => medal === 'gold').length}
+        completedIslandCount={getCompletedIslandCount(solvedMap)}
         islandTotal={ISLANDS.length}
         campaignLevel={campaignIndex + 1}
         campaignTotal={LEVEL_META.length}
         campaignComplete={campaignComplete}
-        onStartGame={progress.solvedCount() === 0 ? startTutorial : () => startCampaign(campaignIndex)}
+        onStartGame={solvedCount === 0 ? startTutorial : () => startCampaign(campaignIndex)}
         onStartDaily={() => startDaily()}
         onStartDailyFor={dateKey =>
           startDaily(new Date(Number(dateKey.slice(0, 4)), Number(dateKey.slice(4, 6)) - 1, Number(dateKey.slice(6, 8))))
@@ -318,9 +330,9 @@ export default function GameScreen() {
     tutorialTotal: TUTORIAL_LEVELS.length,
     rows: levelRows,
     columns: levelColumns,
-    hints: progress.hints,
+    hints: hints,
   };
-  const isNewSolve = mode === 'campaign' && progress.isSolved(curLvl);
+  const isNewSolve = mode === 'campaign' && !!solvedMap[curLvl];
   const mistakeStatus = campaignMistakeStatus();
 
   /**
@@ -345,15 +357,15 @@ export default function GameScreen() {
       return;
     }
     if (isFirstCampaignLevel(labels)) return;
-    if (progress.hints <= 0) return;
+    if (hints <= 0) return;
     if (!hint()) return;
-    progress.spendHint();
+    progressActions.spendHint();
     showShareNotice(t('game.hintApplied'));
   }
 
   function onNextLevel() {
     const shouldOfferIOSInstall =
-      mode === 'campaign' && curLvl === 2 && !progress.iosInstallPromptSeen && canShowIOSInstallPrompt();
+      mode === 'campaign' && curLvl === 2 && !iosInstallPromptSeen && canShowIOSInstallPrompt();
 
     winSheetRef.current?.dismiss();
     if (mode === 'daily') {
@@ -363,7 +375,7 @@ export default function GameScreen() {
     if (mode === 'campaign' && curLvl < LEVEL_META.length - 1) {
       startCampaign(curLvl + 1);
       if (shouldOfferIOSInstall) {
-        progress.markIOSInstallPromptSeen();
+        progressActions.markIOSInstallPromptSeen();
         setTimeout(() => iosInstallPromptRef.current?.present(), 240);
       }
       return;
@@ -431,7 +443,7 @@ export default function GameScreen() {
         campaignSummary={mode === 'campaign' ? campaignResult?.summary : undefined}
         unlockedIslandName={mode === 'campaign' ? campaignResult?.unlockedIslandName : undefined}
         dailySummary={mode === 'daily' ? dailyResult ?? undefined : undefined}
-        dailyStreak={progress.dailyStreak()}
+        dailyStreak={dailyStreak}
         dailyCountdown={dailyCountdown}
         nextLabel={nextLabel(mode, t)}
         onReview={() => winSheetRef.current?.dismiss()}
@@ -444,10 +456,10 @@ export default function GameScreen() {
       <LevelPickerSheet
         ref={levelsSheetRef}
         curLvl={curLvl}
-        isSolved={progress.isSolved}
-        getLevelMedal={progress.getLevelMedal}
-        solvedCount={progress.solvedCount()}
-        isLevelLocked={idx => !isCampaignLevelUnlocked(idx, progress.solvedMap)}
+        isSolved={isSolvedByIndex}
+        getLevelMedal={getLevelMedalByIndex}
+        solvedCount={solvedCount}
+        isLevelLocked={idx => !isCampaignLevelUnlocked(idx, solvedMap)}
         isLevelLoginRequired={idx => requiresCampaignLogin(idx, !!user)}
         onSelectLevel={startCampaign}
       />
