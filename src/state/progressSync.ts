@@ -2,42 +2,15 @@ import { useAuthStore } from './authStore';
 import { useProgressStore } from './progressStore';
 import type { Medal } from '@/game/medals';
 import { mergeProgress, type RemoteProgressState } from './progressMerge';
-import { authClient } from '@/lib/auth-client';
+import { apiRequest } from '@/lib/apiClient';
 import { useSyncStore } from '@/state/syncStore';
 import { AppState, Platform } from 'react-native';
 
 type RemoteState = RemoteProgressState;
 
-function apiUrl(): string {
-  if (Platform.OS === 'web') return '/api/progress';
-  const base = process.env.EXPO_PUBLIC_API_BASE_URL ?? process.env.EXPO_PUBLIC_AUTH_API_URL;
-  return base ? `${base.replace(/\/$/, '')}/api/progress` : '/api/progress';
-}
-
-async function apiRequest<T>(method: 'GET' | 'POST', body?: unknown): Promise<T> {
-  if (!useAuthStore.getState().session) throw new Error('Missing auth session');
-  const cookie = Platform.OS === 'web' ? null : authClient.getCookie();
-
-  const response = await fetch(apiUrl(), {
-    method,
-    headers: {
-      ...(cookie ? { cookie } : {}),
-      ...(body ? { 'content-type': 'application/json' } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    credentials: Platform.OS === 'web' ? 'include' : 'omit',
-  });
-
-  if (!response.ok) {
-    throw new Error(`Progress sync failed: ${response.status}`);
-  }
-
-  return response.json() as Promise<T>;
-}
-
 async function pushProgress(): Promise<void> {
   const s = useProgressStore.getState();
-  await apiRequest<{ ok: true }>('POST', {
+  await apiRequest<{ ok: true }>('/api/progress', 'POST', {
     progress: {
       hints: s.hints,
       dailyCompletedDate: s.dailyCompletedDate,
@@ -48,16 +21,16 @@ async function pushProgress(): Promise<void> {
 
 async function pushSolvedLevels(levelIdxs: number[]): Promise<void> {
   if (!levelIdxs.length) return;
-  await apiRequest<{ ok: true }>('POST', { solvedLevelIdxs: levelIdxs });
+  await apiRequest<{ ok: true }>('/api/progress', 'POST', { solvedLevelIdxs: levelIdxs });
 }
 
 async function pushLevelMedals(levelMedals: Record<number, Medal>): Promise<void> {
   if (!Object.keys(levelMedals).length) return;
-  await apiRequest<{ ok: true }>('POST', { levelMedals });
+  await apiRequest<{ ok: true }>('/api/progress', 'POST', { levelMedals });
 }
 
 async function mergeFromRemote(): Promise<void> {
-  const remote = await apiRequest<RemoteState>('GET');
+  const remote = await apiRequest<RemoteState>('/api/progress', 'GET');
   const merged = mergeProgress(useProgressStore.getState(), remote);
   const { newlyLocalSolved, newlyLocalMedals, ...state } = merged;
 
