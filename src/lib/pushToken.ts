@@ -1,7 +1,8 @@
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
-import { authClient } from '@/lib/auth-client';
+import { apiRequest } from '@/lib/apiClient';
+import { resolveLanguage } from '@/i18n/messages';
 import { useAuthStore } from '@/state/authStore';
+import { useLanguageStore } from '@/state/languageStore';
 
 /**
  * Registers this device for the one push the game sends: someone used your friend code. It is
@@ -13,32 +14,58 @@ import { useAuthStore } from '@/state/authStore';
  * Web has no Expo push token, and a browser would need its own Web Push plumbing, so it opts
  * out here rather than failing per call.
  */
+async function currentToken(): Promise<string | null> {
+  // Both imports are loaded on demand: they reach native modules, and this file is on the
+  // import path of the auth store, which plenty of tests and the web build both pull in.
+  const Notifications = await import('expo-notifications');
+  const Constants = (await import('expo-constants')).default;
+  const permission = await Notifications.getPermissionsAsync();
+  if (!permission.granted) return null;
+
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+  const { data } = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
+  return data || null;
+}
+
+/** The language the notification should arrive in: the player's choice, or their device's. */
+function notificationLanguage(): string {
+  const preference = useLanguageStore.getState().preference;
+  return preference === 'auto' ? resolveLanguage(null) : preference;
+}
+
 export async function registerPushToken(): Promise<'registered' | 'no-permission' | 'unsupported' | 'failed'> {
   if (Platform.OS === 'web') return 'unsupported';
   if (!useAuthStore.getState().session) return 'failed';
 
   try {
-    const Notifications = await import('expo-notifications');
-    const permission = await Notifications.getPermissionsAsync();
-    if (!permission.granted) return 'no-permission';
+    const token = await currentToken();
+    if (!token) return 'no-permission';
 
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
-    const { data: token } = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
-    if (!token) return 'failed';
-
-    const base = process.env.EXPO_PUBLIC_API_BASE_URL ?? process.env.EXPO_PUBLIC_AUTH_API_URL ?? '';
-    const response = await fetch(`${base.replace(/\/$/, '')}/api/push-token`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...(authClient.getCookie() ? { cookie: authClient.getCookie() as string } : {}),
-      },
-      body: JSON.stringify({ token, platform: Platform.OS }),
+    await apiRequest('/api/push-token', 'POST', {
+      token,
+      platform: Platform.OS,
+      language: notificationLanguage(),
     });
-
-    return response.ok ? 'registered' : 'failed';
+    return 'registered';
   } catch {
     // A device that cannot be reached is not a reason to interrupt anything.
     return 'failed';
+  }
+}
+
+/**
+ * Hands the token back on the way out. Called before the session is torn down, because the
+ * request needs it — and because a device left registered keeps answering for an account
+ * nobody is signed into on it.
+ */
+export async function unregisterPushToken(): Promise<void> {
+  if (Platform.OS === 'web') return;
+
+  try {
+    const token = await currentToken();
+    if (!token) return;
+    await apiRequest('/api/push-token', 'POST', { token, action: 'unregister' });
+  } catch {
+    // Signing out is not allowed to fail because a token could not be handed back.
   }
 }

@@ -4,6 +4,7 @@ import { playHaptic } from '@/lib/haptics';
 import { useProgressStore } from '@/state/progressStore';
 import { Platform } from 'react-native';
 import { resolveLanguage, translate } from '@/i18n/messages';
+import { unregisterPushToken } from '@/lib/pushToken';
 import { useFriendsStore } from '@/state/friendsStore';
 import { useLanguageStore } from '@/state/languageStore';
 import { getLocales } from 'expo-localization';
@@ -184,6 +185,9 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   signOut: async () => {
+    // Before the session goes: the request that hands the token back needs it, and a device
+    // left registered keeps receiving notifications for an account nobody is using on it.
+    await unregisterPushToken();
     const { error } = await authClient.signOut();
     if (error) {
       set({ error: error.message });
@@ -201,6 +205,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   deleteAccount: async () => {
     set({ error: null });
+    await unregisterPushToken();
     const { error } = await authClient.deleteUser({});
     if (error) {
       set({ error: error.message });

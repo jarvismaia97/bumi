@@ -49,6 +49,10 @@ async function createAuth() {
               // Both directions: the friend's own row points back at an account that is gone,
               // and leaving it would keep a dead entry on their board.
               progressPool.query('delete from friendships where user_id = $1 or friend_id = $1', [user.id]),
+              // Deletion is stated as permanent, so the device identifier and the rate-limit
+              // trail go too: neither is progress, and both are about a person.
+              progressPool.query('delete from push_tokens where user_id = $1', [user.id]),
+              progressPool.query('delete from friend_code_attempts where user_id = $1', [user.id]),
             ]);
           } finally {
             await progressPool.end();

@@ -34,6 +34,12 @@ type StatsRow = {
 const databaseUrl = process.env.DATABASE_URL;
 /** A board of friends, not a social network: past this the screen stops being readable. */
 const MAX_FRIENDS = 30;
+/**
+ * Guessing a code is 729 million tries by hand and an afternoon to a script, and a hit puts a
+ * stranger on someone's board looking at their numbers. Nobody adds twenty friends in an hour,
+ * so the ceiling costs a real player nothing.
+ */
+const MAX_ATTEMPTS_PER_HOUR = 20;
 
 function sendJson(res: VercelResponse, status: number, body: unknown) {
   res.status(status).setHeader('content-type', 'application/json');
@@ -206,16 +212,20 @@ async function board(sql: Sql, userId: string) {
  * whether or not a phone could be reached. Only devices that already granted notifications for
  * the daily reminder ever registered a token, so this raises no prompt of its own.
  */
-async function notifyAdded(sql: Sql, targetId: string, adderId: string, acceptLanguage: string | undefined) {
+async function notifyAdded(sql: Sql, targetId: string, adderId: string) {
   try {
-    const tokens = (await sql`
-      select token from push_tokens where user_id = ${targetId}
-    `) as { token: string }[];
-    if (!tokens.length) return;
+    const rows = (await sql`
+      select push_tokens.token, profiles.language
+      from push_tokens
+      left join profiles on profiles.user_id = push_tokens.user_id
+      where push_tokens.user_id = ${targetId}
+    `) as { token: string; language: string | null }[];
+    if (!rows.length) return;
 
-    // The receiver's own language is not stored, so the adder's request headers are the best
-    // guess available; the catalogue falls back to Portuguese when they say nothing useful.
-    const language = resolveLanguage(acceptLanguage?.split(',')[0]);
+    const tokens = rows.map(row => ({ token: row.token }));
+    // The receiver's own setting, recorded when their device registered; the catalogue falls
+    // back to Portuguese if that device never said.
+    const language = resolveLanguage(rows[0].language);
     const artist = ARTISTS[artistIndexFor(adderId)];
 
     await fetch('https://exp.host/--/api/v2/push/send', {
@@ -277,6 +287,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    // Removing takes a code the player already has, so only adding is worth rate limiting.
+    if (body.action !== 'remove') {
+      const recent = (await sql`
+        select count(*)::int as count
+        from friend_code_attempts
+        where user_id = ${userId} and attempted_at > now() - interval '1 hour'
+      `) as { count: number }[];
+      if ((recent[0]?.count ?? 0) >= MAX_ATTEMPTS_PER_HOUR) {
+        sendJson(res, 429, { error: 'too_many_attempts' });
+        return;
+      }
+      // Logged whether or not the code exists: a miss is what enumeration is made of. Older
+      // rows go with it, so the table stays the size of one hour of use.
+      await sql`
+        insert into friend_code_attempts (user_id) values (${userId})
+      `;
+      await sql`
+        delete from friend_code_attempts where user_id = ${userId} and attempted_at < now() - interval '1 day'
+      `;
+    }
+
     const matches = (await sql`
       select user_id, friend_code from profiles where friend_code = ${code}
     `) as CodeRow[];
@@ -318,7 +349,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `) as { user_id: string }[];
 
     // Only on a pair that did not already exist, so re-entering a code stays quiet.
-    if (inserted.length) await notifyAdded(sql, targetId, userId, req.headers['accept-language']);
+    if (inserted.length) await notifyAdded(sql, targetId, userId);
 
     sendJson(res, 200, await board(sql, userId));
     return;

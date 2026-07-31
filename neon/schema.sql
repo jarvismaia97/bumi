@@ -1,7 +1,5 @@
 create table if not exists profiles (
   user_id text primary key,
-  display_name text,
-  avatar_url text,
   created_at timestamptz not null default now()
 );
 
@@ -35,14 +33,25 @@ create table if not exists push_tokens (
 
 create index if not exists push_tokens_user_id_idx on push_tokens (user_id);
 
+-- The language the device asked to be notified in. Without it the only clue available is the
+-- accept-language of whoever did the adding, which is the wrong person's setting.
+alter table profiles add column if not exists language text;
+
+-- Guessing a code is 729 million tries, which is a lot by hand and nothing to a script. Every
+-- attempt lands here so the endpoint can refuse a caller who is clearly enumerating.
+create table if not exists friend_code_attempts (
+  user_id text not null,
+  attempted_at timestamptz not null default now()
+);
+
+create index if not exists friend_code_attempts_user_id_idx on friend_code_attempts (user_id, attempted_at desc);
+
 create table if not exists user_progress (
   user_id text primary key,
   hints integer not null default 0,
-  infinite_best integer not null default 0,
   daily_completed_date date,
   updated_at timestamptz not null default now(),
-  constraint user_progress_hints_nonnegative check (hints >= 0),
-  constraint user_progress_infinite_best_nonnegative check (infinite_best >= 0)
+  constraint user_progress_hints_nonnegative check (hints >= 0)
 );
 
 create table if not exists solved_levels (
@@ -85,3 +94,10 @@ on conflict (user_id, completed_date) do nothing;
 alter table profiles alter column user_id type text using user_id::text;
 alter table user_progress alter column user_id type text using user_id::text;
 alter table solved_levels alter column user_id type text using user_id::text;
+
+-- Columns nothing has written to since the features that owned them were removed: the endless
+-- mode, and a display name and avatar that the painter nickname and mosaic replaced. Verified
+-- empty across every row before dropping.
+alter table profiles drop column if exists display_name;
+alter table profiles drop column if exists avatar_url;
+alter table user_progress drop column if exists infinite_best;
