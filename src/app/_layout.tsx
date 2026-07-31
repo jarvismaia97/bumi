@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AppErrorBoundary } from '@/components/AppErrorBoundary';
 import { BootLogo } from '@/components/BootLogo';
 import { useAppearance } from '@/state/appearanceStore';
 import { useAuthStore } from '@/state/authStore';
@@ -25,6 +26,10 @@ import { markHydrated, useI18n } from '@/i18n';
 const SITE_URL = 'https://www.jogarbumi.pt';
 const SITE_DESCRIPTION =
   'Divide a grelha em retângulos e resolve o puzzle. Centenas de níveis, um desafio diário e o progresso guardado entre dispositivos.';
+
+// Expo Router renders this instead of the segment when a render throws. Exported from the root
+// layout, so it covers every screen the app has.
+export { AppErrorBoundary as ErrorBoundary };
 
 export default function RootLayout() {
   const init = useAuthStore(s => s.init);
