@@ -386,15 +386,6 @@ export function gradeLevel(level: Level, options: { lookahead?: boolean } = {}):
   return { solvedByLogic, needsGuess, deepest, steps, candidateTotal, candidatesPerClue, score };
 }
 
-/**
- * A level the rules solve outright has exactly one solution — every step was forced, so no
- * alternative exists. Cheaper and stronger than the backtracking check for that case; falls
- * back to `undefined` when the rules stall, where solver.ts must still be consulted.
- */
-export function isUniqueByLogic(level: Level): boolean | undefined {
-  return gradeLevel(level).solvedByLogic ? true : undefined;
-}
-
 /** The rectangles the rules derive, clue-indexed, or null when they stall. */
 export function solveByLogic(level: Level): SolutionRect[] | null {
   const state = initialState(level, enumerateCandidates(level));

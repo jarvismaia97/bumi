@@ -134,8 +134,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (body.progress) {
       const progress = body.progress;
-      // infinite_best is left alone rather than named: the column still exists and still
-      // has a not-null default, but no client writes it since the mode was removed.
       writes.push(sql`
         insert into user_progress (user_id, hints, daily_completed_date, updated_at)
         values (

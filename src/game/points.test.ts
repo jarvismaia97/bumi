@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countMedals, medalPointsGain, pointsFromCounts, pointsFromMedals } from './points';
+import { countMedals, medalPointsGain, pointsFromCounts } from './points';
 
 describe('leaderboard points', () => {
   it('pays five for gold, three for silver, one for bronze', () => {
@@ -11,7 +11,7 @@ describe('leaderboard points', () => {
 
   it('scores nothing for a player who has solved nothing', () => {
     expect(pointsFromCounts({ gold: 0, silver: 0, bronze: 0 })).toBe(0);
-    expect(pointsFromMedals({})).toBe(0);
+    expect(countMedals({})).toEqual({ gold: 0, silver: 0, bronze: 0 });
   });
 
   it('pays a first medal in full', () => {
@@ -35,6 +35,6 @@ describe('leaderboard points', () => {
     const medals = { 0: 'gold', 1: 'gold', 2: 'silver', 7: 'bronze' } as const;
 
     expect(countMedals(medals)).toEqual({ gold: 2, silver: 1, bronze: 1 });
-    expect(pointsFromMedals(medals)).toBe(14);
+    expect(pointsFromCounts(countMedals(medals))).toBe(14);
   });
 });

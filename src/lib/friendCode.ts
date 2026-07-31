@@ -12,10 +12,6 @@
 const ALPHABET = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
 export const FRIEND_CODE_LENGTH = 6;
 
-export function friendCodeAlphabet(): string {
-  return ALPHABET;
-}
-
 /** Builds a code from random bytes. The caller owns the randomness, so this stays testable. */
 export function friendCodeFromBytes(bytes: Uint8Array): string {
   let code = '';
@@ -34,8 +30,4 @@ export function normalizeFriendCode(input: string): string | null {
   const cleaned = input.trim().toUpperCase().replace(/[\s-]/g, '');
   if (cleaned.length !== FRIEND_CODE_LENGTH) return null;
   return [...cleaned].every(char => ALPHABET.includes(char)) ? cleaned : null;
-}
-
-export function isFriendCode(input: string): boolean {
-  return normalizeFriendCode(input) !== null;
 }

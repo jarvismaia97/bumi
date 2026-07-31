@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { friendCodeFromBytes, isFriendCode, normalizeFriendCode } from './friendCode';
+import { friendCodeFromBytes, normalizeFriendCode } from './friendCode';
 
 describe('friend codes', () => {
   it('builds a six-character code from bytes', () => {
@@ -21,6 +21,6 @@ describe('friend codes', () => {
     expect(normalizeFriendCode('7K3QF')).toBeNull();
     expect(normalizeFriendCode('7K3QF23')).toBeNull();
     expect(normalizeFriendCode('')).toBeNull();
-    expect(isFriendCode('not a code')).toBe(false);
+    expect(normalizeFriendCode('not a code')).toBeNull();
   });
 });
