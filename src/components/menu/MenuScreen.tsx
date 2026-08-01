@@ -7,6 +7,7 @@ import MapPinned from 'lucide-react-native/icons/map-pinned';
 import Settings from 'lucide-react-native/icons/settings';
 import Trophy from 'lucide-react-native/icons/trophy';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { IslandJourney } from '@/components/menu/IslandJourney';
 import { GoogleMark } from '@/components/GoogleMark';
 import { BrandMark } from '@/components/BrandMark';
 import { PlayerAvatarTile } from '@/components/PlayerAvatar';
@@ -23,6 +24,7 @@ import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
 import { MONTHLY_REWARD_HINTS, WEEKLY_REWARD_HINTS, type GoalProgress } from '@/game/goals';
+import type { IslandProgress } from '@/game/islands';
 
 interface MenuScreenProps {
   dailyDone: boolean;
@@ -33,6 +35,8 @@ interface MenuScreenProps {
   goldMedalCount: number;
   completedIslandCount: number;
   islandTotal: number;
+  journey: { islands: IslandProgress[]; currentIndex: number };
+  onOpenMap: () => void;
   campaignLevel: number;
   campaignTotal: number;
   campaignComplete: boolean;
@@ -114,6 +118,8 @@ export function MenuScreen({
   goldMedalCount,
   completedIslandCount,
   islandTotal,
+  journey,
+  onOpenMap,
   campaignLevel,
   campaignTotal,
   campaignComplete,
@@ -163,10 +169,12 @@ export function MenuScreen({
         </View>
       </View>
 
-      <View style={styles.islandProgress}>
+      <AnimatedPressable accessibilityRole="button" feedback="control" style={styles.islandProgress} onPress={onOpenMap}>
         <MapPinned size={15} color={theme.accent} strokeWidth={2.3} />
         <Text style={[styles.islandProgressText, { color: theme.sub }]}>{t('menu.islands', { completed: completedIslandCount, total: islandTotal })}</Text>
-      </View>
+      </AnimatedPressable>
+
+      <IslandJourney islands={journey.islands} currentIndex={journey.currentIndex} onOpenMap={onOpenMap} />
 
       <View style={styles.goalsRow}>
         <GoalCard

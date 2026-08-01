@@ -20,7 +20,7 @@ import { isCampaignLevelUnlocked, requiresCampaignLogin } from '@/game/access';
 import { formatResultDuration, getMistakeBudget, type Medal } from '@/game/medals';
 import { resolveCampaignSolve } from '@/game/results';
 import { getLevel, LEVEL_META, TUTORIAL_LEVELS } from '@/game/levels';
-import { getCompletedIslandCount, getNewlyCompletedIslandIndex, ISLANDS } from '@/game/islands';
+import { getCompletedIslandCount, getIslandJourney, getNewlyCompletedIslandIndex, ISLANDS } from '@/game/islands';
 import { useGameStore } from '@/state/gameStore';
 import { useProgressStore } from '@/state/progressStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
@@ -305,6 +305,8 @@ export default function GameScreen() {
         goldMedalCount={Object.values(levelMedals).filter(medal => medal === 'gold').length}
         completedIslandCount={getCompletedIslandCount(solvedMap)}
         islandTotal={ISLANDS.length}
+        journey={getIslandJourney(solvedMap, campaignIndex)}
+        onOpenMap={() => levelsSheetRef.current?.present()}
         campaignLevel={campaignIndex + 1}
         campaignTotal={LEVEL_META.length}
         campaignComplete={campaignComplete}
@@ -313,6 +315,18 @@ export default function GameScreen() {
         onStartDailyFor={dateKey =>
           startDaily(new Date(Number(dateKey.slice(0, 4)), Number(dateKey.slice(4, 6)) - 1, Number(dateKey.slice(6, 8))))
         }
+      />
+      {/* Mounted on this branch as well: the journey opens the map from the menu, and the
+          game branch that used to own the sheet is not rendered here. */}
+      <LevelPickerSheet
+        ref={levelsSheetRef}
+        curLvl={campaignIndex}
+        isSolved={isSolvedByIndex}
+        getLevelMedal={getLevelMedalByIndex}
+        solvedCount={solvedCount}
+        isLevelLocked={idx => !isCampaignLevelUnlocked(idx, solvedMap)}
+        isLevelLoginRequired={idx => requiresCampaignLogin(idx, !!user)}
+        onSelectLevel={startCampaign}
       />
       </Animated.View>
     );

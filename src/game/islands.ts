@@ -52,3 +52,50 @@ export function getNewlyCompletedIslandIndex(levelIndex: number, solvedMap: Read
   }
   return islandIndex;
 }
+
+export interface IslandProgress {
+  index: number;
+  id: string;
+  color: string;
+  bg: string;
+  solved: number;
+  total: number;
+  complete: boolean;
+  /** Reached islands are painted; the ones beyond the player's path stay undiscovered. */
+  reached: boolean;
+  current: boolean;
+}
+
+/**
+ * The campaign as thirteen chapters rather than five hundred numbers. Every island already
+ * carries a name, a colour and a line of prose in three languages; until now the only place
+ * any of that surfaced was a sheet behind an icon that appears while a level is open, so a
+ * player on the menu had no way to know the path went anywhere.
+ */
+export function getIslandJourney(
+  solvedMap: Readonly<Record<number, true>>,
+  campaignIndex: number,
+): { islands: IslandProgress[]; currentIndex: number } {
+  const currentIndex = getIslandIndexForLevel(campaignIndex) ?? 0;
+
+  const islands = ISLANDS.map((island, index) => {
+    const { startIdx, endIdx } = getIslandRange(index);
+    const total = Math.max(0, endIdx - startIdx);
+    let solved = 0;
+    for (let idx = startIdx; idx < endIdx; idx++) if (solvedMap[idx]) solved += 1;
+
+    return {
+      index,
+      id: island.id,
+      color: island.color,
+      bg: island.bg,
+      solved,
+      total,
+      complete: total > 0 && solved === total,
+      reached: index <= currentIndex,
+      current: index === currentIndex,
+    };
+  });
+
+  return { islands, currentIndex };
+}

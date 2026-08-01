@@ -4,6 +4,7 @@ import { ScrollView, View } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { translate } from '@/i18n/messages';
 import { MONTHLY_TARGET, WEEKLY_TARGET, type GoalProgress } from '@/game/goals';
+import { getIslandJourney } from '@/game/islands';
 import { useProgressStore } from '@/state/progressStore';
 import { MenuScreen } from './MenuScreen';
 
@@ -55,6 +56,8 @@ function renderMenu(overrides: Partial<React.ComponentProps<typeof MenuScreen>> 
       goldMedalCount={3}
       completedIslandCount={2}
       islandTotal={13}
+      journey={getIslandJourney({}, 12)}
+      onOpenMap={() => {}}
       campaignLevel={13}
       campaignTotal={500}
       campaignComplete={false}
