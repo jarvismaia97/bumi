@@ -116,15 +116,18 @@ Invoke it as `npx eas-cli`; plain `npx eas` cannot resolve the binary.
 1. **Disable the old Google client secret.** A new secret was added alongside it, so
    both currently authenticate. Until the old one is disabled in Google Auth Platform >
    Clients, the value leaked into a chat transcript still works.
-2. **Verify Google login end to end** on the web, with a pre-existing account, and
-   confirm it does not create a duplicate user row.
 
-Two items are now closed. Sign in with Apple works on a real device, so the App ID carries
-the capability — that could only ever be checked at runtime, since EAS syncs Push
-Notifications but never reports the Apple capability either way. And `suporte@jogarbumi.pt`
+Everything else on this list is closed. Sign in with Apple works on a real device, so the
+App ID carries the capability — that could only ever be checked at runtime, since EAS syncs
+Push Notifications but never reports the Apple capability either way. `suporte@jogarbumi.pt`
 is live and receiving mail; the support URL stays pointed at the privacy page on purpose,
 because that page states the address (`privacy.contactBody`), which is what Apple asks a
 support URL to provide.
+
+And web Google login was confirmed on 2026-08-01 with an account that predates the client
+switch. No duplicates: 13 users, every email appearing once, each with exactly one `account`
+row, the oldest dating from before the move to project `606345526586`. Google issues public
+subject identifiers, which is why `sub` survived the change — checked rather than assumed.
 
 ## Before submission
 
@@ -142,16 +145,24 @@ support URL to provide.
 5. Test on device: Google sign-in, Apple sign-in, account deletion, offline play,
    daily reminder. Confirm both providers land on one user row, not two.
 6. `npx eas-cli build --profile production --platform ios`
-7. `npx eas-cli submit --platform ios` — prompts for Apple ID plus an app-specific
-   password. The `.p8` above is a Sign in with Apple key and cannot authenticate
-   submission; an App Store Connect API key (Users and Access > Integrations, which
-   also yields an Issuer ID) would make this non-interactive and is required for CI.
+7. `npx eas-cli submit --platform ios --latest` — non-interactive. An App Store Connect
+   API key is already stored on the EAS servers, which the run reports as
+   `Key Source: EAS servers`; nothing prompts for an Apple ID. (The `.p8` recorded above is
+   the Sign in with Apple key and is a different thing entirely — it cannot authenticate a
+   submission.) Apple then processes the binary for 5-10 minutes and emails when it lands;
+   internal TestFlight is immediate after that, external testing needs Apple's review.
 8. Capture the 6.9" screenshots described above, one set per listing language.
 9. Privacy questionnaire: email and name (Google/Apple sign-in) plus game progress,
    linked to identity. The friends board shares progress *between players* — a painter
    nickname, points, level count and streak, never a name, email or account id — so the
    questionnaire's "data used to track you" stays No while progress remains linked to
    identity. The policy paragraph covering it is `privacy.friends*` in the catalogue.
+
+## Submitted
+
+| Build | Version | Date | Notes |
+| --- | --- | --- | --- |
+| 29 | 1.0.0 | 2026-08-01 | First TestFlight upload. Carries Spanish, the mistake-based medals, the friends board and its notifications, the error boundary, and SDK 57 patch alignment. |
 
 ## Maintenance
 
