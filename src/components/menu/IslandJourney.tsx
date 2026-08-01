@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import Check from 'lucide-react-native/icons/check';
 import Lock from 'lucide-react-native/icons/lock';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import type { IslandProgress } from '@/game/islands';
@@ -25,25 +24,33 @@ export function IslandJourney({ islands, currentIndex, onOpenMap }: {
   const { t } = useI18n();
   const scrollRef = useRef<ScrollView>(null);
   const current = islands[currentIndex];
+  // A conquered island is a place the player has already been. The strip is what is left of
+  // the path, so it drops them and keeps the road ahead; the count above still says how many
+  // of the thirteen are done.
+  const ahead = islands.filter(island => !island.complete);
+  const currentPosition = ahead.findIndex(island => island.current);
 
   // The path runs past the edge of the screen, so it arrives showing where the player is
   // rather than where they started.
   useEffect(() => {
-    const offset = Math.max(0, currentIndex * (DOT + DOT_GAP) - DOT * 2);
+    const offset = Math.max(0, currentPosition * (DOT + DOT_GAP) - DOT * 2);
     scrollRef.current?.scrollTo({ x: offset, animated: false });
-  }, [currentIndex]);
+  }, [currentPosition]);
 
   if (!current) return null;
 
   return (
     <View style={styles.wrap}>
+      {/* Nothing left to walk means the campaign is finished; the card below says so on its
+          own, and an empty strip would be a row of nothing. */}
+      {ahead.length > 0 && (
       <ScrollView
         ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.strip}
       >
-        {islands.map(island => (
+        {ahead.map(island => (
           <AnimatedPressable
             key={island.id}
             accessibilityRole="button"
@@ -61,9 +68,7 @@ export function IslandJourney({ islands, currentIndex, onOpenMap }: {
               island.current && { borderColor: island.color },
             ]}
           >
-            {island.complete ? (
-              <Check size={16} color={island.color} strokeWidth={3} />
-            ) : island.reached ? (
+            {island.reached ? (
               <Text style={[styles.dotText, { color: island.color }]}>{island.solved}</Text>
             ) : (
               <Lock size={13} color={theme.sub} strokeWidth={2.4} />
@@ -71,6 +76,7 @@ export function IslandJourney({ islands, currentIndex, onOpenMap }: {
           </AnimatedPressable>
         ))}
       </ScrollView>
+      )}
 
       <AnimatedPressable
         accessibilityRole="button"
