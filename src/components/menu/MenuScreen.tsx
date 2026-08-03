@@ -61,6 +61,8 @@ function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
   const signInWithGoogle = useAuthStore(s => s.signInWithGoogle);
   const signInWithApple = useAuthStore(s => s.signInWithApple);
   const appleAvailable = useAppleSignInAvailable();
+  const authError = useAuthStore(s => s.error);
+  const semantic = useSemanticTokens();
   // Apple's own button ships two fixed colourways, so the one that reads is picked by
   // appearance rather than by the theme's tokens, which it will not take.
   const appearance = useAppearance();
@@ -91,6 +93,11 @@ function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
             onPress={() => signInWithApple().catch(() => {})}
           />
         ) : null}
+        {/* Both handlers swallow what they throw, because a dismissed provider sheet throws the
+            same way a real failure does and nobody wants to be told off for changing their mind.
+            The server's verdict is different: it only ever means the sign-in did not happen, and
+            without this the tap did nothing and said nothing about why. */}
+        {authError ? <Text style={[styles.authError, { color: semantic.danger }]}>{authError}</Text> : null}
       </View>
     );
   }
@@ -335,6 +342,7 @@ const styles = StyleSheet.create({
   authPill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1.5, borderRadius: AUTH_BUTTON_HEIGHT / 2, width: AUTH_BUTTON_WIDTH, height: AUTH_BUTTON_HEIGHT, paddingHorizontal: 14 },
   authApplePill: { width: AUTH_BUTTON_WIDTH, height: AUTH_BUTTON_HEIGHT },
   authPillText: { flexShrink: 1, minWidth: 0, fontSize: 12, fontWeight: '600' },
+  authError: { maxWidth: 280, marginTop: 2, fontSize: 12, fontWeight: '600', textAlign: 'center' },
   // The player name wraps freely, so the pill grows past 58 instead of clipping it.
   accountButton: { width: '100%', maxWidth: 320, minHeight: 58, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
   accountCopy: { flex: 1, minWidth: 0, marginLeft: 12, marginRight: 12 },
