@@ -59,6 +59,17 @@ function adaptive(fill?: string): string {
   return svg(`<g transform="translate(${offset} ${offset}) scale(${scale})">${rects(fill, fill ? 1 : undefined)}</g>`);
 }
 
+/**
+ * Play's feature graphic is the one asset that is not a square: 1024x500, shown across the top
+ * of the listing. The mark sits centred on the brand blue at the size it reads at from a phone
+ * in someone's hand.
+ */
+const FEATURE_GRAPHIC = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500">` +
+  `<rect width="1024" height="500" fill="${BLUE}"/>` +
+  `<g transform="translate(412 96) scale(6.25)">${rects()}</g>` +
+  `<text x="512" y="404" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" ` +
+  `font-size="72" font-weight="700" fill="#292827">Bumi</text></svg>`;
+
 const TARGETS: { file: string; size: number; source: string; flatten?: boolean }[] = [
   { file: 'assets/images/bumi-icon.png', size: 1024, source: fullBleed, flatten: true },
   { file: 'assets/images/android-icon-background.png', size: 512, source: solid },
@@ -68,6 +79,8 @@ const TARGETS: { file: string; size: number; source: string; flatten?: boolean }
   { file: 'public/icon-512.png', size: 512, source: fullBleed },
   { file: 'public/icon-192.png', size: 192, source: fullBleed },
   { file: 'public/apple-touch-icon.png', size: 180, source: fullBleed },
+  // Play rejects transparency on the feature graphic, so it is flattened like the iOS icon.
+  { file: 'assets/images/play-feature-graphic.png', size: 1024, source: FEATURE_GRAPHIC, flatten: true },
 ];
 
 for (const target of TARGETS) {

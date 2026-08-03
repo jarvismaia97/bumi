@@ -87,9 +87,17 @@ function GoalCard({ title, goal, reward, doneLabel, accent }: { title: string; g
         <Flame size={15} color={accent} strokeWidth={2.3} />
         <Text style={[styles.goalTitle, { color: theme.text }]}>{title}</Text>
       </View>
-      {/* Half-width leaves no room for a count beside the title, so the card stacks like the
-          stat tiles above it: number first, then the detail underneath. */}
-      <Text style={[styles.goalCount, { color: theme.text }]}>{Math.min(goal.done, goal.target)} / {goal.target}</Text>
+      {/* The reward reads as a consequence of the count, so it sits beside it rather than on a
+          line of its own at the bottom, where it was a fourth row saying something about the
+          first. */}
+      <View style={styles.goalCountRow}>
+        <Text style={[styles.goalCount, { color: theme.text }]}>{Math.min(goal.done, goal.target)} / {goal.target}</Text>
+        {!goal.complete && (
+          <Text style={[styles.goalReward, { color: accent }]} numberOfLines={1}>
+            {t('menu.goalReward', { count: reward, label: t(reward === 1 ? 'menu.hintOne' : 'menu.hintMany') })}
+          </Text>
+        )}
+      </View>
       <View style={[styles.goalBar, { backgroundColor: theme.gridSep }]}>
         <View style={[styles.goalBarFill, { width: `${filled * 100}%`, backgroundColor: accent }]} />
       </View>
@@ -98,12 +106,6 @@ function GoalCard({ title, goal, reward, doneLabel, accent }: { title: string; g
           ? doneLabel
           : t('menu.remainingDaily', { count: remaining, label: t(remaining === 1 ? 'menu.dailyChallenge' : 'menu.dailyChallenges') })}
       </Text>
-      {/* The reward is the point of the goal, so it is stated up front rather than on arrival. */}
-      {!goal.complete && (
-        <Text style={[styles.goalReward, { color: accent }]}>
-          {t('menu.goalReward', { count: reward, label: t(reward === 1 ? 'menu.hintOne' : 'menu.hintMany') })}
-        </Text>
-      )}
     </View>
   );
 }
@@ -274,11 +276,12 @@ const styles = StyleSheet.create({
   goalCard: { flex: 1, minWidth: 0, borderWidth: 1.5, borderRadius: 8, padding: 12 },
   goalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   goalTitle: { flexShrink: 1, minWidth: 0, fontSize: 12, fontWeight: '700' },
-  goalCount: { fontSize: 18, fontWeight: '800', marginTop: 5 },
+  goalCountRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 6, marginTop: 5 },
+  goalCount: { flexShrink: 0, fontSize: 18, fontWeight: '800' },
   goalBar: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 7 },
   goalBarFill: { height: '100%', borderRadius: 3 },
   goalDetail: { fontSize: 10, marginTop: 7 },
-  goalReward: { fontSize: 10, fontWeight: '800', marginTop: 3 },
+  goalReward: { flexShrink: 1, minWidth: 0, fontSize: 10, fontWeight: '800' },
   menuBtns: { gap: 8, width: '100%', maxWidth: 320 },
   playBtn: { borderRadius: 8, paddingVertical: 13, paddingHorizontal: 15, alignItems: 'center', flexDirection: 'row', gap: 8 },
   campaignCopy: { flex: 1 },
