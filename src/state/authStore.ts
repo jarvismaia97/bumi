@@ -239,8 +239,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
     // the rising notification pattern that would congratulate someone for leaving.
     playHaptic('medium');
     // The board belongs to the account, not the device: leaving it behind would show the next
-    // person to sign in a set of friends that are not theirs.
+    // person to sign in a set of friends that are not theirs. The progress is the same argument
+    // — a menu still counting 386 levels and an eight-day streak under a signed-out player is
+    // reading someone else's record. The server holds it; signing back in brings it back.
     useFriendsStore.getState().reset();
+    useProgressStore.getState().clearAccountProgress();
     set({ session: null, user: null, error: null });
   },
 

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { authClient } from '@/lib/auth-client';
 import { resetAuthStoreForTests, useAuthStore } from '@/state/authStore';
+import { useProgressStore } from '@/state/progressStore';
 
 vi.mock('@/lib/haptics', () => ({ playHaptic: vi.fn() }));
 vi.mock('@/lib/pushToken', () => ({ unregisterPushToken: vi.fn().mockResolvedValue(undefined) }));
@@ -75,6 +76,30 @@ describe('signOut on a device', () => {
     await useAuthStore.getState().signOut();
 
     expect(order).toEqual(['configure', 'signOut']);
+  });
+
+  it('takes the account progress with it and leaves the device settings alone', async () => {
+    // The menu was still counting 386 levels and an eight-day streak under a signed-out player,
+    // which is someone else's record. The reminder and the install prompt are this phone's, not
+    // that account's, and someone changing account should not be quietly unsubscribed.
+    useProgressStore.setState({
+      solvedMap: { 0: true, 1: true },
+      levelMedals: { 0: 'gold' },
+      dailyCompletionDates: ['20260801', '20260802'],
+      dailyCompletedDate: '20260802',
+      dailyReminderEnabled: true,
+      iosInstallPromptSeen: true,
+    });
+
+    await useAuthStore.getState().signOut();
+
+    const progress = useProgressStore.getState();
+    expect(progress.solvedMap).toEqual({});
+    expect(progress.levelMedals).toEqual({});
+    expect(progress.dailyCompletionDates).toEqual([]);
+    expect(progress.dailyCompletedDate).toBeNull();
+    expect(progress.dailyReminderEnabled).toBe(true);
+    expect(progress.iosInstallPromptSeen).toBe(true);
   });
 
   it('still reports success when the keychain refuses', async () => {

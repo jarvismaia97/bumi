@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import * as Linking from 'expo-linking';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Grid } from '@/components/Grid/Grid';
 import { celebrationDurationMs, highestTier, type CelebrationTier } from '@/components/Grid/celebration';
@@ -92,6 +92,16 @@ export default function GameScreen() {
   const winTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loginRequestedRef = useRef(false);
   const linkingUrl = Linking.useLinkingURL();
+
+  // The ref is there to stop a re-render pushing the login screen a second time, and it used to
+  // be lowered only by a campaign level that actually started. Now that the login screen can be
+  // backed out of, coming back here is the other way that push ends — and without this, the ref
+  // stayed raised and the next tap on the same locked level did nothing at all.
+  useFocusEffect(
+    useCallback(() => {
+      loginRequestedRef.current = false;
+    }, []),
+  );
   const [tutorialWon, setTutorialWon] = useState(false);
   const [tutorialLevelIndex, setTutorialLevelIndex] = useState(0);
   const [dailyCountdown, setDailyCountdown] = useState(formatDuration(getNextDailyInMs()));

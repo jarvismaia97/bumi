@@ -41,6 +41,7 @@ interface ProgressState {
   solvedCount: () => number;
   markIOSInstallPromptSeen: () => void;
   setDailyReminderEnabled: (enabled: boolean) => void;
+  clearAccountProgress: () => void;
   reset: () => void;
 }
 
@@ -113,6 +114,20 @@ export const useProgressStore = create<ProgressState>()(
 
       setDailyReminderEnabled: enabled => set({ dailyReminderEnabled: enabled }),
 
+      // What the account earned, which the server has a copy of and the next person to sign in
+      // on this device has no business seeing. Signing out uses this; deleting the account uses
+      // `reset`, which goes further.
+      clearAccountProgress: () => set({
+        solvedMap: {},
+        solvedDateMap: {},
+        hints: INITIAL_HINTS,
+        dailyCompletedDate: null,
+        dailyCompletionDates: [],
+        levelMedals: {},
+      }),
+
+      // The two below are the device's, not the account's: whether this phone was offered the
+      // install prompt, and whether it rings at seven. Only leaving for good takes them.
       reset: () => set({
         solvedMap: {},
         solvedDateMap: {},
