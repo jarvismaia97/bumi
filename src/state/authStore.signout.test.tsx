@@ -1,8 +1,9 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { authClient } from '@/lib/auth-client';
-import { useAuthStore } from '@/state/authStore';
+import { resetAuthStoreForTests, useAuthStore } from '@/state/authStore';
 
 vi.mock('@/lib/haptics', () => ({ playHaptic: vi.fn() }));
 vi.mock('@/lib/pushToken', () => ({ unregisterPushToken: vi.fn().mockResolvedValue(undefined) }));
@@ -26,6 +27,8 @@ describe('signOut on a device', () => {
   beforeEach(() => {
     Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true });
     vi.clearAllMocks();
+    // A fresh launch has configured nothing, which is the state the SDK was being used from.
+    resetAuthStoreForTests();
     useAuthStore.setState({ session: null, user: null, loading: false, error: null });
   });
 
@@ -57,6 +60,21 @@ describe('signOut on a device', () => {
 
     expect(order[0]).toBe('request');
     expect(order).toContain('delete');
+  });
+
+  it('configures the Google SDK before asking it to sign out', async () => {
+    // It refuses to be called at all before it is configured, and an app launched with a session
+    // already in place has configured nothing — so signing out was its first use of the SDK.
+    const order: string[] = [];
+    vi.mocked(GoogleSignin.configure).mockImplementation(() => void order.push('configure'));
+    vi.mocked(GoogleSignin.signOut).mockImplementation(async () => {
+      order.push('signOut');
+      return null;
+    });
+
+    await useAuthStore.getState().signOut();
+
+    expect(order).toEqual(['configure', 'signOut']);
   });
 
   it('still reports success when the keychain refuses', async () => {

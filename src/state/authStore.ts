@@ -58,11 +58,32 @@ async function forgetStoredSession(): Promise<void> {
   await Promise.all(AUTH_STORAGE_KEYS.map(key => SecureStore.deleteItemAsync(key).catch(() => {})));
 }
 
+/**
+ * Every entry point into the Google SDK goes through here first. It refuses to be called at all
+ * before it is configured, and the flag guarding this is per-process: an app launched with a
+ * session already in place has never configured it, so the first thing such a launch can do —
+ * sign out — was reaching an SDK that had not been set up.
+ */
+async function google() {
+  const module = await import('@react-native-google-signin/google-signin');
+
+  if (!googleConfigured) {
+    module.GoogleSignin.configure({
+      // Drives the id-token audience, so it must match the server's GOOGLE_CLIENT_ID.
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    });
+    googleConfigured = true;
+  }
+
+  return module;
+}
+
 /** Same contract: best effort, and never the reason a completed sign-out reports failure. */
 async function forgetGoogleAccount(): Promise<void> {
   if (Platform.OS === 'web') return;
   try {
-    const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
+    const { GoogleSignin } = await google();
     await GoogleSignin.signOut();
   } catch {
     // Nothing to sign out of, or the module never loaded on this platform.
@@ -70,18 +91,7 @@ async function forgetGoogleAccount(): Promise<void> {
 }
 
 async function signInWithGoogleNative(): Promise<string> {
-  const { GoogleSignin, statusCodes, isSuccessResponse } = await import(
-    '@react-native-google-signin/google-signin'
-  );
-
-  if (!googleConfigured) {
-    GoogleSignin.configure({
-      // Drives the id-token audience, so it must match the server's GOOGLE_CLIENT_ID.
-      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    });
-    googleConfigured = true;
-  }
+  const { GoogleSignin, statusCodes, isSuccessResponse } = await google();
 
   await GoogleSignin.hasPlayServices();
 
@@ -256,5 +266,8 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
 export function resetAuthStoreForTests(): void {
   initialized = false;
+  // Per-process in the app, so a test that asserts the SDK is configured before it is used has
+  // to be able to put it back to how a fresh launch finds it.
+  googleConfigured = false;
   useAuthStore.setState({ session: null, user: null, loading: true, error: null });
 }
