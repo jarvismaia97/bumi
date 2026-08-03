@@ -22,6 +22,16 @@ function migrateCampaignProgress(persistedState: unknown, version: number): unkn
 }
 
 interface ProgressState {
+  /**
+   * Who the board on this device belongs to, or `null` while nobody has claimed it — which is
+   * what guest play looks like, and what signing out leaves behind.
+   *
+   * Signing in merges whatever is here up into the account, and that is the point: a guest who
+   * signs in keeps what they played. It is only right while the board has no owner. Carried
+   * into a second account it hands over the first one's record, and `mergeFromRemote` counts
+   * everything the server lacks as newly local — so a fresh account was sent all of it.
+   */
+  progressOwnerId: string | null;
   solvedMap: Record<number, true>;
   solvedDateMap: Record<number, string>;
   hints: number;
@@ -41,6 +51,7 @@ interface ProgressState {
   solvedCount: () => number;
   markIOSInstallPromptSeen: () => void;
   setDailyReminderEnabled: (enabled: boolean) => void;
+  setProgressOwner: (userId: string | null) => void;
   clearAccountProgress: () => void;
   reset: () => void;
 }
@@ -50,6 +61,7 @@ interface ProgressState {
 export const useProgressStore = create<ProgressState>()(
   persist(
     (set, get) => ({
+      progressOwnerId: null,
       solvedMap: {},
       solvedDateMap: {},
       hints: INITIAL_HINTS,
@@ -124,7 +136,10 @@ export const useProgressStore = create<ProgressState>()(
         dailyCompletedDate: null,
         dailyCompletionDates: [],
         levelMedals: {},
+        progressOwnerId: null,
       }),
+
+      setProgressOwner: userId => set({ progressOwnerId: userId }),
 
       // The two below are the device's, not the account's: whether this phone was offered the
       // install prompt, and whether it rings at seven. Only leaving for good takes them.
@@ -137,6 +152,7 @@ export const useProgressStore = create<ProgressState>()(
         levelMedals: {},
         iosInstallPromptSeen: false,
         dailyReminderEnabled: false,
+        progressOwnerId: null,
       }),
     }),
     {

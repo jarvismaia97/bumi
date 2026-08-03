@@ -121,6 +121,20 @@ export function initProgressSync(): void {
   useAuthStore.subscribe((state, prevState) => {
     const userId = state.user?.id ?? null;
     if (userId && userId !== (prevState.user?.id ?? null)) {
+      const progress = useProgressStore.getState();
+      // Signing in hands the board on this device up to the account, which is what a guest who
+      // signs in wants and how they keep what they played. It is only ever right for a board
+      // nobody has claimed. One already carrying another account's name is not this player's to
+      // give: `mergeFromRemote` counts everything the server lacks as newly local, so a second
+      // account was being sent the first one's entire record and shown it as its own.
+      //
+      // Signing out empties the board and drops the name with it, so the ordinary path never
+      // reaches this. What does is every way a session ends without being signed out of — an
+      // expired one, a revoked one, a sign-out that failed at the request.
+      if (progress.progressOwnerId && progress.progressOwnerId !== userId) {
+        progress.clearAccountProgress();
+      }
+      useProgressStore.getState().setProgressOwner(userId);
       requestSync(true);
     }
     if (!userId && prevState.user) {
