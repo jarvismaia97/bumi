@@ -1,9 +1,10 @@
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
 import Check from 'lucide-react-native/icons/check';
 import Flame from 'lucide-react-native/icons/flame';
+import Grid2x2Check from 'lucide-react-native/icons/grid-2x2-check';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
 import Settings from 'lucide-react-native/icons/settings';
 import Trophy from 'lucide-react-native/icons/trophy';
@@ -114,6 +115,35 @@ function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
   );
 }
 
+/**
+ * The counters are built out of the goal card's parts, because they are the same kind of fact
+ * and were being told differently: a bare number over a caption, with the trophy floating above
+ * it and nothing at all above the levels. Named title, then the count, then how far along.
+ *
+ * `progress` is optional because only one of them is going anywhere — the campaign has a last
+ * level, and gold medals do not have a number you are working towards.
+ */
+function StatCard({ icon, title, value, progress, accent }: { icon: ReactNode; title: string; value: string; progress?: number; accent?: string }) {
+  const theme = useThemeTokens();
+
+  return (
+    <View style={[styles.stat, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
+      <View style={styles.goalTitleRow}>
+        {icon}
+        <Text style={[styles.goalTitle, { color: theme.text }]} numberOfLines={1}>{title}</Text>
+      </View>
+      <View style={styles.goalCountRow}>
+        <Text style={[styles.goalCount, { color: theme.text }]}>{value}</Text>
+      </View>
+      {progress != null && (
+        <View style={[styles.goalBar, { backgroundColor: theme.gridSep }]}>
+          <View style={[styles.goalBarFill, { width: `${Math.min(progress, 1) * 100}%`, backgroundColor: accent }]} />
+        </View>
+      )}
+    </View>
+  );
+}
+
 /** Both goals read the same, because they are the same promise at two cadences. */
 function GoalCard({ title, goal, reward, doneLabel, accent }: { title: string; goal: GoalProgress; reward: number; doneLabel: string; accent: string }) {
   const theme = useThemeTokens();
@@ -207,16 +237,19 @@ export function MenuScreen({
           listing shows to someone deciding whether to install. */}
       {solvedCount > 0 && (
         <View style={styles.statsRow}>
-          <View style={[styles.stat, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
-            <Text style={[styles.statValue, { color: theme.text }]}>{solvedCount}</Text>
-            <Text style={[styles.statLabel, { color: theme.sub }]}>{t('menu.solved')}</Text>
-          </View>
+          <StatCard
+            icon={<Grid2x2Check size={15} color={theme.accent} strokeWidth={2.3} />}
+            title={t('menu.solved')}
+            value={`${solvedCount} / ${campaignTotal}`}
+            progress={solvedCount / campaignTotal}
+            accent={theme.accent}
+          />
           {goldMedalCount > 0 && (
-            <View style={[styles.stat, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
-              <Trophy size={17} color={semantic.gold} strokeWidth={2.3} />
-              <Text style={[styles.statValue, { color: theme.text }]}>{goldMedalCount}</Text>
-              <Text style={[styles.statLabel, { color: theme.sub }]}>{t('menu.gold')}</Text>
-            </View>
+            <StatCard
+              icon={<Trophy size={15} color={semantic.gold} strokeWidth={2.3} />}
+              title={t('menu.gold')}
+              value={String(goldMedalCount)}
+            />
           )}
         </View>
       )}
@@ -307,9 +340,9 @@ const styles = StyleSheet.create({
   brandBlock: { alignItems: 'center', gap: 4 },
   title: { fontSize: 34, fontWeight: '800', letterSpacing: -1 },
   statsRow: { flexDirection: 'row', width: '100%', maxWidth: 320, gap: 8 },
-  stat: { flex: 1, minHeight: 70, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, justifyContent: 'center' },
-  statValue: { fontSize: 20, fontWeight: '800', marginTop: 1 },
-  statLabel: { fontSize: 10, fontWeight: '600', marginTop: 2 },
+  // Same box as `goalCard`, and no longer centring its contents: three rows starting at the top
+  // line up with the goals underneath, where a centred column would not.
+  stat: { flex: 1, minWidth: 0, borderWidth: 1.5, borderRadius: 8, padding: 12 },
   islandProgress: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 20 },
   islandProgressText: { flexShrink: 1, minWidth: 0, fontSize: 12, fontWeight: '700' },
   goalsRow: { flexDirection: 'row', alignItems: 'stretch', width: '100%', maxWidth: 320, gap: 8 },
