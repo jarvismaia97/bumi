@@ -79,7 +79,7 @@ function BrandPiece({
           top: piece.y * unit,
           width: piece.w * unit,
           height: piece.h * unit,
-          borderRadius: 3 * unit,
+          borderRadius: 2 * unit,
           backgroundColor: piece.fill,
         },
       ]}

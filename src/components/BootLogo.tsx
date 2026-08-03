@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#a8b9d8',
   },
   // The same grid as Logo.tsx, at this screen's 86pt box: margin 11, gutter 8, units 19 and 37.
-  panel: { borderRadius: 8 },
+  panel: { borderRadius: 5 },
   pink: {
     top: 11,
     left: 11,
