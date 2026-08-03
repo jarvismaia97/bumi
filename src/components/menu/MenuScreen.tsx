@@ -139,6 +139,9 @@ export function MenuScreen({
   const leaderboardRef = useRef<LeaderboardSheetHandle>(null);
   const archiveRef = useRef<DailyArchiveSheetHandle>(null);
 
+  const currentIsland = journey.islands[journey.currentIndex];
+  const islandShare = currentIsland?.total ? Math.round((currentIsland.solved / currentIsland.total) * 100) : 0;
+
   const daily = dailyDone
     ? { fg: semantic.success, bg: semantic.successSurface, border: semantic.successBorder }
     : { fg: semantic.warning, bg: semantic.warningSurface, border: semantic.warningBorder };
@@ -196,9 +199,18 @@ export function MenuScreen({
       <View style={styles.menuBtns}>
         <AnimatedPressable accessibilityRole="button" style={[styles.playBtn, { backgroundColor: theme.accent }]} onPress={onStartGame}>
           <View style={styles.campaignCopy}>
-            <Text style={styles.campaignLabel}>{t('menu.campaign')}</Text>
+            <Text style={styles.campaignLabel} numberOfLines={1}>
+              {currentIsland ? `${t('menu.campaign')} · ${t(`island.${currentIsland.id}.name`)}` : t('menu.campaign')}
+            </Text>
             <Text style={styles.playBtnText}>{campaignComplete ? t('menu.playAgain') : solvedCount === 0 ? t('menu.startCampaign') : t('menu.continueLevel', { level: campaignLevel })}</Text>
             <Text style={styles.campaignDetail}>{campaignComplete ? t('menu.levelsComplete', { count: campaignTotal }) : t('menu.levelsExplore', { count: campaignTotal - campaignLevel + 1 })}</Text>
+            {/* The island's own progress, on the button that continues it. The card this
+                replaces said the same in three lines and a heading of its own. */}
+            {!!currentIsland && (
+              <View style={styles.campaignBar}>
+                <View style={[styles.campaignBarFill, { width: `${islandShare}%` }]} />
+              </View>
+            )}
           </View>
           <ArrowRight size={20} color="#fff" strokeWidth={2.4} />
         </AnimatedPressable>
@@ -262,6 +274,8 @@ const styles = StyleSheet.create({
   campaignLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: 'rgba(255,255,255,0.72)' },
   playBtnText: { color: '#fff', fontSize: 15, fontWeight: '700', marginTop: 2 },
   campaignDetail: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)', marginTop: 3 },
+  campaignBar: { height: 4, borderRadius: 2, overflow: 'hidden', marginTop: 8, backgroundColor: 'rgba(255,255,255,0.28)' },
+  campaignBarFill: { height: '100%', borderRadius: 2, backgroundColor: '#fff' },
   dailyBtn: { borderWidth: 1.5, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
   dailyTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   dailyBtnText: { flexShrink: 1, minWidth: 0, fontSize: 15, fontWeight: '700' },

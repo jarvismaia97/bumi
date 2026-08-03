@@ -10,10 +10,10 @@ const DOT = 34;
 const DOT_GAP = 6;
 
 /**
- * The campaign as the thirteen islands it actually is. All of this was already written — a
- * name, a colour and a line of prose per island, in three languages — and none of it reached
- * a player who had not opened the level map from inside a level, which is the one place the
- * map used to live. The strip is the path; the card under it is where the player is standing.
+ * What is left of the path: one dot per island still to finish, each showing how far into it
+ * the player is, locked where they have not reached. The island they are standing on is the
+ * one at the front, and its name and progress ride on the campaign button below rather than
+ * in a card of their own — the prose lives in the level map, which any of these dots opens.
  */
 export function IslandJourney({ islands, currentIndex, onOpenMap }: {
   islands: IslandProgress[];
@@ -82,32 +82,6 @@ export function IslandJourney({ islands, currentIndex, onOpenMap }: {
       </ScrollView>
       )}
 
-      <AnimatedPressable
-        accessibilityRole="button"
-        style={[styles.card, { backgroundColor: theme.surface, borderColor: current.color }]}
-        onPress={onOpenMap}
-      >
-        <View style={styles.cardHead}>
-          <Text style={[styles.cardTitle, { color: current.color }]} numberOfLines={1}>
-            {t(`island.${current.id}.name`)}
-          </Text>
-          <Text style={[styles.cardCount, { color: theme.sub }]}>
-            {t('journey.islandProgress', { solved: current.solved, total: current.total })}
-          </Text>
-        </View>
-        {/* The line of prose is the reason the island has a name at all. */}
-        <Text style={[styles.cardStory, { color: theme.sub }]} numberOfLines={2}>
-          {t(`island.${current.id}.story`)}
-        </Text>
-        <View style={[styles.bar, { backgroundColor: theme.gridSep }]}>
-          <View
-            style={[
-              styles.barFill,
-              { width: `${current.total ? (current.solved / current.total) * 100 : 0}%`, backgroundColor: current.color },
-            ]}
-          />
-        </View>
-      </AnimatedPressable>
     </View>
   );
 }
@@ -117,11 +91,4 @@ const styles = StyleSheet.create({
   strip: { gap: DOT_GAP, paddingVertical: 2 },
   dot: { width: DOT, height: DOT, borderRadius: DOT / 2, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   dotText: { fontSize: 10, fontWeight: '800' },
-  card: { borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 },
-  cardHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
-  cardTitle: { flexShrink: 1, minWidth: 0, fontSize: 14, fontWeight: '800' },
-  cardCount: { flexShrink: 0, fontSize: 10, fontWeight: '700' },
-  cardStory: { fontSize: 11, lineHeight: 15, fontStyle: 'italic', marginTop: 4 },
-  bar: { height: 5, borderRadius: 3, overflow: 'hidden', marginTop: 8 },
-  barFill: { height: '100%', borderRadius: 3 },
 });
