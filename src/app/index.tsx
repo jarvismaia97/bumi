@@ -17,7 +17,7 @@ import { formatDuration, getDailyDateKey, getDailyLevel, getDailyStreak, getNext
 import { getMonthlyProgress, getWeeklyProgress, goalsCompletedBy, isStreakMilestone } from '@/game/goals';
 import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
 import { isCampaignLevelUnlocked, requiresCampaignLogin } from '@/game/access';
-import { formatResultDuration, getMistakeBudget, type Medal } from '@/game/medals';
+import { formatResultDuration, getMedalForResult, getMistakeBudget, type Medal } from '@/game/medals';
 import { resolveCampaignSolve } from '@/game/results';
 import { getLevel, LEVEL_META, TUTORIAL_LEVELS } from '@/game/levels';
 import { getCompletedIslandCount, getIslandJourney, getNewlyCompletedIslandIndex, ISLANDS } from '@/game/islands';
@@ -353,16 +353,21 @@ export default function GameScreen() {
    * Which medal the mistakes so far still allow, and how much of that budget is left. The
    * tutorial has no medals, and the daily is scored on its own summary rather than a medal.
    */
-  function campaignMistakeStatus(): { label: string; color: string } | null {
+  function campaignMistakeStatus(): { medal: Medal; label: string; color: string } | null {
     if (mode !== 'campaign' || won || !level) return null;
+    // The medal this result would earn if the level were solved right now. Hints count against
+    // it as much as mistakes do, which the mistake count alone could never show.
+    const medal = getMedalForResult({ hintsUsed, mistakes, rects: level.solution.length });
     const budget = getMistakeBudget(level.solution.length);
-    if (mistakes <= budget.gold) {
-      return { label: t('game.mistakeBudget', { used: mistakes, limit: budget.gold }), color: theme.sub };
-    }
-    if (mistakes <= budget.silver) {
-      return { label: t('game.mistakeBudget', { used: mistakes, limit: budget.silver }), color: semantic.warning };
-    }
-    return { label: t('game.mistakeCount', { count: mistakes }), color: semantic.warning };
+    const limit = medal === 'gold' ? budget.gold : medal === 'silver' ? budget.silver : null;
+
+    return {
+      medal,
+      label: limit == null
+        ? t('game.mistakeCount', { count: mistakes })
+        : t('game.mistakeBudget', { used: mistakes, limit }),
+      color: medal === 'gold' ? theme.sub : semantic.warning,
+    };
   }
 
   function onHintPress() {
@@ -426,7 +431,12 @@ export default function GameScreen() {
         {/* The medal is decided by this number, so the number is on screen. Nobody can play
             for gold while the budget is a rule they have to infer from the result. */}
         {mistakeStatus && (
-          <Text style={[styles.mistakeStatus, { color: mistakeStatus.color }]}>{mistakeStatus.label}</Text>
+          <View style={styles.mistakeStatus}>
+            <View style={[styles.medalMark, { backgroundColor: semantic[mistakeStatus.medal] }]} />
+            <Text style={[styles.mistakeStatusText, { color: mistakeStatus.color }]}>
+              {t(`medal.${mistakeStatus.medal}`)} · {mistakeStatus.label}
+            </Text>
+          </View>
         )}
       </View>
 
@@ -501,7 +511,9 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   container: { flex: 1, alignItems: 'center' },
   gridWrap: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 12, width: '100%', maxWidth: 480 },
-  mistakeStatus: { fontSize: 11, fontWeight: '700', marginTop: 12 },
+  mistakeStatus: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
+  medalMark: { width: 9, height: 9, borderRadius: 5 },
+  mistakeStatusText: { fontSize: 11, fontWeight: '700' },
   shareNotice: { position: 'absolute', alignSelf: 'center', zIndex: 2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
   shareNoticeText: { fontSize: 12, fontWeight: '700' },
 });
