@@ -1,8 +1,8 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppErrorBoundary } from '@/components/AppErrorBoundary';
 import { BootLogo } from '@/components/BootLogo';
 import { useAppearance } from '@/state/appearanceStore';
+import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useAuthStore } from '@/state/authStore';
 import { initProgressSync } from '@/state/progressSync';
 import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
@@ -43,7 +44,27 @@ export default function RootLayout() {
   const dailyCompletedDate = useProgressStore(s => s.dailyCompletedDate);
   const dailyCompletionDates = useProgressStore(s => s.dailyCompletionDates);
   const appearance = useAppearance();
+  const theme = useThemeTokens();
+  const semantic = useSemanticTokens();
   const { language } = useI18n();
+
+  // The navigator paints its own ground under every screen, and left alone it is react-navigation's
+  // light `rgb(242,242,242)` whatever the player picked. The screens cover it, so it only showed
+  // where they do not: behind a push transition and in the overscroll past the end of a scroll.
+  const navigationTheme = useMemo(
+    () => ({
+      ...(appearance === 'dark' ? DarkTheme : DefaultTheme),
+      colors: {
+        primary: theme.accent,
+        background: theme.bg,
+        card: theme.surface,
+        text: theme.text,
+        border: theme.gridSep,
+        notification: semantic.danger,
+      },
+    }),
+    [appearance, theme, semantic],
+  );
 
   useEffect(() => {
     // First effect after mount: from here the tree may render the device's language and
@@ -153,17 +174,19 @@ export default function RootLayout() {
           <BottomSheetModalProvider>
             {/* `auto` would read the device appearance, which the in-app override can contradict. */}
             <StatusBar style={appearance === 'dark' ? 'light' : 'dark'} />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Protected guard={loading}>
-                <Stack.Screen name="loading" />
-              </Stack.Protected>
-              <Stack.Protected guard={!loading}>
-                <Stack.Screen name="index" />
-              </Stack.Protected>
-              <Stack.Protected guard={!loading && !user}>
-                <Stack.Screen name="login" />
-              </Stack.Protected>
-            </Stack>
+            <ThemeProvider value={navigationTheme}>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Protected guard={loading}>
+                  <Stack.Screen name="loading" />
+                </Stack.Protected>
+                <Stack.Protected guard={!loading}>
+                  <Stack.Screen name="index" />
+                </Stack.Protected>
+                <Stack.Protected guard={!loading && !user}>
+                  <Stack.Screen name="login" />
+                </Stack.Protected>
+              </Stack>
+            </ThemeProvider>
             <BootLogo />
           </BottomSheetModalProvider>
         </SafeAreaProvider>
