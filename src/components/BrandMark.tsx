@@ -14,9 +14,9 @@ export const ASSEMBLE_IN_MS = 190;
 // Views rather than SVG because each piece has to animate independently.
 const VIEWBOX = 32;
 const PIECES = [
-  { x: 5, y: 5, w: 13, h: 9, fill: '#f6ed94', opacity: 1, from: { x: -0.9, y: -0.7 } },
-  { x: 20, y: 5, w: 7, h: 22, fill: '#9fcf9b', opacity: 1, from: { x: 1.1, y: -0.3 } },
-  { x: 5, y: 16, w: 13, h: 11, fill: '#ffffff', opacity: 0.85, from: { x: -0.8, y: 0.9 } },
+  { x: 4, y: 4, w: 14, h: 7, fill: '#f6ed94', opacity: 1, from: { x: -0.9, y: -0.7 } },
+  { x: 21, y: 4, w: 7, h: 24, fill: '#9fcf9b', opacity: 1, from: { x: 1.1, y: -0.3 } },
+  { x: 4, y: 14, w: 14, h: 14, fill: '#ffffff', opacity: 0.85, from: { x: -0.8, y: 0.9 } },
 ] as const;
 
 /**
@@ -79,7 +79,7 @@ function BrandPiece({
           top: piece.y * unit,
           width: piece.w * unit,
           height: piece.h * unit,
-          borderRadius: 2 * unit,
+          borderRadius: 3 * unit,
           backgroundColor: piece.fill,
         },
       ]}
