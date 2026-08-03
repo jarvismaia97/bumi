@@ -86,10 +86,13 @@ describe('MenuScreen', () => {
     expect(screen.getByText(t('menu.goalReward', { count: 3, label: t('menu.hintMany') }))).toBeTruthy();
   });
 
-  it('drops the reward and says so once a goal is met', () => {
+  it('drops the reward once a goal is met, the count being what says so', () => {
     renderMenu({ weekly: goal(WEEKLY_TARGET, WEEKLY_TARGET) });
 
-    expect(screen.getByText(t('menu.weeklyDone'))).toBeTruthy();
+    // There is no line under the bar announcing it any more: `3 / 3`, a full bar and the border
+    // taking the accent colour are three ways of saying the same thing, and the reward leaving
+    // is the fourth.
+    expect(screen.getByText(`${WEEKLY_TARGET} / ${WEEKLY_TARGET}`)).toBeTruthy();
     expect(screen.queryByText(t('menu.goalReward', { count: 1, label: t('menu.hintOne') }))).toBeNull();
   });
 

@@ -49,16 +49,6 @@ interface MenuScreenProps {
   onStartDailyFor: (dateKey: string) => void;
 }
 
-/**
- * All four cards stand the same height. The counters have three rows and the goals four — the
- * goals end on a line of detail the counters have nothing truthful to put on, since the only
- * thing left to say about the levels is the count the campaign button below already gives.
- *
- * A floor rather than a fixed height: at larger type both pairs grow past it and keep matching,
- * and the one case that would part them again is a goal's detail line wrapping to two.
- */
-const CARD_MIN_HEIGHT = 100;
-
 // The two providers are offered as one pair, so they are one box: Apple's button takes a frame
 // rather than styles, and this is the only thing both of them can be told.
 const AUTH_BUTTON_WIDTH = 240;
@@ -155,11 +145,10 @@ function StatCard({ icon, title, value, progress, accent }: { icon: ReactNode; t
 }
 
 /** Both goals read the same, because they are the same promise at two cadences. */
-function GoalCard({ title, goal, reward, doneLabel, accent }: { title: string; goal: GoalProgress; reward: number; doneLabel: string; accent: string }) {
+function GoalCard({ title, goal, reward, accent }: { title: string; goal: GoalProgress; reward: number; accent: string }) {
   const theme = useThemeTokens();
   const { t } = useI18n();
   const filled = Math.min(goal.done / goal.target, 1);
-  const remaining = Math.max(goal.target - goal.done, 0);
 
   return (
     <View style={[styles.goalCard, { backgroundColor: theme.surface, borderColor: goal.complete ? accent : theme.gridSep }]}>
@@ -178,14 +167,13 @@ function GoalCard({ title, goal, reward, doneLabel, accent }: { title: string; g
           </Text>
         )}
       </View>
+      {/* Nothing under the bar. What used to sit here was `target - done`, which is the
+          subtraction the count above already shows both sides of, and on the other branch a
+          line saying the goal was met — which the full bar, the count reading `3 / 3` and the
+          border taking the accent colour say between them. */}
       <View style={[styles.goalBar, { backgroundColor: theme.gridSep }]}>
         <View style={[styles.goalBarFill, { width: `${filled * 100}%`, backgroundColor: accent }]} />
       </View>
-      <Text style={[styles.goalDetail, { color: theme.sub }]}>
-        {goal.complete
-          ? doneLabel
-          : t('menu.remainingDaily', { count: remaining, label: t(remaining === 1 ? 'menu.dailyChallenge' : 'menu.dailyChallenges') })}
-      </Text>
     </View>
   );
 }
@@ -274,14 +262,12 @@ export function MenuScreen({
           title={t('menu.weeklyGoal')}
           goal={weekly}
           reward={WEEKLY_REWARD_HINTS}
-          doneLabel={t('menu.weeklyDone')}
           accent={semantic.streak}
         />
         <GoalCard
           title={t('menu.monthlyGoal')}
           goal={monthly}
           reward={MONTHLY_REWARD_HINTS}
-          doneLabel={t('menu.monthlyDone')}
           accent={theme.accent}
         />
       </View>
@@ -354,18 +340,17 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', width: '100%', maxWidth: 320, gap: 8 },
   // Same box as `goalCard`, and no longer centring its contents: three rows starting at the top
   // line up with the goals underneath, where a centred column would not.
-  stat: { flex: 1, minWidth: 0, minHeight: CARD_MIN_HEIGHT, borderWidth: 1.5, borderRadius: 8, padding: 12 },
+  stat: { flex: 1, minWidth: 0, borderWidth: 1.5, borderRadius: 8, padding: 12 },
   islandProgress: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 20 },
   islandProgressText: { flexShrink: 1, minWidth: 0, fontSize: 12, fontWeight: '700' },
   goalsRow: { flexDirection: 'row', alignItems: 'stretch', width: '100%', maxWidth: 320, gap: 8 },
-  goalCard: { flex: 1, minWidth: 0, minHeight: CARD_MIN_HEIGHT, borderWidth: 1.5, borderRadius: 8, padding: 12 },
+  goalCard: { flex: 1, minWidth: 0, borderWidth: 1.5, borderRadius: 8, padding: 12 },
   goalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   goalTitle: { flexShrink: 1, minWidth: 0, fontSize: 12, fontWeight: '700' },
   goalCountRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 6, marginTop: 5 },
   goalCount: { flexShrink: 0, fontSize: 18, fontWeight: '800' },
   goalBar: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 7 },
   goalBarFill: { height: '100%', borderRadius: 3 },
-  goalDetail: { fontSize: 10, marginTop: 7 },
   goalReward: { flexShrink: 1, minWidth: 0, fontSize: 10, fontWeight: '800' },
   menuBtns: { gap: 8, width: '100%', maxWidth: 320 },
   playBtn: { borderRadius: 8, paddingVertical: 13, paddingHorizontal: 15, alignItems: 'center', flexDirection: 'row', gap: 8 },
