@@ -8,10 +8,15 @@
 /**
  * Every solve used to look identical, so after a few hundred levels the celebration stopped
  * meaning anything. The tiers exist so the big one stays rare: ordered least to most.
+ *
+ * Bronze and silver were not among them, which meant earning a medal looked exactly like
+ * earning nothing — the two most common good outcomes in the game passed unremarked. They now
+ * burst too, just smaller. A milestone still outranks them: a medal is won most times a level
+ * is played, and the levels the catalogue marks are fixed and few.
  */
-export type CelebrationTier = 'normal' | 'milestone' | 'gold' | 'island';
+export type CelebrationTier = 'normal' | 'bronze' | 'silver' | 'milestone' | 'gold' | 'island';
 
-const TIER_RANK: Record<CelebrationTier, number> = { normal: 0, milestone: 1, gold: 2, island: 3 };
+const TIER_RANK: Record<CelebrationTier, number> = { normal: 0, bronze: 1, silver: 2, milestone: 3, gold: 4, island: 5 };
 
 export function highestTier(...tiers: (CelebrationTier | null | undefined)[]): CelebrationTier {
   return tiers.reduce<CelebrationTier>(
@@ -46,11 +51,24 @@ export const BURST_DELAY_MS = 140;
 export const BURST_TRAVEL_MS = 620;
 export const BURST_FADE_MS = 260;
 
-/** Gold is frequent enough that its burst stays modest; an island is a 20-45 level arc. */
-export const BURST_PARTICLES: Record<'gold' | 'island', number> = { gold: 26, island: 44 };
+/**
+ * How much of a burst each tier is worth. The counts climb rather than repeat so the rarer
+ * thing still reads as the bigger one from across the room: bronze is a handful, gold is more
+ * than twice it, and an island — a 20-45 level arc — is more than four times.
+ *
+ * None of this lengthens the wait before the win sheet. A burst is spent by
+ * `BURST_DELAY_MS + BURST_TRAVEL_MS`, which is under the glow it plays over, so the hold below
+ * is decided by the glow either way.
+ */
+export const BURST_PARTICLES: Record<'bronze' | 'silver' | 'gold' | 'island', number> = {
+  bronze: 10,
+  silver: 16,
+  gold: 26,
+  island: 44,
+};
 
 export function burstParticleCount(tier: CelebrationTier): number {
-  return tier === 'gold' || tier === 'island' ? BURST_PARTICLES[tier] : 0;
+  return tier === 'normal' || tier === 'milestone' ? 0 : BURST_PARTICLES[tier];
 }
 
 /**

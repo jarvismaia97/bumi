@@ -34,15 +34,20 @@ describe('what a campaign solve was worth', () => {
     expect(outcome.tier).toBe('island');
   });
 
-  it('ranks the celebration: milestone over plain, gold over milestone, island over both', () => {
-    // A hint costs the gold, so the milestone is all that is left to celebrate.
+  it('ranks the celebration: milestone over the common medals, gold over milestone, island over both', () => {
+    // A hint costs the gold and leaves silver, which a milestone outranks: a medal is won on
+    // most solves, and the levels the catalogue marks are fixed and few.
     expect(resolveCampaignSolve({ ...clean, hintsUsed: 1, milestone: true }).tier).toBe('milestone');
     expect(resolveCampaignSolve({ ...clean, milestone: true }).tier).toBe('gold');
     expect(resolveCampaignSolve({ ...clean, hintsUsed: 1, unlockedIsland: true }).tier).toBe('island');
   });
 
-  it('leaves an ordinary solve an ordinary celebration', () => {
-    expect(resolveCampaignSolve({ ...clean, hintsUsed: 1 }).tier).toBe('normal');
+  it('celebrates the lesser medals too, since every campaign solve earns one', () => {
+    // There is no medal-less solve — `getMedalForResult` answers bronze at worst — so nothing
+    // here is ever `normal` any more. That tier is left to the daily and the tutorial, which
+    // set it themselves. Earning silver used to look exactly like earning nothing.
+    expect(resolveCampaignSolve({ ...clean, hintsUsed: 1 }).tier).toBe('silver');
+    expect(resolveCampaignSolve({ ...clean, hintsUsed: 2 }).tier).toBe('bronze');
   });
 
   it('scales the mistake budget with the board, as the medal rules do', () => {
