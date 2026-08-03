@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
 import Check from 'lucide-react-native/icons/check';
 import Flame from 'lucide-react-native/icons/flame';
@@ -11,6 +12,7 @@ import { GoogleMark } from '@/components/GoogleMark';
 import { BrandMark } from '@/components/BrandMark';
 import { PlayerAvatarTile } from '@/components/PlayerAvatar';
 import { playerName } from '@/lib/identity';
+import { useAppleSignInAvailable } from '@/lib/appleSignIn';
 import { ThemePickerSheet, type ThemePickerSheetHandle } from '@/components/overlays/ThemePickerSheet';
 import { SettingsSheet, type SettingsSheetHandle } from '@/components/overlays/SettingsSheet';
 import { AchievementsSheet, type AchievementsSheetHandle } from '@/components/overlays/AchievementsSheet';
@@ -19,6 +21,7 @@ import { LanguageSheet, type LanguageSheetHandle } from '@/components/overlays/L
 import { LeaderboardSheet, type LeaderboardSheetHandle } from '@/components/overlays/LeaderboardSheet';
 import { DailyArchiveSheet, type DailyArchiveSheetHandle } from '@/components/overlays/DailyArchiveSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAppearance } from '@/state/appearanceStore';
 import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
@@ -50,15 +53,39 @@ function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
   const user = useAuthStore(s => s.user);
   const loading = useAuthStore(s => s.loading);
   const signInWithGoogle = useAuthStore(s => s.signInWithGoogle);
+  const signInWithApple = useAuthStore(s => s.signInWithApple);
+  const appleAvailable = useAppleSignInAvailable();
+  // Apple's own button ships two fixed colourways, so the one that reads is picked by
+  // appearance rather than by the theme's tokens, which it will not take.
+  const appearance = useAppearance();
 
   if (loading) return null;
 
   if (!user) {
+    // Both providers belong here, not just the one. `login.tsx` offers the pair, but nothing
+    // routes to it except the campaign gate in `index.tsx` — so a player who never hits a level
+    // that demands an account only ever sees what this renders. Apple asks that its button sit
+    // wherever another provider's does, and a player who wants neither still just walks past.
     return (
-      <AnimatedPressable accessibilityRole="button" feedback="control" style={[styles.authPill, { borderColor: theme.gridSep }]} onPress={() => signInWithGoogle().catch(() => {})}>
-        <GoogleMark size={16} />
-        <Text style={[styles.authPillText, { color: theme.text }]}>{t('auth.signInGoogle')}</Text>
-      </AnimatedPressable>
+      <View style={styles.authChoices}>
+        <AnimatedPressable accessibilityRole="button" feedback="control" style={[styles.authPill, { borderColor: theme.gridSep }]} onPress={() => signInWithGoogle().catch(() => {})}>
+          <GoogleMark size={16} />
+          <Text style={[styles.authPillText, { color: theme.text }]}>{t('auth.signInGoogle')}</Text>
+        </AnimatedPressable>
+        {appleAvailable ? (
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+            buttonStyle={
+              appearance === 'dark'
+                ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+            }
+            cornerRadius={20}
+            style={styles.authApplePill}
+            onPress={() => signInWithApple().catch(() => {})}
+          />
+        ) : null}
+      </View>
     );
   }
 
@@ -294,7 +321,11 @@ const styles = StyleSheet.create({
   dailyTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   dailyBtnText: { flexShrink: 1, minWidth: 0, fontSize: 15, fontWeight: '700' },
   dailyStreak: { fontSize: 11, fontWeight: '600', marginTop: 2, textAlign: 'center' },
+  authChoices: { alignItems: 'center', gap: 8 },
   authPill: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 14, marginTop: 6, maxWidth: 260 },
+  // Apple's button sizes itself from the frame it is given, so it is told the height the pill
+  // beside it happens to be: 12pt of text on 6pt of padding inside a 1.5pt border, doubled.
+  authApplePill: { height: 34, width: 200 },
   authPillText: { flexShrink: 1, minWidth: 0, fontSize: 12, fontWeight: '600' },
   // The player name wraps freely, so the pill grows past 58 instead of clipping it.
   accountButton: { width: '100%', maxWidth: 320, minHeight: 58, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },

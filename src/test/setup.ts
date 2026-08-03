@@ -10,6 +10,18 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
   default: { getItem: async () => null, setItem: async () => {}, removeItem: async () => {} },
 }));
 
+// The Apple sheet is a native module that cannot load outside a device build, and the menu
+// imports it to offer the button beside Google's. Tests run as web, where `useAppleSignInAvailable`
+// answers false before asking it anything, so this only has to exist.
+vi.mock('expo-apple-authentication', () => ({
+  isAvailableAsync: async () => false,
+  signInAsync: async () => ({ identityToken: null }),
+  AppleAuthenticationButton: () => null,
+  AppleAuthenticationButtonType: { CONTINUE: 'CONTINUE' },
+  AppleAuthenticationButtonStyle: { BLACK: 'BLACK', WHITE: 'WHITE' },
+  AppleAuthenticationScope: { FULL_NAME: 'FULL_NAME', EMAIL: 'EMAIL' },
+}));
+
 // Reanimated now sits under every pressable in the app, and its worklet runtime cannot load
 // outside a Metro build. See the stub for what it stands in for.
 vi.mock('react-native-reanimated', () => import('./reanimated-stub'));

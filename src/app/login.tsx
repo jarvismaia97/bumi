@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { GoogleMark } from '@/components/GoogleMark';
 import { Logo } from '@/components/Logo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAppleSignInAvailable } from '@/lib/appleSignIn';
 import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
@@ -16,15 +17,9 @@ export default function LoginScreen() {
   const signInWithApple = useAuthStore(s => s.signInWithApple);
   const authError = useAuthStore(s => s.error);
   const [submitting, setSubmitting] = useState(false);
-  const [appleAvailable, setAppleAvailable] = useState(false);
+  const appleAvailable = useAppleSignInAvailable();
   const insets = useSafeAreaInsets();
   const { t } = useI18n();
-  const appleEnabled = process.env.EXPO_PUBLIC_APPLE_SIGN_IN_ENABLED === 'true';
-
-  useEffect(() => {
-    if (Platform.OS !== 'ios' || !appleEnabled) return;
-    AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => setAppleAvailable(false));
-  }, [appleEnabled]);
 
   async function onSignIn() {
     if (submitting) return;
