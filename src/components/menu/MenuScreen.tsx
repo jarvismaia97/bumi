@@ -171,10 +171,6 @@ export function MenuScreen({
         </View>
       </View>
 
-      <AnimatedPressable accessibilityRole="button" feedback="control" style={styles.islandProgress} onPress={onOpenMap}>
-        <MapPinned size={15} color={theme.accent} strokeWidth={2.3} />
-        <Text style={[styles.islandProgressText, { color: theme.sub }]}>{t('menu.islands', { completed: completedIslandCount, total: islandTotal })}</Text>
-      </AnimatedPressable>
 
       <View style={styles.goalsRow}>
         <GoalCard
@@ -192,6 +188,11 @@ export function MenuScreen({
           accent={theme.accent}
         />
       </View>
+
+      <AnimatedPressable accessibilityRole="button" feedback="control" style={styles.islandProgress} onPress={onOpenMap}>
+        <MapPinned size={15} color={theme.accent} strokeWidth={2.3} />
+        <Text style={[styles.islandProgressText, { color: theme.sub }]}>{t('menu.islands', { completed: completedIslandCount, total: islandTotal })}</Text>
+      </AnimatedPressable>
 
       <View style={styles.menuBtns}>
         <AnimatedPressable accessibilityRole="button" style={[styles.playBtn, { backgroundColor: theme.accent }]} onPress={onStartGame}>
