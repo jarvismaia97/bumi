@@ -23,6 +23,7 @@ vi.mock('expo-router', () => ({ router: { push: vi.fn() } }));
 // The auth client reaches expo-secure-store, whose native source vitest cannot parse. The
 // tests put the account into the store directly rather than through a session.
 vi.mock('@/lib/auth-client', () => ({
+  AUTH_STORAGE_KEYS: ['bumi_cookie', 'bumi_session_data'],
   authClient: {
     getSession: vi.fn().mockResolvedValue({ data: null, error: null }),
     signOut: vi.fn().mockResolvedValue({ error: null }),

@@ -1,5 +1,6 @@
+import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
-import { authClient } from '@/lib/auth-client';
+import { authClient, AUTH_STORAGE_KEYS } from '@/lib/auth-client';
 import { playHaptic } from '@/lib/haptics';
 import { useProgressStore } from '@/state/progressStore';
 import { Platform } from 'react-native';
@@ -44,6 +45,28 @@ const GOOGLE_CANCELLED = 'google/cancelled';
 function currentLanguage() {
   const preference = useLanguageStore.getState().preference;
   return preference === 'auto' ? resolveLanguage(getLocales()[0]?.languageCode) : preference;
+}
+
+/**
+ * The session as it exists on the device, removed by name. Web has no SecureStore and keeps its
+ * session in a cookie the server expires, so there is nothing here for it to do. Failures are
+ * swallowed: a key that was already gone, or a keychain that refuses, must not turn a sign-out
+ * the server has already accepted into an error the player is shown.
+ */
+async function forgetStoredSession(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  await Promise.all(AUTH_STORAGE_KEYS.map(key => SecureStore.deleteItemAsync(key).catch(() => {})));
+}
+
+/** Same contract: best effort, and never the reason a completed sign-out reports failure. */
+async function forgetGoogleAccount(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  try {
+    const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
+    await GoogleSignin.signOut();
+  } catch {
+    // Nothing to sign out of, or the module never loaded on this platform.
+  }
 }
 
 async function signInWithGoogleNative(): Promise<string> {
@@ -194,6 +217,14 @@ export const useAuthStore = create<AuthState>()((set) => ({
       playHaptic('error');
       throw error;
     }
+    // Only now that the request carrying it has been answered. The plugin clears its own copy
+    // on a successful `/sign-out`, but a session that outlives the tap is the one failure worth
+    // being redundant about — the player is told they left, and the next launch reads whatever
+    // is still on the device.
+    await forgetStoredSession();
+    // Google keeps its own account attached, and the next `signIn()` would take it without
+    // asking. Someone signing out to hand the phone over, or to change account, means this too.
+    await forgetGoogleAccount();
     // A committed account change, not an achievement: the flat thud of impact rather than
     // the rising notification pattern that would congratulate someone for leaving.
     playHaptic('medium');
@@ -212,6 +243,9 @@ export const useAuthStore = create<AuthState>()((set) => ({
       playHaptic('error');
       throw error;
     }
+    // The account no longer exists, so anything still on the device points at nothing.
+    await forgetStoredSession();
+    await forgetGoogleAccount();
     // Deliberately silent on success: the confirmation tap already fired `warning`, and the
     // sheet closing onto a signed-out menu says the rest.
     useProgressStore.getState().reset();

@@ -10,6 +10,16 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
   default: { getItem: async () => null, setItem: async () => {}, removeItem: async () => {} },
 }));
 
+// The keychain is native too, and `signOut` now deletes the stored session by name through it.
+// Spies rather than stubs: `authStore.signout.test.tsx` asserts which keys are deleted and when.
+vi.mock('expo-secure-store', () => ({
+  getItem: vi.fn(() => null),
+  setItem: vi.fn(),
+  getItemAsync: vi.fn(async () => null),
+  setItemAsync: vi.fn(async () => {}),
+  deleteItemAsync: vi.fn(async () => {}),
+}));
+
 // The Apple sheet is a native module that cannot load outside a device build, and the menu
 // imports it to offer the button beside Google's. Tests run as web, where `useAppleSignInAvailable`
 // answers false before asking it anything, so this only has to exist.
