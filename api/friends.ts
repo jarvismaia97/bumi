@@ -142,8 +142,19 @@ async function statsFor(sql: Sql, userIds: string[]): Promise<StatsRow[]> {
         completed_date - (row_number() over (partition by user_id order by completed_date))::int as island
       from days
     ),
+    -- The anchor is today when today is played and yesterday otherwise, matching
+    -- getDailyStreak: a streak breaks when a day closes without it, not when one opens.
+    anchor as (
+      select wanted.user_id,
+        case when exists (
+          select 1 from days where days.user_id = wanted.user_id and days.completed_date = current_date
+        ) then current_date else current_date - 1 end as day
+      from wanted
+    ),
     today as (
-      select user_id, island from islands where completed_date = current_date
+      select islands.user_id, islands.island
+      from islands
+      join anchor on anchor.user_id = islands.user_id and anchor.day = islands.completed_date
     ),
     streaks as (
       select islands.user_id, count(*) as streak

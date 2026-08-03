@@ -7,11 +7,19 @@ export function getDailyDateKey(d: Date = new Date()): string {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/**
+ * Consecutive days ending today, or ending yesterday while today is still open. Counting
+ * strictly from today read zero every morning: a player on an eight-day run opened the app and
+ * was told to start a streak, and it only came back once they had played. The reminder the app
+ * sends at seven says the streak ends at midnight, which is the promise the count now keeps —
+ * it breaks when a day closes without it, not when a day opens.
+ */
 export function getDailyStreak(completedDates: readonly string[], now: Date = new Date()): number {
   const completed = new Set(completedDates);
   const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  let streak = 0;
+  if (!completed.has(getDailyDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
 
+  let streak = 0;
   while (completed.has(getDailyDateKey(cursor))) {
     streak += 1;
     cursor.setDate(cursor.getDate() - 1);
