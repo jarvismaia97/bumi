@@ -4,7 +4,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
 import Check from 'lucide-react-native/icons/check';
 import Flame from 'lucide-react-native/icons/flame';
-import Grid2x2Check from 'lucide-react-native/icons/grid-2x2-check';
+import Map from 'lucide-react-native/icons/map';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
 import Settings from 'lucide-react-native/icons/settings';
 import Trophy from 'lucide-react-native/icons/trophy';
@@ -238,7 +238,7 @@ export function MenuScreen({
       {solvedCount > 0 && (
         <View style={styles.statsRow}>
           <StatCard
-            icon={<Grid2x2Check size={15} color={theme.accent} strokeWidth={2.3} />}
+            icon={<Map size={15} color={theme.accent} strokeWidth={2.3} />}
             title={t('menu.solved')}
             value={`${solvedCount} / ${campaignTotal}`}
             progress={solvedCount / campaignTotal}
