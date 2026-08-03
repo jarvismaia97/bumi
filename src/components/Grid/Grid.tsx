@@ -4,7 +4,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, { interpolate, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 import { rectOk } from '@/game/geometry';
 import type { Level, PlacedRect, SolutionRect } from '@/game/types';
-import { BD_PAL, BG_PAL } from '@/theme/palette';
+import { BD_PAL, BG_PAL, clueInkOn } from '@/theme/palette';
 import { useThemeTokens } from '@/state/themeStore';
 import { Cell, type CellEdges, type CellState } from './Cell';
 import {
@@ -105,12 +105,17 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
                 borderColor = info.colors?.border ?? borderPal[info.colorIndex % borderPal.length];
               }
 
+              // What the clue is actually painted on. The theme's own surface is left out: there
+              // the accent is the intended look and reads on it, so only a colour the level or a
+              // placed rectangle brought needs the ink measured against it.
+              const clueBackdrop = fillColor ?? level.emptyFillColor;
+
               return (
                 <Cell
                   key={c}
                   size={cellSize}
                   clueValue={clue && clue.v > 1 ? clue.v : undefined}
-                  clueColor={theme.accent}
+                  clueColor={clueBackdrop ? clueInkOn(clueBackdrop) : theme.accent}
                   state={state}
                   edges={info?.edges ?? EMPTY_EDGES}
                   fillColor={fillColor}
