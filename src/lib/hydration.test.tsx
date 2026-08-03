@@ -2,8 +2,9 @@ import { render, screen } from '@testing-library/react';
 import { Text } from 'react-native';
 import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
+import { useI18n } from '@/i18n';
+import { useAppearance, useAppearanceStore } from '@/state/appearanceStore';
 import { markHydrated, resetHydrationForTests, useHydrated } from './hydration';
-import { useI18n } from './index';
 
 function Copy() {
   const { t, language } = useI18n();
@@ -14,9 +15,14 @@ function Flag() {
   return <Text>{useHydrated() ? 'hydrated' : 'waiting'}</Text>;
 }
 
+function Palette() {
+  return <Text>{useAppearance()}</Text>;
+}
+
 describe('hydration gate', () => {
   afterEach(() => {
     markHydrated();
+    useAppearanceStore.setState({ preference: 'auto' });
   });
 
   it('reports the static language until the tree has hydrated', () => {
@@ -26,6 +32,19 @@ describe('hydration gate', () => {
     render(<Copy />);
 
     expect(screen.getByText('pt-PT:Abrir definições')).toBeTruthy();
+  });
+
+  it('paints the static appearance until the tree has hydrated', () => {
+    // A saved `dark` is as unrenderable on the first pass as a dark device is: the document was
+    // painted light, and React keeps the server's classes rather than repaint them.
+    resetHydrationForTests(false);
+    useAppearanceStore.setState({ preference: 'dark' });
+    render(<Palette />);
+    expect(screen.getByText('light')).toBeTruthy();
+
+    act(() => markHydrated());
+
+    expect(screen.getByText('dark')).toBeTruthy();
   });
 
   it('switches every subscriber in one go', () => {

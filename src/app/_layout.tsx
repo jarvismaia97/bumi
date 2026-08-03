@@ -19,10 +19,11 @@ import { useChallengeStore } from '@/state/challengeStore';
 import { configureNotificationHandler, onNotificationOpened, refreshDailyReminders, REMINDER_SCREEN } from '@/lib/dailyReminder';
 import { registerPushToken } from '@/lib/pushToken';
 import { useProgressStore } from '@/state/progressStore';
-import { markHydrated, useI18n } from '@/i18n';
+import { markHydrated } from '@/lib/hydration';
+import { useI18n } from '@/i18n';
 
 // The static document is rendered once and pinned to Portuguese by the hydration gate (see
-// src/i18n/hydration.ts), so its metadata is Portuguese to match.
+// src/lib/hydration.ts), so its metadata is Portuguese to match.
 const SITE_URL = 'https://www.jogarbumi.pt';
 const SITE_DESCRIPTION =
   'Divide a grelha em retângulos e resolve o puzzle. Centenas de níveis, um desafio diário e o progresso guardado entre dispositivos.';
@@ -45,8 +46,9 @@ export default function RootLayout() {
   const { language } = useI18n();
 
   useEffect(() => {
-    // First effect after mount: from here the tree may render the device's language, because
-    // hydration has already matched the static markup. See src/i18n/hydration.ts.
+    // First effect after mount: from here the tree may render the device's language and
+    // appearance, because hydration has already matched the static markup. See
+    // src/lib/hydration.ts.
     markHydrated();
     init();
     initProgressSync();

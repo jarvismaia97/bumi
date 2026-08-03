@@ -27,7 +27,8 @@ import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { refreshDailyReminders } from '@/lib/dailyReminder';
 import { playHaptic } from '@/lib/haptics';
 import { useProgressStore } from '@/state/progressStore';
-import { useHydrated, useI18n } from '@/i18n';
+import { useI18n } from '@/i18n';
+import { useHydrated } from '@/lib/hydration';
 import { renderSheetBackdrop } from '@/components/overlays/SheetBackdrop';
 
 export interface SettingsSheetHandle {
