@@ -122,6 +122,33 @@ describe('MenuScreen', () => {
     expect(screen.getByText(t('menu.streak', { count: 1, label: t('menu.day') }))).toBeTruthy();
   });
 
+  it('shows a new player none of the counters, because none has counted anything', () => {
+    renderMenu({
+      solvedCount: 0,
+      goldMedalCount: 0,
+      completedIslandCount: 0,
+      dailyStreak: 0,
+      weekly: goal(0, WEEKLY_TARGET),
+      monthly: goal(0, MONTHLY_TARGET),
+    });
+
+    expect(screen.queryByText(t('menu.solved'))).toBeNull();
+    expect(screen.queryByText(t('menu.gold'))).toBeNull();
+    expect(screen.queryByText(t('menu.weeklyGoal'))).toBeNull();
+    expect(screen.queryByText(t('menu.islands', { completed: 0, total: 13 }))).toBeNull();
+    // What is left is the invitation to play, which is the whole point of the screen.
+    expect(screen.getByText(t('menu.startCampaign'))).toBeTruthy();
+  });
+
+  it('brings each counter back as soon as it has something to say', () => {
+    renderMenu({ goldMedalCount: 0, completedIslandCount: 0, weekly: goal(1, WEEKLY_TARGET) });
+
+    expect(screen.getByText(t('menu.solved'))).toBeTruthy();
+    expect(screen.queryByText(t('menu.gold'))).toBeNull();
+    expect(screen.getByText(t('menu.weeklyGoal'))).toBeTruthy();
+    expect(screen.queryByText(t('menu.islands', { completed: 0, total: 13 }))).toBeNull();
+  });
+
   it('reports island progress out of the total, not as a bare number', () => {
     renderMenu();
 

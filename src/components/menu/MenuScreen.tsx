@@ -138,6 +138,7 @@ export function MenuScreen({
   const leaderboardRef = useRef<LeaderboardSheetHandle>(null);
   const archiveRef = useRef<DailyArchiveSheetHandle>(null);
 
+  const hasPlayedDaily = dailyDone || weekly.done > 0 || monthly.done > 0 || dailyStreak > 0;
   const currentIsland = journey.islands[journey.currentIndex];
   const islandShare = currentIsland?.total ? Math.round((currentIsland.solved / currentIsland.total) * 100) : 0;
 
@@ -159,19 +160,28 @@ export function MenuScreen({
           </View>
         </View>
 
-      <View style={styles.statsRow}>
-        <View style={[styles.stat, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
-          <Text style={[styles.statValue, { color: theme.text }]}>{solvedCount}</Text>
-          <Text style={[styles.statLabel, { color: theme.sub }]}>{t('menu.solved')}</Text>
+      {/* A counter is worth screen only once it has counted something. A new player used to
+          meet five zeros before touching the game — and that is the screen the App Store
+          listing shows to someone deciding whether to install. */}
+      {solvedCount > 0 && (
+        <View style={styles.statsRow}>
+          <View style={[styles.stat, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
+            <Text style={[styles.statValue, { color: theme.text }]}>{solvedCount}</Text>
+            <Text style={[styles.statLabel, { color: theme.sub }]}>{t('menu.solved')}</Text>
+          </View>
+          {goldMedalCount > 0 && (
+            <View style={[styles.stat, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
+              <Trophy size={17} color={semantic.gold} strokeWidth={2.3} />
+              <Text style={[styles.statValue, { color: theme.text }]}>{goldMedalCount}</Text>
+              <Text style={[styles.statLabel, { color: theme.sub }]}>{t('menu.gold')}</Text>
+            </View>
+          )}
         </View>
-        <View style={[styles.stat, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
-          <Trophy size={17} color={semantic.gold} strokeWidth={2.3} />
-          <Text style={[styles.statValue, { color: theme.text }]}>{goldMedalCount}</Text>
-          <Text style={[styles.statLabel, { color: theme.sub }]}>{t('menu.gold')}</Text>
-        </View>
-      </View>
+      )}
 
 
+      {/* The goals are about daily challenges, so they arrive with the first one played. */}
+      {hasPlayedDaily && (
       <View style={styles.goalsRow}>
         <GoalCard
           title={t('menu.weeklyGoal')}
@@ -188,11 +198,14 @@ export function MenuScreen({
           accent={theme.accent}
         />
       </View>
+      )}
 
+      {completedIslandCount > 0 && (
       <AnimatedPressable accessibilityRole="button" feedback="control" style={styles.islandProgress} onPress={onOpenMap}>
         <MapPinned size={15} color={theme.accent} strokeWidth={2.3} />
         <Text style={[styles.islandProgressText, { color: theme.sub }]}>{t('menu.islands', { completed: completedIslandCount, total: islandTotal })}</Text>
       </AnimatedPressable>
+      )}
 
       <View style={styles.menuBtns}>
         <AnimatedPressable accessibilityRole="button" style={[styles.playBtn, { backgroundColor: theme.accent }]} onPress={onStartGame}>
