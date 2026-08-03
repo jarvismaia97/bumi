@@ -1,6 +1,7 @@
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet';
 import { forwardRef, useImperativeHandle, useRef, type ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { hitSlopFor } from '@/lib/touchTarget';
@@ -40,6 +41,8 @@ const BACK_BUTTON_HIT_SLOP = hitSlopFor({ width: BACK_BUTTON_SIZE, height: BACK_
 export const SettingsChildSheet = forwardRef<SettingsChildSheetHandle, SettingsChildSheetProps>(
   function SettingsChildSheet({ title, subtitle, headerRight, snapPoints, scrollable = false, children }, ref) {
     const sheetRef = useRef<BottomSheetModal>(null);
+    const insets = useSafeAreaInsets();
+    const { height } = useWindowDimensions();
     const theme = useThemeTokens();
     const { t } = useI18n();
 
@@ -56,13 +59,18 @@ export const SettingsChildSheet = forwardRef<SettingsChildSheetHandle, SettingsC
         ref={sheetRef}
         snapPoints={snapPoints}
         enableDynamicSizing={!snapPoints}
+        // Same reasoning as the settings sheet: a sheet sized to its own content has nothing
+        // stopping it from reaching the notch, and the language and privacy sheets both grow
+        // with their translations.
+        topInset={insets.top + 12}
+        maxDynamicContentSize={height - insets.top - 24}
         enablePanDownToClose
         backgroundStyle={{ backgroundColor: theme.bg }}
         handleIndicatorStyle={{ backgroundColor: theme.gridSep }}
       >
         <Body
-          style={scrollable ? undefined : styles.content}
-          contentContainerStyle={scrollable ? styles.content : undefined}
+          style={scrollable ? undefined : [styles.content, { paddingBottom: insets.bottom + 34 }]}
+          contentContainerStyle={scrollable ? [styles.content, { paddingBottom: insets.bottom + 34 }] : undefined}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
@@ -95,7 +103,7 @@ export const SettingsChildSheet = forwardRef<SettingsChildSheetHandle, SettingsC
 );
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 34 },
+  content: { paddingHorizontal: 20, paddingTop: 8 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   backButton: { minWidth: BACK_BUTTON_SIZE, minHeight: BACK_BUTTON_SIZE, borderWidth: 1.5, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   title: { flexShrink: 1, minWidth: 0, fontSize: 20, fontWeight: '800', textAlign: 'center' },

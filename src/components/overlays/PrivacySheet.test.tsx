@@ -7,6 +7,10 @@ import { PrivacySheet } from './PrivacySheet';
 
 // The sheet chrome is native and is not what these tests are about; plain views render the
 // content itself. Same approach as ThemePickerSheet.test.tsx.
+vi.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
+
 vi.mock('@gorhom/bottom-sheet', () => ({
   BottomSheetModal: forwardRef<unknown, { children?: React.ReactNode }>(function BottomSheetModal({ children }, _ref) {
     return <View>{children}</View>;

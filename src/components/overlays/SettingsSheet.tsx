@@ -1,6 +1,7 @@
-import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
-import { Alert, Linking, Platform, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Linking, Platform, StyleSheet, Switch, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Cloud from 'lucide-react-native/icons/cloud';
 import CloudOff from 'lucide-react-native/icons/cloud-off';
@@ -44,6 +45,8 @@ interface SettingsSheetProps {
 
 export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>(function SettingsSheet({ onOpenAchievements, onOpenThemes, onOpenPrivacy, onOpenLanguage, onOpenLeaderboard, onOpenArchive }, ref) {
   const sheetRef = useRef<BottomSheetModal>(null);
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const theme = useThemeTokens();
   const semantic = useSemanticTokens();
   const user = useAuthStore(s => s.user);
@@ -137,10 +140,20 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
       ref={sheetRef}
       enableDynamicSizing
       enablePanDownToClose
+      // This sheet grew past the screen — account, five rows, a reminder switch and account
+      // deletion — and dynamic sizing let it run under the status bar with the title behind
+      // the clock, while the last row sat below the fold with no way to scroll to it. The
+      // inset keeps the handle clear of the notch, the ceiling stops it filling the screen,
+      // and the body scrolls once it reaches that ceiling.
+      topInset={insets.top + 12}
+      maxDynamicContentSize={height - insets.top - 24}
       backgroundStyle={{ backgroundColor: theme.bg }}
       handleIndicatorStyle={{ backgroundColor: theme.gridSep }}
     >
-      <BottomSheetView style={styles.content}>
+      <BottomSheetScrollView
+        style={styles.body}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
+      >
         <Text style={[styles.title, { color: theme.text }]}>{t('settings.title')}</Text>
 
         {user ? (
@@ -247,14 +260,15 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
             {error ? <Text style={[styles.error, { color: semantic.danger }]}>{error}</Text> : null}
           </>
         ) : null}
-      </BottomSheetView>
+      </BottomSheetScrollView>
     </BottomSheetModal>
   );
 });
 
 const styles = StyleSheet.create({
   // One 4px scale throughout: 4 / 8 / 12 / 14 / 20 / 28.
-  content: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32, gap: 8 },
+  body: { width: '100%' },
+  content: { paddingHorizontal: 20, paddingTop: 4, gap: 8 },
   title: { fontSize: 20, fontWeight: '800', marginBottom: 12 },
   account: { borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, paddingTop: 16 },
   accountIdentity: { flexDirection: 'row', alignItems: 'center', gap: 12 },

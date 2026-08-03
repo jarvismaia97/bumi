@@ -13,6 +13,10 @@ vi.mock('@/lib/haptics', () => ({ playHaptic: vi.fn() }));
 
 // The sheet chrome is native (reanimated + gesture handler under the hood) and is not what
 // these tests are about; swapping it for plain views renders the rows themselves.
+vi.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
+
 vi.mock('@gorhom/bottom-sheet', () => ({
   BottomSheetModal: forwardRef<unknown, { children?: React.ReactNode }>(function BottomSheetModal({ children }, _ref) {
     return <View>{children}</View>;

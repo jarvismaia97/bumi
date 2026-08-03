@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { forwardRef } from 'react';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { playHaptic } from '@/lib/haptics';
 import { refreshDailyReminders } from '@/lib/dailyReminder';
@@ -32,11 +32,16 @@ vi.mock('@/lib/auth-client', () => ({
 }));
 
 // The sheet chrome is native and is not what these tests are about.
+vi.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
+
 vi.mock('@gorhom/bottom-sheet', () => ({
   BottomSheetModal: forwardRef<unknown, { children?: React.ReactNode }>(function BottomSheetModal({ children }, _ref) {
     return <View>{children}</View>;
   }),
   BottomSheetView: View,
+  BottomSheetScrollView: ScrollView,
 }));
 
 // The reminder row only exists off the web build, and Alert is native chrome whose buttons
