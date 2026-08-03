@@ -13,6 +13,7 @@ import { BrandMark } from '@/components/BrandMark';
 import { PlayerAvatarTile } from '@/components/PlayerAvatar';
 import { playerName } from '@/lib/identity';
 import { useAppleSignInAvailable } from '@/lib/appleSignIn';
+import { MIN_TOUCH_TARGET } from '@/lib/touchTarget';
 import { ThemePickerSheet, type ThemePickerSheetHandle } from '@/components/overlays/ThemePickerSheet';
 import { SettingsSheet, type SettingsSheetHandle } from '@/components/overlays/SettingsSheet';
 import { AchievementsSheet, type AchievementsSheetHandle } from '@/components/overlays/AchievementsSheet';
@@ -47,6 +48,11 @@ interface MenuScreenProps {
   onStartDailyFor: (dateKey: string) => void;
 }
 
+// The two providers are offered as one pair, so they are one box: Apple's button takes a frame
+// rather than styles, and this is the only thing both of them can be told.
+const AUTH_BUTTON_WIDTH = 240;
+const AUTH_BUTTON_HEIGHT = MIN_TOUCH_TARGET;
+
 function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
   const theme = useThemeTokens();
   const { t, language } = useI18n();
@@ -80,7 +86,7 @@ function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
                 ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
                 : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
             }
-            cornerRadius={20}
+            cornerRadius={AUTH_BUTTON_HEIGHT / 2}
             style={styles.authApplePill}
             onPress={() => signInWithApple().catch(() => {})}
           />
@@ -321,11 +327,13 @@ const styles = StyleSheet.create({
   dailyTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   dailyBtnText: { flexShrink: 1, minWidth: 0, fontSize: 15, fontWeight: '700' },
   dailyStreak: { fontSize: 11, fontWeight: '600', marginTop: 2, textAlign: 'center' },
-  authChoices: { alignItems: 'center', gap: 8 },
-  authPill: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 14, marginTop: 6, maxWidth: 260 },
-  // Apple's button sizes itself from the frame it is given, so it is told the height the pill
-  // beside it happens to be: 12pt of text on 6pt of padding inside a 1.5pt border, doubled.
-  authApplePill: { height: 34, width: 200 },
+  authChoices: { alignItems: 'center', gap: 8, marginTop: 6 },
+  // One box, stated once and given to both. Apple's button will not be talked down below its
+  // own floor and the Google pill was sizing itself from its text, so left to themselves they
+  // came out different heights and different widths. 44 is the floor anyway — the pill used to
+  // paint about 25 and had no slop making up the difference.
+  authPill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1.5, borderRadius: AUTH_BUTTON_HEIGHT / 2, width: AUTH_BUTTON_WIDTH, height: AUTH_BUTTON_HEIGHT, paddingHorizontal: 14 },
+  authApplePill: { width: AUTH_BUTTON_WIDTH, height: AUTH_BUTTON_HEIGHT },
   authPillText: { flexShrink: 1, minWidth: 0, fontSize: 12, fontWeight: '600' },
   // The player name wraps freely, so the pill grows past 58 instead of clipping it.
   accountButton: { width: '100%', maxWidth: 320, minHeight: 58, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
