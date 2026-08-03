@@ -68,11 +68,10 @@ export function IslandJourney({ islands, currentIndex, onOpenMap }: {
               island.current && { borderColor: island.color },
             ]}
           >
-            {island.reached ? (
-              <Text style={[styles.dotText, { color: island.color }]}>{island.solved}</Text>
-            ) : (
-              <Lock size={13} color={theme.sub} strokeWidth={2.4} />
-            )}
+            {/* Colour and the ring say which island this is and where the player stands. The
+                count used to sit here and read as a level number next to "continue at level
+                368"; the card below already states it, in words that cannot be misread. */}
+            {!island.reached && <Lock size={13} color={theme.sub} strokeWidth={2.4} />}
           </AnimatedPressable>
         ))}
       </ScrollView>
@@ -113,7 +112,6 @@ const styles = StyleSheet.create({
   strip: { gap: DOT_GAP, paddingVertical: 2 },
   dot: { width: DOT, height: DOT, borderRadius: DOT / 2, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   dotCurrent: { borderWidth: 3 },
-  dotText: { fontSize: 11, fontWeight: '800' },
   card: { borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 },
   cardHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
   cardTitle: { flexShrink: 1, minWidth: 0, fontSize: 14, fontWeight: '800' },
