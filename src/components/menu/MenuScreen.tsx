@@ -120,10 +120,12 @@ function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
  * and were being told differently: a bare number over a caption, with the trophy floating above
  * it and nothing at all above the levels. Named title, then the count, then how far along.
  *
- * `progress` is optional because only one of them is going anywhere — the campaign has a last
- * level, and gold medals do not have a number you are working towards.
+ * Both are going somewhere, so both draw a bar. Medals are awarded per campaign level and only
+ * from the campaign — `setLevelMedal` is keyed by the level and the daily never calls it — so
+ * they share the levels' denominator, and the pair reads as the distance between solving a level
+ * and solving it well.
  */
-function StatCard({ icon, title, value, progress, accent }: { icon: ReactNode; title: string; value: string; progress?: number; accent?: string }) {
+function StatCard({ icon, title, value, progress, accent }: { icon: ReactNode; title: string; value: string; progress: number; accent: string }) {
   const theme = useThemeTokens();
 
   return (
@@ -135,11 +137,9 @@ function StatCard({ icon, title, value, progress, accent }: { icon: ReactNode; t
       <View style={styles.goalCountRow}>
         <Text style={[styles.goalCount, { color: theme.text }]}>{value}</Text>
       </View>
-      {progress != null && (
-        <View style={[styles.goalBar, { backgroundColor: theme.gridSep }]}>
-          <View style={[styles.goalBarFill, { width: `${Math.min(progress, 1) * 100}%`, backgroundColor: accent }]} />
-        </View>
-      )}
+      <View style={[styles.goalBar, { backgroundColor: theme.gridSep }]}>
+        <View style={[styles.goalBarFill, { width: `${Math.min(progress, 1) * 100}%`, backgroundColor: accent }]} />
+      </View>
     </View>
   );
 }
@@ -248,7 +248,9 @@ export function MenuScreen({
             <StatCard
               icon={<Trophy size={15} color={semantic.gold} strokeWidth={2.3} />}
               title={t('menu.gold')}
-              value={String(goldMedalCount)}
+              value={`${goldMedalCount} / ${campaignTotal}`}
+              progress={goldMedalCount / campaignTotal}
+              accent={semantic.gold}
             />
           )}
         </View>
