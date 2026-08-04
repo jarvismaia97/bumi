@@ -8,6 +8,7 @@ import Map from 'lucide-react-native/icons/map';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
 import Settings from 'lucide-react-native/icons/settings';
 import Trophy from 'lucide-react-native/icons/trophy';
+import Dumbbell from 'lucide-react-native/icons/dumbbell';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { GoogleMark } from '@/components/GoogleMark';
 import { BrandMark } from '@/components/BrandMark';
@@ -47,6 +48,7 @@ interface MenuScreenProps {
   onStartGame: () => void;
   onStartDaily: () => void;
   onStartDailyFor: (dateKey: string) => void;
+  onStartTraining: () => void;
 }
 
 // The two providers are offered as one pair, so they are one box: Apple's button takes a frame
@@ -195,6 +197,7 @@ export function MenuScreen({
   onStartGame,
   onStartDaily,
   onStartDailyFor,
+  onStartTraining,
 }: MenuScreenProps) {
   const theme = useThemeTokens();
   const semantic = useSemanticTokens();
@@ -299,15 +302,28 @@ export function MenuScreen({
           <ArrowRight size={20} color="#fff" strokeWidth={2.4} />
         </AnimatedPressable>
 
-        <AnimatedPressable accessibilityRole="button" style={[styles.dailyBtn, { backgroundColor: daily.bg, borderColor: daily.border }]} onPress={onStartDaily}>
-          <View style={styles.dailyTitleRow}>
-            {dailyDone && <Check size={16} color={daily.fg} strokeWidth={2.8} />}
-            <Text style={[styles.dailyBtnText, { color: daily.fg }]}>{dailyDone ? t('menu.dailyDone') : t('menu.daily')}</Text>
-          </View>
-          <Text style={[styles.dailyStreak, { color: daily.fg }]}>
-            {dailyStreak ? t('menu.streak', { count: dailyStreak, label: t(dailyStreak === 1 ? 'menu.day' : 'menu.days') }) : t('menu.startStreak')}
-          </Text>
-        </AnimatedPressable>
+        {/* The daily and training sit as a pair: one board everyone gets today, and as many as
+            you like at a difficulty you choose. Training is outlined rather than filled, so the
+            recurring hook keeps the stronger colour. */}
+        <View style={styles.playRow}>
+          <AnimatedPressable accessibilityRole="button" style={[styles.dailyBtn, { backgroundColor: daily.bg, borderColor: daily.border }]} onPress={onStartDaily}>
+            <View style={styles.dailyTitleRow}>
+              {dailyDone && <Check size={16} color={daily.fg} strokeWidth={2.8} />}
+              <Text style={[styles.dailyBtnText, { color: daily.fg }]} numberOfLines={2}>{dailyDone ? t('menu.dailyDone') : t('menu.daily')}</Text>
+            </View>
+            <Text style={[styles.dailyStreak, { color: daily.fg }]} numberOfLines={2}>
+              {dailyStreak ? t('menu.streak', { count: dailyStreak, label: t(dailyStreak === 1 ? 'menu.day' : 'menu.days') }) : t('menu.startStreak')}
+            </Text>
+          </AnimatedPressable>
+
+          <AnimatedPressable accessibilityRole="button" style={[styles.dailyBtn, { borderColor: theme.gridSep }]} onPress={onStartTraining}>
+            <View style={styles.dailyTitleRow}>
+              <Dumbbell size={16} color={theme.text} strokeWidth={2.4} />
+              <Text style={[styles.dailyBtnText, { color: theme.text }]} numberOfLines={2}>{t('training.card')}</Text>
+            </View>
+            <Text style={[styles.dailyStreak, { color: theme.sub }]} numberOfLines={2}>{t('training.cardSub')}</Text>
+          </AnimatedPressable>
+        </View>
       </View>
 
         <AuthPill onOpenSettings={() => settingsRef.current?.present()} />
@@ -360,7 +376,8 @@ const styles = StyleSheet.create({
   campaignDetail: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)', marginTop: 3 },
   campaignBar: { height: 4, borderRadius: 2, overflow: 'hidden', marginTop: 8, backgroundColor: 'rgba(255,255,255,0.28)' },
   campaignBarFill: { height: '100%', borderRadius: 2, backgroundColor: '#fff' },
-  dailyBtn: { borderWidth: 1.5, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
+  playRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
+  dailyBtn: { flex: 1, minWidth: 0, borderWidth: 1.5, borderRadius: 8, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' },
   dailyTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   dailyBtnText: { flexShrink: 1, minWidth: 0, fontSize: 15, fontWeight: '700' },
   dailyStreak: { fontSize: 11, fontWeight: '600', marginTop: 2, textAlign: 'center' },

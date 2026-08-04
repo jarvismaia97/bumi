@@ -63,6 +63,7 @@ function renderMenu(overrides: Partial<React.ComponentProps<typeof MenuScreen>> 
       campaignComplete={false}
       onStartGame={() => {}}
       onStartDaily={() => {}}
+      onStartTraining={() => {}}
       onStartDailyFor={() => {}}
       {...overrides}
     />,

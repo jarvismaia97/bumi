@@ -12,6 +12,7 @@ import { MenuScreen } from '@/components/menu/MenuScreen';
 import { LevelPickerSheet, type LevelPickerSheetHandle } from '@/components/overlays/LevelPickerSheet';
 import { WinSheet, type WinSheetHandle } from '@/components/overlays/WinSheet';
 import { IOSInstallPromptSheet, type IOSInstallPromptSheetHandle } from '@/components/overlays/IOSInstallPromptSheet';
+import { TrainingSheet, type TrainingSheetHandle } from '@/components/overlays/TrainingSheet';
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
 import { formatDuration, getDailyDateKey, getDailyLevel, getDailyStreak, getNextDailyInMs } from '@/game/daily';
 import { getMonthlyProgress, getWeeklyProgress, goalsCompletedBy, isStreakMilestone } from '@/game/goals';
@@ -20,6 +21,7 @@ import { isCampaignLevelUnlocked, requiresCampaignLogin } from '@/game/access';
 import { formatResultDuration, getMedalForResult, getMistakeBudget, type Medal } from '@/game/medals';
 import { resolveCampaignSolve } from '@/game/results';
 import { getLevel, LEVEL_META, TUTORIAL_LEVELS } from '@/game/levels';
+import { generateTrainingLevel, TRAINING_TIERS, type TrainingTier } from '@/game/training';
 import { getCompletedIslandCount, getIslandJourney, getNewlyCompletedIslandIndex, ISLANDS } from '@/game/islands';
 import { useGameStore } from '@/state/gameStore';
 import { useProgressStore } from '@/state/progressStore';
@@ -90,6 +92,7 @@ export default function GameScreen() {
   const iosInstallPromptRef = useRef<IOSInstallPromptSheetHandle>(null);
   const shareNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const winTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const trainingSheetRef = useRef<TrainingSheetHandle>(null);
   const loginRequestedRef = useRef(false);
   const linkingUrl = Linking.useLinkingURL();
 
@@ -102,6 +105,9 @@ export default function GameScreen() {
       loginRequestedRef.current = false;
     }, []),
   );
+  // Kept so "another puzzle" stays at the difficulty that was asked for.
+  const [trainingTier, setTrainingTier] = useState<TrainingTier>(TRAINING_TIERS[0]);
+  const [trainingSummary, setTrainingSummary] = useState<string | null>(null);
   const [tutorialWon, setTutorialWon] = useState(false);
   const [tutorialLevelIndex, setTutorialLevelIndex] = useState(0);
   const [dailyCountdown, setDailyCountdown] = useState(formatDuration(getNextDailyInMs()));
@@ -146,6 +152,17 @@ export default function GameScreen() {
     setDailyChallengeDate(getDailyDateKey(date));
     loadLevel(getDailyLevel(date));
     enterGame('daily');
+  }
+
+  /** Unscored by construction: nothing here writes to progress, so nothing has to opt out. */
+  function startTraining(tier: TrainingTier) {
+    setTrainingTier(tier);
+    setCampaignResult(null);
+    setCelebrationTier('normal');
+    setDailyResult(null);
+    setTrainingSummary(null);
+    loadLevel(generateTrainingLevel(tier));
+    enterGame('training');
   }
 
   function startTutorial() {
@@ -219,6 +236,14 @@ export default function GameScreen() {
         // per player, so it cannot fatigue: it gets the largest celebration there is.
         if (tutorialLevelIndex === TUTORIAL_LEVELS.length - 1) setCelebrationTier('island');
         setTutorialWon(true);
+        return;
+      }
+      if (mode === 'training') {
+        // No medal, no points, no solve recorded. The board lights up and that is the whole
+        // reward — the moment training pays, it becomes the cheapest way to earn and the 500
+        // hand-tuned levels stop being the game.
+        setTrainingSummary(formatSummary(elapsedMs(), hintsUsed, mistakes, t));
+        presentWinSheet();
         return;
       }
       if (mode === 'daily') {
@@ -322,6 +347,7 @@ export default function GameScreen() {
         campaignComplete={campaignComplete}
         onStartGame={solvedCount === 0 ? startTutorial : () => startCampaign(campaignIndex)}
         onStartDaily={() => startDaily()}
+        onStartTraining={() => trainingSheetRef.current?.present()}
         onStartDailyFor={dateKey =>
           startDaily(new Date(Number(dateKey.slice(0, 4)), Number(dateKey.slice(4, 6)) - 1, Number(dateKey.slice(6, 8))))
         }
@@ -338,6 +364,8 @@ export default function GameScreen() {
         isLevelLoginRequired={idx => requiresCampaignLogin(idx, !!user)}
         onSelectLevel={startCampaign}
       />
+      {/* Same reason as the map above: it is opened from the menu, so it has to exist here. */}
+      <TrainingSheet ref={trainingSheetRef} onSelect={startTraining} />
       </Animated.View>
     );
   }
@@ -355,6 +383,7 @@ export default function GameScreen() {
     rows: levelRows,
     columns: levelColumns,
     hints: hints,
+    trainingLabel: t(`difficulty.${trainingTier.label}`),
   };
   const isNewSolve = mode === 'campaign' && !!solvedMap[curLvl];
   const mistakeStatus = campaignMistakeStatus();
@@ -381,7 +410,7 @@ export default function GameScreen() {
   }
 
   function onHintPress() {
-    if (mode === 'tutorial') {
+    if (mode === 'tutorial' || mode === 'training') {
       if (hint()) showShareNotice(t('game.hintApplied'));
       return;
     }
@@ -397,6 +426,10 @@ export default function GameScreen() {
       mode === 'campaign' && curLvl === 2 && !iosInstallPromptSeen && canShowIOSInstallPrompt();
 
     winSheetRef.current?.dismiss();
+    if (mode === 'training') {
+      startTraining(trainingTier);
+      return;
+    }
     if (mode === 'daily') {
       goToMenu();
       return;
@@ -464,7 +497,9 @@ export default function GameScreen() {
         ref={winSheetRef}
         title={t(mode === 'daily' ? 'win.dailyTitle' : 'win.title')}
         subtitle={
-          mode === 'daily'
+          mode === 'training'
+            ? `${t(`difficulty.${trainingTier.label}`)} · ${levelRows}×${levelColumns}`
+            : mode === 'daily'
             ? new Date(Number(dailyChallengeDate.slice(0, 4)), Number(dailyChallengeDate.slice(4, 6)) - 1, Number(dailyChallengeDate.slice(6, 8))).toLocaleDateString(language, { day: 'numeric', month: 'long' })
             : meta
               ? t('win.levelSubtitle', { level: curLvl + 1, difficulty: t(`difficulty.${meta.label}`) })
@@ -476,7 +511,7 @@ export default function GameScreen() {
         campaignPoints={mode === 'campaign' ? campaignResult?.pointsGained : undefined}
         campaignSummary={mode === 'campaign' ? campaignResult?.summary : undefined}
         unlockedIslandName={mode === 'campaign' ? campaignResult?.unlockedIslandName : undefined}
-        dailySummary={mode === 'daily' ? dailyResult ?? undefined : undefined}
+        dailySummary={mode === 'training' ? trainingSummary ?? undefined : mode === 'daily' ? dailyResult ?? undefined : undefined}
         dailyStreak={dailyStreak}
         dailyCountdown={dailyCountdown}
         nextLabel={nextLabel(mode, t)}

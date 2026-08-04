@@ -17,10 +17,15 @@ export interface LabelContext {
   rows: number;
   columns: number;
   hints: number;
+  /** The chosen difficulty's own name, which only training has. */
+  trainingLabel?: string;
 }
 
 export function levelLabel(context: LabelContext, t: Translate): string {
   if (context.mode === 'daily') return t('game.today');
+  // Training has no number to give: the puzzles are generated on the tap and nothing counts
+  // them, so the difficulty asked for is the only identity a board has.
+  if (context.mode === 'training') return t('game.trainingLabel');
   if (context.mode === 'tutorial') {
     return t('game.tutorialLevel', { current: context.tutorialIndex + 1, total: context.tutorialTotal });
   }
@@ -29,6 +34,7 @@ export function levelLabel(context: LabelContext, t: Translate): string {
 
 export function difficultyLabel(context: LabelContext, t: Translate): string {
   if (context.mode === 'daily') return t('game.dailyLabel');
+  if (context.mode === 'training') return `${context.trainingLabel ?? ''} · ${context.rows}×${context.columns}`;
   if (context.mode === 'tutorial') return t('game.learnMeta', { rows: context.rows, columns: context.columns });
   if (!context.meta) return '';
 
@@ -50,10 +56,12 @@ export function hintLabel(context: LabelContext, t: Translate): string {
 export function isHintDisabled(context: LabelContext, won: boolean): boolean {
   if (won) return true;
   // The tutorial hands out hints freely: being stuck there is worse than being helped.
-  if (context.mode === 'tutorial') return false;
+  if (context.mode === 'tutorial' || context.mode === 'training') return false;
   return isFirstCampaignLevel(context) || context.hints <= 0;
 }
 
 export function nextLabel(mode: Mode, t: Translate): string {
-  return mode === 'daily' ? t('win.backToMenu') : t('win.nextLevel');
+  if (mode === 'daily') return t('win.backToMenu');
+  if (mode === 'training') return t('training.another');
+  return t('win.nextLevel');
 }

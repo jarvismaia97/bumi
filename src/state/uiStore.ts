@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type Mode = 'campaign' | 'daily' | 'tutorial';
+export type Mode = 'campaign' | 'daily' | 'tutorial' | 'training';
 export type Screen = 'menu' | 'game';
 
 interface UIState {
