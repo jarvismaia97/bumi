@@ -1,8 +1,9 @@
 name: Generate daily social clip
 
+# Ran daily and uploaded a review package nobody collected — a ffmpeg install and ten minutes
+# of Actions a day for an artifact that expired unread. Left runnable by hand, since the clip
+# is worth having on the days a post is actually going out.
 on:
-  schedule:
-    - cron: '5 9 * * *'
   workflow_dispatch:
     inputs:
       date:
