@@ -1,7 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
 import { apiRequest } from '@/lib/apiClient';
+import { getDailyDateKey } from '@/game/daily';
 import { normalizeFriendCode } from '@/lib/friendCode';
 
 /** One row of the board. `artist` indexes ARTISTS, so the nickname is built on the device. */
@@ -26,12 +25,6 @@ interface FriendsState {
   loading: boolean;
   busy: boolean;
   error: FriendsError | null;
-  /**
-   * When the player last looked at the board. Persisted, because "new since you last looked"
-   * has to survive the app being closed — which is exactly when someone else adds you.
-   */
-  seenAt: string | null;
-  markBoardSeen: () => void;
   load: () => Promise<void>;
   addFriend: (code: string) => Promise<boolean>;
   removeFriend: (code: string) => Promise<void>;
@@ -40,9 +33,25 @@ interface FriendsState {
   reset: () => void;
 }
 
-/** Friends added since the player last opened the board. Their own row never counts. */
-export function newFriends(entries: LeaderboardEntry[], seenAt: string | null): LeaderboardEntry[] {
-  return entries.filter(entry => !entry.isSelf && entry.addedAt && (!seenAt || entry.addedAt > seenAt));
+/**
+ * Friends who arrived today. Their own row never counts.
+ *
+ * This used to be "since you last looked", which needed a persisted mark of the last visit —
+ * and that mark is wiped by `reset` on every sign-out, so changing account made every friend
+ * new again. A day needs nothing remembered: it is read off the clock, it clears itself at
+ * midnight, and there is no state left to get out of step.
+ *
+ * The day is `getDailyDateKey`, the same boundary the daily challenge turns on, so the app has
+ * one idea of when a day ends rather than two.
+ *
+ * The trade is real: a friend added while the app sits unopened for two days is never badged.
+ * The push sent when someone uses your code is what carries that news now.
+ */
+export function newFriends(entries: LeaderboardEntry[], now: Date = new Date()): LeaderboardEntry[] {
+  const today = getDailyDateKey(now);
+  return entries.filter(
+    entry => !entry.isSelf && entry.addedAt && getDailyDateKey(new Date(entry.addedAt)) === today,
+  );
 }
 
 type BoardResponse = { code: string; entries: LeaderboardEntry[] };
@@ -54,17 +63,14 @@ function toFriendsError(error: unknown): FriendsError {
   return KNOWN_ERRORS.find(known => known === message) ?? 'offline';
 }
 
-export const useFriendsStore = create<FriendsState>()(
-  persist(
-    (set, get) => ({
+// Nothing here outlives the app any more: the board is refetched on every visit, and "new"
+// is now read off the clock rather than off a remembered visit.
+export const useFriendsStore = create<FriendsState>()((set, get) => ({
   code: null,
   entries: [],
   loading: false,
   busy: false,
   error: null,
-  seenAt: null,
-
-  markBoardSeen: () => set({ seenAt: new Date().toISOString() }),
 
   load: async () => {
     if (get().loading) return;
@@ -118,15 +124,6 @@ export const useFriendsStore = create<FriendsState>()(
 
   clearError: () => set({ error: null }),
 
-  // Signing out has to drop the board: the next account must not inherit this one's friends,
-  // nor the mark of what it had already seen.
-  reset: () => set({ code: null, entries: [], loading: false, busy: false, error: null, seenAt: null }),
-    }),
-    {
-      name: 'bumi-friends-store',
-      storage: createJSONStorage(() => AsyncStorage),
-      // Only the mark is worth keeping: the board itself is refetched on every visit.
-      partialize: state => ({ seenAt: state.seenAt }),
-    },
-  ),
-);
+  // Signing out has to drop the board: the next account must not inherit this one's friends.
+  reset: () => set({ code: null, entries: [], loading: false, busy: false, error: null }),
+}));

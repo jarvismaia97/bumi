@@ -29,21 +29,29 @@ function respond(body: unknown, status = 200) {
   });
 }
 
-describe('new friends since the last visit', () => {
-  const self = entry({ isSelf: true, code: 'MYCODE', addedAt: null });
-  const older = entry({ code: 'AAAAAA', addedAt: '2026-07-29T10:00:00.000Z' });
-  const newer = entry({ code: 'BBBBBB', addedAt: '2026-07-30T10:00:00.000Z' });
+describe('friends who arrived today', () => {
+  // Local time, because the day boundary is the daily challenge's own — midnight where the
+  // player is, not midnight in UTC.
+  const NOW = new Date(2026, 7, 4, 11, 0, 0);
+  const self = entry({ isSelf: true, code: 'MYCODE', addedAt: new Date(2026, 7, 4, 9, 0, 0).toISOString() });
+  const today = entry({ code: 'AAAAAA', addedAt: new Date(2026, 7, 4, 2, 0, 0).toISOString() });
+  const yesterday = entry({ code: 'BBBBBB', addedAt: new Date(2026, 7, 3, 23, 30, 0).toISOString() });
 
-  it('counts only what arrived after the mark', () => {
-    expect(newFriends([self, older, newer], '2026-07-29T12:00:00.000Z').map(row => row.code)).toEqual(['BBBBBB']);
+  it('badges the ones added today', () => {
+    expect(newFriends([self, today, yesterday], NOW).map(row => row.code)).toEqual(['AAAAAA']);
   });
 
-  it('counts everyone on a board the player has never opened', () => {
-    expect(newFriends([self, older, newer], null).map(row => row.code)).toEqual(['AAAAAA', 'BBBBBB']);
+  it('drops the badge once the day turns, which is what makes it clear itself', () => {
+    const tomorrow = new Date(2026, 7, 5, 0, 30, 0);
+    expect(newFriends([self, today, yesterday], tomorrow)).toEqual([]);
   });
 
-  it('never counts the player themselves', () => {
-    expect(newFriends([self], null)).toEqual([]);
+  it('never counts the player themselves, however recently the row was made', () => {
+    expect(newFriends([self], NOW)).toEqual([]);
+  });
+
+  it('ignores a row with no arrival time rather than treating it as new', () => {
+    expect(newFriends([entry({ code: 'CCCCCC', addedAt: null })], NOW)).toEqual([]);
   });
 });
 

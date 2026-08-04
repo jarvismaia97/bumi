@@ -65,9 +65,8 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
   const missedDays = countMissedDays(dailyCompletionDates);
   const friendCode = useFriendsStore(state => state.code);
   const friendEntries = useFriendsStore(state => state.entries);
-  const friendsSeenAt = useFriendsStore(state => state.seenAt);
   const loadFriends = useFriendsStore(state => state.load);
-  const arrivedCount = newFriends(friendEntries, friendsSeenAt).length;
+  const arrivedCount = newFriends(friendEntries).length;
   const { t, language } = useI18n();
   const selectedLanguage = LANGUAGE_OPTIONS.find(option => option.value === languagePreference) ?? LANGUAGE_OPTIONS[0];
   const languageValueLabel = selectedLanguage.value === 'auto' ? t('settings.languageAuto') : selectedLanguage.label;

@@ -31,19 +31,14 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
   const semantic = useSemanticTokens();
   const { t, language } = useI18n();
   const user = useAuthStore(state => state.user);
-  const { code, entries, loading, busy, error, seenAt, markBoardSeen, load, addFriend, removeFriend, rotateCode, clearError } = useFriendsStore();
-  // Read once per opening: marking the board seen must not make the badges vanish while the
-  // player is still looking at them.
-  const [seenAtOnOpen, setSeenAtOnOpen] = useState<string | null>(seenAt);
-  const arrived = new Set(newFriends(entries, seenAtOnOpen).map(entry => entry.code));
+  const { code, entries, loading, busy, error, load, addFriend, removeFriend, rotateCode, clearError } = useFriendsStore();
+  const arrived = new Set(newFriends(entries).map(entry => entry.code));
   const [input, setInput] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
 
   useImperativeHandle(ref, () => ({
     present: () => {
-      setSeenAtOnOpen(useFriendsStore.getState().seenAt);
       load();
-      markBoardSeen();
       sheetRef.current?.present();
     },
     dismiss: () => sheetRef.current?.dismiss(),
