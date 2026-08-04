@@ -31,7 +31,7 @@ export interface SemanticTokens {
   bronze: string;
 }
 
-export type ThemeName = 'classic' | 'mint' | 'violet' | 'navy' | 'rose' | 'sun';
+export type ThemeName = 'classic' | 'mint' | 'violet' | 'navy' | 'rose' | 'sun' | 'natal' | 'halloween';
 
 export type Appearance = 'light' | 'dark';
 
@@ -65,6 +65,18 @@ export const THEMES: Record<ThemeName, Record<Appearance, ThemeTokens>> = {
   sun: {
     light: { bg: '#fff9e8', surface: '#fffefa', gridSep: '#f0dfad', text: '#5f4810', sub: '#8a6e27', accent: '#976e1c' },
     dark: { bg: '#19160c', surface: '#242015', gridSep: '#3a3320', text: '#f5efdd', sub: '#bdaa7e', accent: '#dfb35b' },
+  },
+  // Seasonal, and the first two designed against `contrast.test.ts` rather than by eye alone.
+  // Both keep a saturated accent: the red is the point of the one and the pumpkin is the point
+  // of the other, and neither had to be washed out to make the clue readable — the light reds
+  // and oranges are dark enough to carry a number, the dark ones bright enough.
+  natal: {
+    light: { bg: '#f3f7f2', surface: '#ffffff', gridSep: '#d5e5d6', text: '#1c3524', sub: '#4d6a56', accent: '#c0273f' },
+    dark: { bg: '#111a14', surface: '#1a251d', gridSep: '#2b3a30', text: '#eef4ef', sub: '#a4bcab', accent: '#e35c72' },
+  },
+  halloween: {
+    light: { bg: '#fbf4ea', surface: '#fffdf9', gridSep: '#eeddc4', text: '#3a2412', sub: '#7a5a34', accent: '#bb5711' },
+    dark: { bg: '#14100f', surface: '#1f1917', gridSep: '#352a26', text: '#f5ece3', sub: '#bfa895', accent: '#f08a3c' },
   },
 };
 
@@ -119,7 +131,7 @@ export const SEMANTIC: Record<Appearance, SemanticTokens> = {
   },
 };
 
-export const THEME_OPTIONS: readonly ThemeName[] = ['classic', 'mint', 'violet', 'navy', 'rose', 'sun'];
+export const THEME_OPTIONS: readonly ThemeName[] = ['classic', 'mint', 'violet', 'navy', 'rose', 'sun', 'natal', 'halloween'];
 
 // The device scheme arrives as React Native's `ColorSchemeName`, so anything the platform
 // reports that is not an explicit `dark` is painted light.

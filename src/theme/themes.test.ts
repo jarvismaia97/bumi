@@ -22,8 +22,11 @@ const FAMILIES = ['danger', 'warning', 'success', 'info'] as const;
 const GRAPHIC_TOKENS: (keyof SemanticTokens)[] = ['streak', 'gold', 'silver', 'bronze'];
 
 describe('themes', () => {
-  it('exposes the six selectable colour themes', () => {
-    expect(THEME_OPTIONS).toEqual(['classic', 'mint', 'violet', 'navy', 'rose', 'sun']);
+  it('offers every theme it defines, in the order the picker shows them', () => {
+    // Listing them rather than counting: a theme added to `THEMES` and forgotten in
+    // `THEME_OPTIONS` exists everywhere except the one screen that would let anyone pick it.
+    expect(THEME_OPTIONS).toEqual(['classic', 'mint', 'violet', 'navy', 'rose', 'sun', 'natal', 'halloween']);
+    expect([...THEME_OPTIONS].sort()).toEqual(Object.keys(THEMES).sort());
   });
 
   it('has complete tokens for every selectable theme in both appearances', () => {

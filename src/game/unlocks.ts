@@ -24,6 +24,13 @@ export const THEME_REQUIREMENTS: Record<ThemeName, UnlockRequirement> = {
   navy: { islands: 3 },
   rose: { goldMedals: 25 },
   sun: { islands: 6 },
+  // Placeholders, and the one loose end of this pair. What these two want is the season they
+  // are named after — played the daily on a day in December, on a day in October — and that
+  // needs a requirement kind this file does not have yet. `dailyCompletionDates` already stores
+  // and syncs which days were played, so the rule is derivable like every other one here; it is
+  // only the plumbing that is missing. Until then they sit on the same ladder as the rest.
+  natal: { achievements: 6 },
+  halloween: { goldMedals: 50 },
 };
 
 export interface UnlockStats {
