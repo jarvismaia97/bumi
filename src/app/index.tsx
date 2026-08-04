@@ -452,7 +452,9 @@ export default function GameScreen() {
         levelLabel={levelLabel(labels, t)}
         diffLabel={difficultyLabel(labels, t)}
         onMenu={goToMenu}
-        onLevels={mode === 'tutorial' ? undefined : () => levelsSheetRef.current?.present()}
+        // The map lists campaign levels, so it belongs to the modes it is about. From training
+        // it was a door out of the mode rather than a way around it, and the tutorial has one path.
+        onLevels={mode === 'campaign' || mode === 'daily' ? () => levelsSheetRef.current?.present() : undefined}
         onShare={mode === 'campaign' ? onShareChallenge : mode === 'daily' ? onShareDailyChallenge : undefined}
         topInset={insets.top}
       />
