@@ -30,12 +30,11 @@ describe('celebrationDurationMs', () => {
 });
 
 describe('celebration tiers', () => {
-  it('ranks a discovered island above a gold medal above a milestone above the common medals', () => {
+  it('ranks a discovered island above a gold medal above a milestone above a silver', () => {
     expect(highestTier('island', 'gold', 'milestone')).toBe('island');
     expect(highestTier('gold', 'milestone')).toBe('gold');
     expect(highestTier('milestone', 'silver')).toBe('milestone');
-    expect(highestTier('silver', 'bronze')).toBe('silver');
-    expect(highestTier('bronze')).toBe('bronze');
+    expect(highestTier('silver')).toBe('silver');
   });
 
   it('falls back to normal when nothing special happened', () => {
@@ -43,14 +42,13 @@ describe('celebration tiers', () => {
     expect(highestTier(null, undefined)).toBe('normal');
   });
 
-  it('bursts for every medal, and harder the rarer the medal is', () => {
-    // Bronze and silver used to sit at zero with `normal`, which is why earning one of them
-    // looked like earning nothing at all.
+  it('bursts from silver up, and harder the rarer the tier is', () => {
+    // Silver used to sit at zero with `normal`, which is why spending a single hint cost the
+    // whole celebration rather than just the gold. Bronze has no tier at all, by design.
     expect(burstParticleCount('normal')).toBe(0);
-    expect(burstParticleCount('bronze')).toBeGreaterThan(0);
+    expect(burstParticleCount('silver')).toBeGreaterThan(0);
     expect(burstParticleCount('island')).toBeGreaterThan(burstParticleCount('gold'));
     expect(burstParticleCount('gold')).toBeGreaterThan(burstParticleCount('silver'));
-    expect(burstParticleCount('silver')).toBeGreaterThan(burstParticleCount('bronze'));
   });
 
   it('leaves the milestone to its double glow rather than adding a burst', () => {
@@ -66,7 +64,7 @@ describe('celebration tiers', () => {
     // The burst is shorter than the glow, so it does not extend the hold — but if either
     // timing is ever retuned, the sheet must not arrive first.
     const burstEnds = BURST_DELAY_MS + BURST_TRAVEL_MS;
-    for (const tier of ['bronze', 'silver', 'gold', 'island'] as const) {
+    for (const tier of ['silver', 'gold', 'island'] as const) {
       for (const rects of [1, 3, 8, 20]) {
         expect(celebrationDurationMs(rects, false, tier)).toBeGreaterThanOrEqual(burstEnds);
       }
@@ -75,7 +73,7 @@ describe('celebration tiers', () => {
 
   it('drops the extra hold under reduced motion, where the burst does not play', () => {
     const reduced = celebrationDurationMs(3, true, 'normal');
-    for (const tier of ['bronze', 'silver', 'milestone', 'gold', 'island'] as const) {
+    for (const tier of ['silver', 'milestone', 'gold', 'island'] as const) {
       expect(celebrationDurationMs(3, true, tier)).toBe(reduced);
     }
   });

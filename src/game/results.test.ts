@@ -42,12 +42,11 @@ describe('what a campaign solve was worth', () => {
     expect(resolveCampaignSolve({ ...clean, hintsUsed: 1, unlockedIsland: true }).tier).toBe('island');
   });
 
-  it('celebrates the lesser medals too, since every campaign solve earns one', () => {
-    // There is no medal-less solve — `getMedalForResult` answers bronze at worst — so nothing
-    // here is ever `normal` any more. That tier is left to the daily and the tutorial, which
-    // set it themselves. Earning silver used to look exactly like earning nothing.
+  it('celebrates a silver, and leaves a bronze to the plain celebration', () => {
+    // Spending one hint used to cost the whole celebration rather than just the gold. Bronze is
+    // what a solve scores when nothing about it stood out, so it stays where it was.
     expect(resolveCampaignSolve({ ...clean, hintsUsed: 1 }).tier).toBe('silver');
-    expect(resolveCampaignSolve({ ...clean, hintsUsed: 2 }).tier).toBe('bronze');
+    expect(resolveCampaignSolve({ ...clean, hintsUsed: 2 }).tier).toBe('normal');
   });
 
   it('scales the mistake budget with the board, as the medal rules do', () => {

@@ -45,11 +45,12 @@ export function resolveCampaignSolve({
     displayedMedal: isBetterMedal(medal, bestMedal) ? medal : bestMedal ?? medal,
     pointsGained: medalPointsGain(medal, bestMedal),
     // Only the fresh result earns the big celebration; replaying a solved level does not.
-    // Every medal celebrates, not just gold — bronze and silver used to look like no medal at
-    // all, which is what most solves are. `highestTier` keeps the rarest of them on screen.
+    // Silver celebrates as well as gold — spending one hint used to cost the whole celebration,
+    // not just the medal. Bronze is what a solve scores when nothing stood out, so it passes to
+    // `normal` and the board simply lights up.
     tier: highestTier(
       unlockedIsland ? 'island' : null,
-      medal,
+      medal === 'bronze' ? null : medal,
       milestone ? 'milestone' : null,
     ),
   };

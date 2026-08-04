@@ -9,14 +9,17 @@
  * Every solve used to look identical, so after a few hundred levels the celebration stopped
  * meaning anything. The tiers exist so the big one stays rare: ordered least to most.
  *
- * Bronze and silver were not among them, which meant earning a medal looked exactly like
- * earning nothing — the two most common good outcomes in the game passed unremarked. They now
- * burst too, just smaller. A milestone still outranks them: a medal is won most times a level
- * is played, and the levels the catalogue marks are fixed and few.
+ * Silver was not among them, which meant a clean solve that spent one hint looked exactly like
+ * no achievement at all. It bursts now, smaller than gold. A milestone still outranks it: a
+ * medal is won most times a level is played, and the levels the catalogue marks are fixed.
+ *
+ * Bronze has no tier on purpose. It is what a solve scores when nothing about it stood out, so
+ * `normal` is the honest answer — and a tier that burst nothing would be a distinction this
+ * file claimed without making.
  */
-export type CelebrationTier = 'normal' | 'bronze' | 'silver' | 'milestone' | 'gold' | 'island';
+export type CelebrationTier = 'normal' | 'silver' | 'milestone' | 'gold' | 'island';
 
-const TIER_RANK: Record<CelebrationTier, number> = { normal: 0, bronze: 1, silver: 2, milestone: 3, gold: 4, island: 5 };
+const TIER_RANK: Record<CelebrationTier, number> = { normal: 0, silver: 1, milestone: 2, gold: 3, island: 4 };
 
 export function highestTier(...tiers: (CelebrationTier | null | undefined)[]): CelebrationTier {
   return tiers.reduce<CelebrationTier>(
@@ -53,15 +56,14 @@ export const BURST_FADE_MS = 260;
 
 /**
  * How much of a burst each tier is worth. The counts climb rather than repeat so the rarer
- * thing still reads as the bigger one from across the room: bronze is a handful, gold is more
- * than twice it, and an island — a 20-45 level arc — is more than four times.
+ * thing still reads as the bigger one from across the room: silver is a handful, gold is more
+ * than half again, and an island — a 20-45 level arc — is nearly three times.
  *
  * None of this lengthens the wait before the win sheet. A burst is spent by
  * `BURST_DELAY_MS + BURST_TRAVEL_MS`, which is under the glow it plays over, so the hold below
  * is decided by the glow either way.
  */
-export const BURST_PARTICLES: Record<'bronze' | 'silver' | 'gold' | 'island', number> = {
-  bronze: 10,
+export const BURST_PARTICLES: Record<'silver' | 'gold' | 'island', number> = {
   silver: 16,
   gold: 26,
   island: 44,
