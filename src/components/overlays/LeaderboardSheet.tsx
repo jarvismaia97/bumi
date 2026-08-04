@@ -12,6 +12,7 @@ import { FRIEND_CODE_LENGTH } from '@/lib/friendCode';
 import { shareFriendCode } from '@/lib/friendCodeShare';
 import { playHaptic } from '@/lib/haptics';
 import { ARTISTS } from '@/lib/playerName';
+import { titleFor } from '@/game/titles';
 import { newFriends, useFriendsStore, type LeaderboardEntry } from '@/state/friendsStore';
 import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
@@ -134,7 +135,10 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
           {!loading && entries.length <= 1 && (
             <Text style={[styles.empty, { color: theme.sub }]}>{t('leaderboard.alone')}</Text>
           )}
-          {entries.map((entry, index) => (
+          {entries.map((entry, index) => {
+            const title = titleFor({ solved: entry.solved, gold: entry.medals.gold, streak: entry.streak });
+            const rowTitle = title ? t(`title.${title.id}`) : null;
+            return (
             <View
               key={entry.code ?? `entry-${index}`}
               style={[
@@ -157,7 +161,12 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                     </Text>
                   )}
                 </View>
+                {/* On this line rather than beside the name: the name already truncates against
+                    the NEW badge, and a title is permanent where that badge lasts a day. Cut
+                    from the numbers that follow it, so a friend gets one without the board
+                    having to send anything it does not already send. */}
                 <Text style={[styles.rowDetail, { color: theme.sub }]} numberOfLines={1}>
+                  {rowTitle && <Text style={{ color: theme.accent, fontWeight: '800' }}>{rowTitle} · </Text>}
                   {t('leaderboard.rowDetail', { solved: entry.solved, gold: entry.medals.gold, streak: entry.streak })}
                 </Text>
               </View>
@@ -178,7 +187,8 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                 </AnimatedPressable>
               )}
             </View>
-          ))}
+            );
+          })}
           <Text style={[styles.hint, { color: theme.sub }]}>{t('leaderboard.pointsHint')}</Text>
         </>
       )}
