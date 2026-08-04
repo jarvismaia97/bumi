@@ -1,9 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<!--
+  Every guide lists every guide, itself included: a set of alternates that does not point back
+  at each of its members is discarded whole. `x-default` is the Portuguese one, which is the
+  language the bare domain already answers in.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://www.jogarbumi.pt/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.jogarbumi.pt/como-jogar</loc>
+    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://www.jogarbumi.pt/como-jogar"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.jogarbumi.pt/how-to-play"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.jogarbumi.pt/como-jugar"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.jogarbumi.pt/como-jogar"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.jogarbumi.pt/how-to-play</loc>
+    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://www.jogarbumi.pt/como-jogar"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.jogarbumi.pt/how-to-play"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.jogarbumi.pt/como-jugar"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.jogarbumi.pt/como-jogar"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.jogarbumi.pt/como-jugar</loc>
+    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://www.jogarbumi.pt/como-jogar"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.jogarbumi.pt/how-to-play"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.jogarbumi.pt/como-jugar"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.jogarbumi.pt/como-jogar"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://www.jogarbumi.pt/privacidade</loc>
