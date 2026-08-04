@@ -47,7 +47,7 @@ export const THEMES: Record<ThemeName, Record<Appearance, ThemeTokens>> = {
     dark: { bg: '#1a1817', surface: '#252220', gridSep: '#3a3532', text: '#f2efec', sub: '#aca49d', accent: '#96acd6' },
   },
   mint: {
-    light: { bg: '#effaf5', surface: '#ffffff', gridSep: '#cde7da', text: '#174d36', sub: '#537967', accent: '#71cda5' },
+    light: { bg: '#effaf5', surface: '#ffffff', gridSep: '#cde7da', text: '#174d36', sub: '#537967', accent: '#338461' },
     dark: { bg: '#111815', surface: '#1b2520', gridSep: '#2c3a33', text: '#e7f2ec', sub: '#9db9ab', accent: '#6fc7a1' },
   },
   violet: {
@@ -59,15 +59,23 @@ export const THEMES: Record<ThemeName, Record<Appearance, ThemeTokens>> = {
     dark: { bg: '#10151c', surface: '#1a2029', gridSep: '#2b3644', text: '#e7edf6', sub: '#a2b2c7', accent: '#89aede' },
   },
   rose: {
-    light: { bg: '#fff5f8', surface: '#ffffff', gridSep: '#f0d6e0', text: '#613044', sub: '#9e5e77', accent: '#d78cab' },
+    light: { bg: '#fff5f8', surface: '#ffffff', gridSep: '#f0d6e0', text: '#613044', sub: '#9e5e77', accent: '#c14d7d' },
     dark: { bg: '#1b1316', surface: '#261c20', gridSep: '#3c2d34', text: '#f6eaee', sub: '#c39bab', accent: '#dda2bc' },
   },
   sun: {
-    light: { bg: '#fff9e8', surface: '#fffefa', gridSep: '#f0dfad', text: '#5f4810', sub: '#8a6e27', accent: '#e3ad3e' },
+    light: { bg: '#fff9e8', surface: '#fffefa', gridSep: '#f0dfad', text: '#5f4810', sub: '#8a6e27', accent: '#976e1c' },
     dark: { bg: '#19160c', surface: '#242015', gridSep: '#3a3320', text: '#f5efdd', sub: '#bdaa7e', accent: '#dfb35b' },
   },
 };
 
+// A clue on an empty cell is `accent` on `surface`, so the accent is not only decoration —
+// it is the puzzle's own numbers. Mint and sun were painting them at 1.9 and 2.0 against the
+// cell, well under the 4.5 the rest of the app is held to, and nobody reading this file would
+// have guessed that from the word "accent". Both were darkened along their own hue, the
+// lightest value that clears the bar, so they read as the same colours they were.
+//
+// It fixes a second thing on the way: the campaign card is `accent` behind white text.
+//
 // Status is not brand: a player reads "done", "careful", "gone" the same way whichever
 // palette they picked, so these vary by appearance only and no theme redefines them.
 // The dark tints are re-mixed rather than dimmed — a dimmed mint reads as grey, so the
