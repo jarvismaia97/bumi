@@ -18,6 +18,12 @@ export interface TitleStats {
 
 export interface Title {
   id: string;
+  /**
+   * Which medal colour rings the avatar. The three that already exist rather than three new
+   * ones: the board is read in medals, so a frame in the same three says its rank without
+   * anyone being told what the colours mean.
+   */
+  frame: 'gold' | 'silver' | 'bronze';
   /** The achievement this pays out. `titles.test.ts` holds the two to the same threshold. */
   achievement: string;
   reached: (stats: TitleStats) => boolean;
@@ -29,14 +35,14 @@ export interface Title {
  * takes the higher rung.
  */
 export const TITLES: readonly Title[] = [
-  { id: 'legend', achievement: 'campaign-500', reached: s => s.solved >= 500 },
-  { id: 'veteran', achievement: 'campaign-250', reached: s => s.solved >= 250 },
-  { id: 'goldsmith', achievement: 'gold-50', reached: s => s.gold >= 50 },
-  { id: 'cartographer', achievement: 'campaign-100', reached: s => s.solved >= 100 },
-  { id: 'steady', achievement: 'daily-7', reached: s => s.streak >= 7 },
-  { id: 'collector', achievement: 'gold-10', reached: s => s.gold >= 10 },
-  { id: 'explorer', achievement: 'campaign-50', reached: s => s.solved >= 50 },
-  { id: 'apprentice', achievement: 'campaign-10', reached: s => s.solved >= 10 },
+  { id: 'legend', frame: 'gold', achievement: 'campaign-500', reached: s => s.solved >= 500 },
+  { id: 'veteran', frame: 'gold', achievement: 'campaign-250', reached: s => s.solved >= 250 },
+  { id: 'goldsmith', frame: 'gold', achievement: 'gold-50', reached: s => s.gold >= 50 },
+  { id: 'cartographer', frame: 'silver', achievement: 'campaign-100', reached: s => s.solved >= 100 },
+  { id: 'steady', frame: 'silver', achievement: 'daily-7', reached: s => s.streak >= 7 },
+  { id: 'collector', frame: 'bronze', achievement: 'gold-10', reached: s => s.gold >= 10 },
+  { id: 'explorer', frame: 'bronze', achievement: 'campaign-50', reached: s => s.solved >= 50 },
+  { id: 'apprentice', frame: 'bronze', achievement: 'campaign-10', reached: s => s.solved >= 10 },
 ];
 
 /** The highest one earned, or nothing at all — a first-day player has not been anything yet. */

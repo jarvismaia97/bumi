@@ -42,3 +42,17 @@ describe('titles', () => {
     expect(titleFor({ solved: 9, gold: 0, streak: 0 })).toBeNull();
   });
 });
+
+describe('title frames', () => {
+  it('never puts a lesser metal above a greater one', () => {
+    // The list is ordered by rank, so the frames have to descend with it: a bronze above a gold
+    // would mean a higher title wearing a lower ring.
+    const rank = { gold: 3, silver: 2, bronze: 1 };
+    const ranks = TITLES.map(title => rank[title.frame]);
+    expect([...ranks].sort((a, b) => b - a)).toEqual(ranks);
+  });
+
+  it('gives every title a frame, since the ring is how the board shows rank at a glance', () => {
+    for (const title of TITLES) expect(['gold', 'silver', 'bronze']).toContain(title.frame);
+  });
+});

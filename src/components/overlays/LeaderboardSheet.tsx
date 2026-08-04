@@ -149,7 +149,7 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
               <Text style={[styles.rank, { color: theme.sub }]}>{index + 1}</Text>
               {/* Self is the only row whose account id this device knows, so only it gets the
                   real mosaic; a friend gets one seeded from the code they handed out. */}
-              <PlayerAvatarTile userId={entry.isSelf ? user.id : entry.code ?? ''} size={34} />
+              <PlayerAvatarTile userId={entry.isSelf ? user.id : entry.code ?? ''} size={34} frame={title ? semantic[title.frame] : undefined} />
               <View style={styles.rowCopy}>
                 <View style={styles.rowNameLine}>
                   <Text style={[styles.rowName, { color: theme.text }]} numberOfLines={1}>

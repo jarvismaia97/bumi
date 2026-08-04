@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { AVATAR_GRID, playerAvatar } from '@/lib/identity';
-import { PlayerAvatarTile } from './PlayerAvatar';
+import { avatarMetrics, PlayerAvatarTile } from './PlayerAvatar';
 
 // react-native-web resolves `transparent` to a fully transparent rgba, not the keyword.
 const TRANSPARENT = 'rgba(0, 0, 0, 0)';
@@ -45,5 +45,21 @@ describe('PlayerAvatarTile', () => {
   it('still renders something for a signed-out or unknown player', () => {
     const { container } = render(<PlayerAvatarTile userId={null} />);
     expect(paintedCells(container).some(Boolean)).toBe(true);
+  });
+});
+
+describe('avatar metrics', () => {
+  it('keeps the mosaic the same size framed or bare', () => {
+    // The claim the frame rests on: earning a title must not shrink the picture inside it, or a
+    // board of friends would change rhythm row by row.
+    for (const size of [34, 38, 40, 64]) {
+      expect(avatarMetrics(size, true).cellSize, `size ${size}`).toBe(avatarMetrics(size, false).cellSize);
+    }
+  });
+
+  it('spends the frame from the padding, not from the outside', () => {
+    const framed = avatarMetrics(40, true);
+    expect(framed.frameWidth).toBeGreaterThan(0);
+    expect(framed.frameWidth + framed.padding).toBe(avatarMetrics(40, false).padding);
   });
 });
