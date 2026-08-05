@@ -22,7 +22,8 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle>(function Them
   const solvedDateMap = useProgressStore(state => state.solvedDateMap);
   const levelMedals = useProgressStore(state => state.levelMedals);
   const dailyStreak = useProgressStore(state => state.dailyStreak);
-  const unlockStats = getUnlockStats({ solvedMap, solvedDateMap, levelMedals, dailyStreak: dailyStreak() });
+  const dailyCompletionDates = useProgressStore(state => state.dailyCompletionDates);
+  const unlockStats = getUnlockStats({ solvedMap, solvedDateMap, levelMedals, dailyStreak: dailyStreak() }, dailyCompletionDates);
 
   /** Says what the lock is waiting on, so it reads as a goal rather than a wall. */
   function lockHint(name: (typeof THEME_OPTIONS)[number]): string {
@@ -30,6 +31,7 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle>(function Them
     if (missing.islands) return t('theme.needIslands', { count: missing.islands, label: t(missing.islands === 1 ? 'theme.island' : 'theme.islands') });
     if (missing.achievements) return t('theme.needAchievements', { count: missing.achievements, label: t(missing.achievements === 1 ? 'theme.achievement' : 'theme.achievements') });
     if (missing.goldMedals) return t('theme.needGold', { count: missing.goldMedals });
+    if (missing.dailyInMonth) return t('theme.needSeason', { month: t(`month.${missing.dailyInMonth}`) });
     return t('theme.locked');
   }
   const themeName = useThemeStore(state => state.themeName);

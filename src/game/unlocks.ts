@@ -15,6 +15,8 @@ export interface UnlockRequirement {
   islands?: number;
   achievements?: number;
   goldMedals?: number;
+  /** Calendar month, 1-12, the daily has to have been played in. Any year counts. */
+  dailyInMonth?: number;
 }
 
 export const THEME_REQUIREMENTS: Record<ThemeName, UnlockRequirement> = {
@@ -24,26 +26,34 @@ export const THEME_REQUIREMENTS: Record<ThemeName, UnlockRequirement> = {
   navy: { islands: 3 },
   rose: { goldMedals: 25 },
   sun: { islands: 6 },
-  // Placeholders, and the one loose end of this pair. What these two want is the season they
-  // are named after — played the daily on a day in December, on a day in October — and that
-  // needs a requirement kind this file does not have yet. `dailyCompletionDates` already stores
-  // and syncs which days were played, so the rule is derivable like every other one here; it is
-  // only the plumbing that is missing. Until then they sit on the same ladder as the rest.
-  natal: { achievements: 6 },
-  halloween: { goldMedals: 50 },
+  // These two ask for the season they are named after rather than for a rung on the ladder:
+  // being there in December, being there in October. That is a different axis from skill and
+  // deliberately so — a seasonal theme means you turned up, which is the whole of what it
+  // commemorates. Any year satisfies it, so the player who played one December keeps the
+  // theme for good instead of losing it every January.
+  natal: { dailyInMonth: 12 },
+  halloween: { dailyInMonth: 10 },
 };
 
 export interface UnlockStats {
   islands: number;
   achievements: number;
   goldMedals: number;
+  /** Every month the daily was ever played in, so a season unlocks retroactively too. */
+  dailyMonths: number[];
 }
 
-export function getUnlockStats(stats: AchievementStats): UnlockStats {
+/** `YYYYMMDD`, the shape `dailyCompletionDates` is stored and synced in. */
+function monthOf(dateKey: string): number {
+  return Number(dateKey.slice(4, 6));
+}
+
+export function getUnlockStats(stats: AchievementStats, dailyCompletionDates: readonly string[] = []): UnlockStats {
   return {
     islands: getCompletedIslandCount(stats.solvedMap),
     achievements: getAchievements(stats).filter(a => a.current >= a.target).length,
     goldMedals: Object.values(stats.levelMedals).filter(medal => medal === 'gold').length,
+    dailyMonths: Array.from(new Set(dailyCompletionDates.map(monthOf))),
   };
 }
 
@@ -51,7 +61,8 @@ export function isUnlocked(requirement: UnlockRequirement, stats: UnlockStats): 
   return (
     stats.islands >= (requirement.islands ?? 0) &&
     stats.achievements >= (requirement.achievements ?? 0) &&
-    stats.goldMedals >= (requirement.goldMedals ?? 0)
+    stats.goldMedals >= (requirement.goldMedals ?? 0) &&
+    (requirement.dailyInMonth === undefined || stats.dailyMonths.includes(requirement.dailyInMonth))
   );
 }
 
@@ -61,9 +72,12 @@ export function isThemeUnlocked(name: ThemeName, stats: UnlockStats): boolean {
 
 /** How far off the player is, for the row that explains what the lock is waiting on. */
 export function remainingFor(requirement: UnlockRequirement, stats: UnlockStats): UnlockRequirement {
+  const monthMet = requirement.dailyInMonth !== undefined && stats.dailyMonths.includes(requirement.dailyInMonth);
   return {
     islands: Math.max(0, (requirement.islands ?? 0) - stats.islands) || undefined,
     achievements: Math.max(0, (requirement.achievements ?? 0) - stats.achievements) || undefined,
     goldMedals: Math.max(0, (requirement.goldMedals ?? 0) - stats.goldMedals) || undefined,
+    // Binary, not a countdown: the month is either behind the player or still to come.
+    dailyInMonth: monthMet ? undefined : requirement.dailyInMonth,
   };
 }

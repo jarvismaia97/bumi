@@ -13,8 +13,8 @@ function solveIslands(count: number): Record<number, true> {
   return solved;
 }
 
-function stats(solvedMap: Record<number, true> = {}, levelMedals: Record<number, Medal> = {}) {
-  return getUnlockStats({ solvedMap, solvedDateMap: {}, levelMedals, dailyStreak: 0 });
+function stats(solvedMap: Record<number, true> = {}, levelMedals: Record<number, Medal> = {}, dailyCompletionDates: string[] = []) {
+  return getUnlockStats({ solvedMap, solvedDateMap: {}, levelMedals, dailyStreak: 0 }, dailyCompletionDates);
 }
 
 describe('theme unlocks', () => {
@@ -45,12 +45,34 @@ describe('theme unlocks', () => {
   it('never rewards skill with hints, only with cosmetics', () => {
     // The whole point of the split: nothing here can hand out help.
     for (const requirement of Object.values(THEME_REQUIREMENTS)) {
-      expect(Object.keys(requirement).every(key => ['islands', 'achievements', 'goldMedals'].includes(key))).toBe(true);
+      expect(Object.keys(requirement).every(key => ['islands', 'achievements', 'goldMedals', 'dailyInMonth'].includes(key))).toBe(true);
     }
+  });
+
+  it('opens a seasonal theme to the daily played in its own month', () => {
+    expect(isThemeUnlocked('natal', stats({}, {}, ['20261224']))).toBe(true);
+    expect(isThemeUnlocked('halloween', stats({}, {}, ['20261031']))).toBe(true);
+    // Named for the season, so the rest of the calendar does not open it.
+    expect(isThemeUnlocked('natal', stats({}, {}, ['20261130', '20270101']))).toBe(false);
+  });
+
+  it('keeps a season earned once, in every year after it', () => {
+    // Any year satisfies the month, so December does not take the theme back in January.
+    const played = stats({}, {}, ['20251215']);
+    expect(isThemeUnlocked('natal', played)).toBe(true);
+  });
+
+  it('does not hand a season to raw skill, nor a ladder theme to the calendar', () => {
+    const master = stats(solveIslands(6), Object.fromEntries(Array.from({ length: 60 }, (_, i) => [i, 'gold' as Medal])));
+    expect(isThemeUnlocked('halloween', master)).toBe(false);
+    expect(isThemeUnlocked('rose', stats({}, {}, ['20261031']))).toBe(false);
   });
 
   it('reports what is still missing, and nothing once it is met', () => {
     expect(remainingFor({ islands: 3 }, stats(solveIslands(1))).islands).toBe(2);
     expect(remainingFor({ islands: 3 }, stats(solveIslands(3))).islands).toBeUndefined();
+    // Binary rather than a countdown: the month is named until it is behind the player.
+    expect(remainingFor({ dailyInMonth: 12 }, stats()).dailyInMonth).toBe(12);
+    expect(remainingFor({ dailyInMonth: 12 }, stats({}, {}, ['20261201'])).dailyInMonth).toBeUndefined();
   });
 });
