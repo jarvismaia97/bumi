@@ -11,6 +11,7 @@ function entry(overrides: Partial<LeaderboardEntry> = {}): LeaderboardEntry {
   return {
     code: '7K3QF2',
     addedAt: '2026-07-30T10:00:00.000Z',
+    name: null,
     artist: 0,
     points: 12,
     medals: { gold: 2, silver: 0, bronze: 2 },

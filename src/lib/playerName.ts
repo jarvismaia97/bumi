@@ -5,7 +5,8 @@
  * palette, which a serverless function has no business bundling.
  *
  * The leaderboard sends artist *indexes* rather than names, so the epithet is translated on the
- * device that shows it and no account id ever leaves the server.
+ * device that shows it and no account id ever leaves the server. This is what a board row is
+ * called at rest; the account's real name is behind a tap, and `api/friends.ts` says why.
  */
 import type { SupportedLanguage } from '../i18n/messages';
 
@@ -92,7 +93,15 @@ export function artistIndexFor(userId: string | null | undefined): number {
   return seedOf(userId) % ARTISTS.length;
 }
 
-export function playerName(userId: string | null | undefined, language: SupportedLanguage): string {
-  const artist = ARTISTS[seedOf(userId) % ARTISTS.length];
+/**
+ * A painter by index, which is what the board is sent. Taken modulo the list so a row built
+ * from an older, longer catalogue still lands on an artist instead of on undefined.
+ */
+export function artistLabel(artistIndex: number, language: SupportedLanguage): string {
+  const artist = ARTISTS[artistIndex % ARTISTS.length];
   return `${artist.name} "${artist.epithet[language]}"`;
+}
+
+export function playerName(userId: string | null | undefined, language: SupportedLanguage): string {
+  return artistLabel(seedOf(userId), language);
 }

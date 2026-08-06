@@ -8,9 +8,14 @@ import { pointsFromCounts } from '../src/game/points';
 import { resolveLanguage, translate } from '../src/i18n/messages';
 
 /**
- * The friends leaderboard. Two things this deliberately never returns: account ids and the
- * names or emails the providers gave us. A row identifies a player by their painter index, so
- * the device translates the nickname into its own language and nothing identifying travels.
+ * The friends leaderboard. A row carries the account's display name, because a board you join
+ * by handing someone a code in person is exactly where the painter nickname failed: nobody
+ * recognises "Michelangelo" as their brother. The nickname stays as the fallback for accounts
+ * with no name — Apple Sign In lets people withhold it — so every row still reads as somebody.
+ *
+ * What still never leaves: account ids and email addresses. The name reaches only the accounts
+ * on the other side of a mutual friendship, which is only ever made by someone typing a code
+ * its owner gave them. A player who wants that undone rotates the code and removes the row.
  *
  * Everything scored here comes from what the client posted to /api/progress, which is not
  * verified — a patched client can claim five hundred golds. That is acceptable for a board you
@@ -24,12 +29,25 @@ type CodeRow = { user_id: string; friend_code: string | null };
 type StatsRow = {
   user_id: string;
   friend_code: string | null;
+  name: string | null;
   gold: number | string;
   silver: number | string;
   bronze: number | string;
   solved: number | string;
   streak: number | string;
 };
+
+/**
+ * A display name worth showing, or null to fall back to the painter. Whitespace-only names come
+ * back from providers often enough to be worth the trim, and the cap is the width the row can
+ * actually paint before it truncates anyway.
+ */
+const MAX_NAME_LENGTH = 40;
+
+function displayName(name: string | null | undefined): string | null {
+  const trimmed = name?.trim();
+  return trimmed ? trimmed.slice(0, MAX_NAME_LENGTH) : null;
+}
 
 const databaseUrl = process.env.DATABASE_URL;
 /** A board of friends, not a social network: past this the screen stops being readable. */
@@ -164,6 +182,9 @@ async function statsFor(sql: Sql, userIds: string[]): Promise<StatsRow[]> {
     )
     select wanted.user_id,
       profiles.friend_code,
+      -- better-auth's own table, double-quoted because user is a reserved word in Postgres.
+      -- Left joined: a missing account row must not drop a player off their friends' boards.
+      accounts.name,
       coalesce(medals.gold, 0) as gold,
       coalesce(medals.silver, 0) as silver,
       coalesce(medals.bronze, 0) as bronze,
@@ -171,6 +192,7 @@ async function statsFor(sql: Sql, userIds: string[]): Promise<StatsRow[]> {
       coalesce(streaks.streak, 0) as streak
     from wanted
     left join profiles on profiles.user_id = wanted.user_id
+    left join "user" as accounts on accounts.id = wanted.user_id
     left join medals on medals.user_id = wanted.user_id
     left join solved on solved.user_id = wanted.user_id
     left join streaks on streaks.user_id = wanted.user_id
@@ -188,6 +210,8 @@ function toEntry(row: StatsRow, selfId: string, addedAt?: string | null) {
     code: row.friend_code,
     // When the pair was made, so the board can mark the ones the player has not seen yet.
     addedAt: addedAt ?? null,
+    name: displayName(row.name),
+    // Still sent, and still the fallback: a nameless account is a painter, not a blank row.
     artist: artistIndexFor(row.user_id),
     points: pointsFromCounts(counts),
     medals: counts,
@@ -237,7 +261,11 @@ async function notifyAdded(sql: Sql, targetId: string, adderId: string) {
     // The receiver's own setting, recorded when their device registered; the catalogue falls
     // back to Portuguese if that device never said.
     const language = resolveLanguage(rows[0].language);
-    const artist = ARTISTS[artistIndexFor(adderId)];
+    // The same identity the board will show them, so the notification and the row agree.
+    const adder = (await sql`
+      select name from "user" where id = ${adderId}
+    `) as { name: string | null }[];
+    const name = displayName(adder[0]?.name) ?? ARTISTS[artistIndexFor(adderId)].name;
 
     await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
@@ -246,7 +274,7 @@ async function notifyAdded(sql: Sql, targetId: string, adderId: string) {
         tokens.map(row => ({
           to: row.token,
           title: translate(language, 'push.friendAddedTitle'),
-          body: translate(language, 'push.friendAddedBody', { name: artist.name }),
+          body: translate(language, 'push.friendAddedBody', { name }),
           sound: 'default',
         })),
       ),

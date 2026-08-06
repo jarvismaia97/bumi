@@ -8,6 +8,8 @@ export interface LeaderboardEntry {
   code: string | null;
   /** ISO timestamp of when the pair was made, or null for the player's own row. */
   addedAt: string | null;
+  /** The account's display name, or null when it has none and the painter stands in. */
+  name: string | null;
   artist: number;
   points: number;
   medals: { gold: number; silver: number; bronze: number };

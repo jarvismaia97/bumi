@@ -11,7 +11,7 @@ import { SettingsChildSheet, type SettingsChildSheetHandle } from '@/components/
 import { FRIEND_CODE_LENGTH } from '@/lib/friendCode';
 import { shareFriendCode } from '@/lib/friendCodeShare';
 import { playHaptic } from '@/lib/haptics';
-import { ARTISTS } from '@/lib/playerName';
+import { artistLabel } from '@/lib/playerName';
 import { titleFor } from '@/game/titles';
 import { newFriends, useFriendsStore, type LeaderboardEntry } from '@/state/friendsStore';
 import { useAuthStore } from '@/state/authStore';
@@ -22,8 +22,12 @@ export type LeaderboardSheetHandle = SettingsChildSheetHandle;
 
 /** The board shows painter nicknames, the same identity the settings sheet shows. */
 function entryName(entry: LeaderboardEntry, language: SupportedLanguage): string {
-  const artist = ARTISTS[entry.artist % ARTISTS.length];
-  return `${artist.name} "${artist.epithet[language]}"`;
+  return artistLabel(entry.artist, language);
+}
+
+/** Rows are keyed by code; the player's own row has none until the server assigns one. */
+function rowKey(entry: LeaderboardEntry, index: number): string {
+  return entry.code ?? `entry-${index}`;
 }
 
 export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function LeaderboardSheet(_, ref) {
@@ -36,9 +40,17 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
   const arrived = new Set(newFriends(entries).map(entry => entry.code));
   const [input, setInput] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
+  /**
+   * Which row is showing who it really is. One at a time, and it stays until the player taps
+   * again or leaves — a timer would take the answer away mid-read, and on a board you consult
+   * rather than watch, that is the wrong kind of surprise.
+   */
+  const [revealed, setRevealed] = useState<string | null>(null);
 
   useImperativeHandle(ref, () => ({
+    // Opening on a reveal left over from last time would answer a question nobody just asked.
     present: () => {
+      setRevealed(null);
       load();
       sheetRef.current?.present();
     },
@@ -138,14 +150,39 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
           {entries.map((entry, index) => {
             const title = titleFor({ solved: entry.solved, gold: entry.medals.gold, streak: entry.streak });
             const rowTitle = title ? t(`title.${title.id}`) : null;
+            const key = rowKey(entry, index);
+            const isRevealed = revealed === key;
             return (
-            <View
-              key={entry.code ?? `entry-${index}`}
+            <AnimatedPressable
+              key={key}
+              accessibilityRole="button"
+              accessibilityLabel={entryName(entry, language)}
+              accessibilityHint={t('leaderboard.revealHint')}
+              accessibilityState={{ expanded: isRevealed }}
+              onPress={() => {
+                playHaptic('selection');
+                setRevealed(current => (current === key ? null : key));
+              }}
+              // Web only, and additive: the pointer answers without having to commit to a tap.
+              onHoverIn={() => setRevealed(key)}
+              onHoverOut={() => setRevealed(current => (current === key ? null : current))}
               style={[
                 styles.row,
                 { backgroundColor: theme.surface, borderColor: entry.isSelf ? theme.accent : theme.gridSep },
+                // Lifts the row so its bubble paints over the rows drawn after it.
+                isRevealed && styles.rowRevealed,
               ]}
             >
+              {isRevealed && (
+                <View
+                  style={[styles.tooltip, { backgroundColor: theme.text, borderColor: theme.text }]}
+                  pointerEvents="none"
+                >
+                  <Text style={[styles.tooltipText, { color: theme.surface }]} numberOfLines={2}>
+                    {entry.name ?? t('leaderboard.noName')}
+                  </Text>
+                </View>
+              )}
               <Text style={[styles.rank, { color: theme.sub }]}>{index + 1}</Text>
               {/* Self is the only row whose account id this device knows, so only it gets the
                   real mosaic; a friend gets one seeded from the code they handed out. */}
@@ -179,14 +216,20 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                   accessibilityRole="button"
                   feedback="icon"
                   style={styles.removeButton}
-                  onPress={() => { playHaptic('selection'); removeFriend(entry.code as string); }}
+                  // Native gives the touch to the inner responder, but on web the click bubbles
+                  // to the row and would toggle the reveal on the way out.
+                  onPress={event => {
+                    event.stopPropagation?.();
+                    playHaptic('selection');
+                    removeFriend(entry.code as string);
+                  }}
                   disabled={busy}
                   accessibilityLabel={t('leaderboard.remove')}
                 >
                   <Trash2 size={16} color={theme.sub} strokeWidth={2.2} />
                 </AnimatedPressable>
               )}
-            </View>
+            </AnimatedPressable>
             );
           })}
           <Text style={[styles.hint, { color: theme.sub }]}>{t('leaderboard.pointsHint')}</Text>
@@ -209,6 +252,11 @@ const styles = StyleSheet.create({
   error: { fontSize: 11, fontWeight: '700', marginTop: 8 },
   empty: { fontSize: 12, lineHeight: 17, marginTop: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8 },
+  // Only while revealed: a permanent stacking context would put every row above the one below.
+  rowRevealed: { zIndex: 2 },
+  // Anchored over the name it explains, and inert — the tap belongs to the row underneath.
+  tooltip: { position: 'absolute', left: 46, bottom: '82%', maxWidth: '76%', borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  tooltipText: { fontSize: 12, fontWeight: '800' },
   rank: { flexShrink: 0, minWidth: 16, fontSize: 12, fontWeight: '800' },
   rowCopy: { flex: 1, minWidth: 0 },
   rowNameLine: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
