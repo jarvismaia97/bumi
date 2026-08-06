@@ -14,6 +14,7 @@ export interface LocalProgress {
   hints: number;
   dailyCompletedDate: string | null;
   dailyCompletionDates: string[];
+  dailyDurations: Record<string, number>;
   levelMedals: Record<number, Medal>;
 }
 
@@ -22,6 +23,7 @@ export interface RemoteProgressState {
     hints: number;
     dailyCompletedDate: string | null;
     dailyCompletionDates: string[];
+    dailyDurations?: Record<string, number>;
   } | null;
   solvedLevelIdxs: number[];
   solvedLevelDates: Record<number, string>;
@@ -39,6 +41,24 @@ export interface MergeResult extends LocalProgress {
 function dailyDatesOf(dates: string[] | undefined, last: string | null): string[] {
   if (dates?.length) return dates;
   return last ? [last] : [];
+}
+
+/**
+ * The faster time wins per day, which is the only rule that never takes a record away. A day one
+ * side has no time for keeps the side that does: a completion without a clock is older
+ * information, not a claim that the puzzle took forever.
+ */
+function mergeDurations(
+  local: Record<string, number>,
+  remote: Record<string, number> | undefined,
+): Record<string, number> {
+  const merged = { ...(remote ?? {}) };
+  for (const [date, ms] of Object.entries(local)) {
+    if (!Number.isFinite(ms) || ms <= 0) continue;
+    const known = merged[date];
+    if (known === undefined || ms < known) merged[date] = ms;
+  }
+  return merged;
 }
 
 export function mergeProgress(local: LocalProgress, remote: RemoteProgressState): MergeResult {
@@ -68,6 +88,7 @@ export function mergeProgress(local: LocalProgress, remote: RemoteProgressState)
     hints: normalizeHintCount(Math.max(local.hints, remote.progress?.hints ?? 0)),
     dailyCompletedDate: mergedDailyDates.at(-1) ?? null,
     dailyCompletionDates: mergedDailyDates,
+    dailyDurations: mergeDurations(local.dailyDurations, remote.progress?.dailyDurations),
     levelMedals,
     newlyLocalSolved: Object.keys(local.solvedMap)
       .map(Number)

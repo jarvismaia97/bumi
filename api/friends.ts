@@ -30,6 +30,8 @@ type StatsRow = {
   user_id: string;
   friend_code: string | null;
   name: string | null;
+  daily_ms: number | string | null;
+  daily_done: boolean | null;
   gold: number | string;
   silver: number | string;
   bronze: number | string;
@@ -179,6 +181,14 @@ async function statsFor(sql: Sql, userIds: string[]): Promise<StatsRow[]> {
       from islands
       join today on today.user_id = islands.user_id and today.island = islands.island
       group by islands.user_id
+    ),
+    -- Today's puzzle is the same one for everybody, so this is the only number on the board
+    -- that compares like with like. Server date, like the streak above it: a friend playing
+    -- late reads as not started until the dates line up again.
+    daily as (
+      select user_id, duration_ms
+      from daily_completions
+      where user_id in (select user_id from wanted) and completed_date = current_date
     )
     select wanted.user_id,
       profiles.friend_code,
@@ -189,13 +199,18 @@ async function statsFor(sql: Sql, userIds: string[]): Promise<StatsRow[]> {
       coalesce(medals.silver, 0) as silver,
       coalesce(medals.bronze, 0) as bronze,
       coalesce(solved.solved, 0) as solved,
-      coalesce(streaks.streak, 0) as streak
+      coalesce(streaks.streak, 0) as streak,
+      daily.duration_ms as daily_ms,
+      -- Separate from the time: a completion recorded before the clock existed is a day done
+      -- with nothing to show, which is not the same as a day not started.
+      (daily.user_id is not null) as daily_done
     from wanted
     left join profiles on profiles.user_id = wanted.user_id
     left join "user" as accounts on accounts.id = wanted.user_id
     left join medals on medals.user_id = wanted.user_id
     left join solved on solved.user_id = wanted.user_id
     left join streaks on streaks.user_id = wanted.user_id
+    left join daily on daily.user_id = wanted.user_id
   `) as StatsRow[];
 }
 
@@ -217,6 +232,9 @@ function toEntry(row: StatsRow, selfId: string, addedAt?: string | null) {
     medals: counts,
     solved: Number(row.solved),
     streak: Number(row.streak),
+    // Today's daily: whether it is done, and how long it took when that was recorded.
+    dailyDone: Boolean(row.daily_done),
+    dailyMs: row.daily_ms === null ? null : Number(row.daily_ms),
     isSelf: row.user_id === selfId,
   };
 }

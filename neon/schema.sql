@@ -72,6 +72,15 @@ create table if not exists daily_completions (
 
 create index if not exists daily_completions_user_id_idx on daily_completions (user_id);
 
+-- How long the puzzle took, in milliseconds. Nullable on purpose: every completion recorded
+-- before the clock was kept has no time and never will, and a day solved offline by an old
+-- client still arrives without one.
+alter table daily_completions add column if not exists duration_ms integer;
+
+-- The board reads today's row for every friend at once, which is the whole of the daily
+-- comparison; without this it is a scan of the table per visit.
+create index if not exists daily_completions_date_idx on daily_completions (completed_date, user_id);
+
 create table if not exists level_medals (
   user_id text not null,
   level_idx integer not null,

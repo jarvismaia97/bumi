@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from './authStore';
-import { newFriends, useFriendsStore, type LeaderboardEntry } from './friendsStore';
+import { newFriends, sortForView, useFriendsStore, type LeaderboardEntry } from './friendsStore';
 
 vi.mock('@/lib/auth-client', () => ({
   authClient: { getCookie: () => null, getSession: vi.fn(), signOut: vi.fn(), deleteUser: vi.fn() },
@@ -17,6 +17,8 @@ function entry(overrides: Partial<LeaderboardEntry> = {}): LeaderboardEntry {
     medals: { gold: 2, silver: 0, bronze: 2 },
     solved: 4,
     streak: 1,
+    dailyDone: false,
+    dailyMs: null,
     isSelf: false,
     ...overrides,
   };
@@ -122,5 +124,35 @@ describe('friends store', () => {
 
     expect(useFriendsStore.getState().code).toBeNull();
     expect(useFriendsStore.getState().entries).toEqual([]);
+  });
+});
+
+describe('the board sorted by today', () => {
+  it('puts the fastest first', () => {
+    const rows = [
+      entry({ code: 'SLOW', dailyDone: true, dailyMs: 90_000 }),
+      entry({ code: 'FAST', dailyDone: true, dailyMs: 30_000 }),
+    ];
+    expect(sortForView(rows, 'daily').map(row => row.code)).toEqual(['FAST', 'SLOW']);
+  });
+
+  it('ranks a finish with no recorded time behind every finish that has one', () => {
+    // Completions predate the clock, and they still beat not having played at all.
+    const rows = [
+      entry({ code: 'NOTIME', dailyDone: true, dailyMs: null }),
+      entry({ code: 'PENDING', dailyDone: false, dailyMs: null }),
+      entry({ code: 'TIMED', dailyDone: true, dailyMs: 120_000 }),
+    ];
+    expect(sortForView(rows, 'daily').map(row => row.code)).toEqual(['TIMED', 'NOTIME', 'PENDING']);
+  });
+
+  it('breaks a tie among the unplayed by points, so the tail is not arbitrary', () => {
+    const rows = [entry({ code: 'LOW', points: 3 }), entry({ code: 'HIGH', points: 90 })];
+    expect(sortForView(rows, 'daily').map(row => row.code)).toEqual(['HIGH', 'LOW']);
+  });
+
+  it('leaves the points view exactly as the server ordered it', () => {
+    const rows = [entry({ code: 'A' }), entry({ code: 'B' })];
+    expect(sortForView(rows, 'points')).toBe(rows);
   });
 });

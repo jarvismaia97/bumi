@@ -8,7 +8,22 @@ type ProgressPayload = {
   hints?: number;
   dailyCompletedDate?: string | null;
   dailyCompletionDates?: string[];
+  /** Milliseconds per daily, keyed by the puzzle's own `YYYYMMDD`. Sparse by design. */
+  dailyDurations?: Record<string, number>;
 };
+
+/**
+ * A day's time as the database will take it, or null to leave the column alone. Anything that
+ * is not a positive whole number of milliseconds under a day is a client bug or a lie, and a
+ * board sorted by the smallest number is exactly where a lie would be rewarded.
+ */
+const MAX_DURATION_MS = 24 * 60 * 60 * 1000;
+
+function toDurationMs(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  const rounded = Math.round(value);
+  return rounded > 0 && rounded < MAX_DURATION_MS ? rounded : null;
+}
 
 type PostBody = {
   progress?: ProgressPayload;
@@ -18,7 +33,7 @@ type PostBody = {
 
 /** Neon returns untyped rows, so the shape of each query is declared where it is read. */
 type ProgressRow = { hints: number; daily_completed_date: string | Date | null };
-type DailyRow = { completed_date: string | Date | null };
+type DailyRow = { completed_date: string | Date | null; duration_ms: number | string | null };
 type SolvedRow = { level_idx: number; solved_at: string | Date | null };
 type MedalRow = { level_idx: number; medal: Medal };
 
@@ -99,7 +114,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         order by level_idx asc
       `,
       sql`
-        select completed_date
+        select completed_date, duration_ms
         from daily_completions
         where user_id = ${userId}
         order by completed_date asc
@@ -119,6 +134,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             hints: normalizeHintCount(progress.hints),
             dailyCompletedDate: fromPgDate(progress.daily_completed_date),
             dailyCompletionDates: (dailyRows as DailyRow[]).map(row => fromPgDate(row.completed_date)).filter(Boolean),
+            // Only the days that have a time; the rest stay absent rather than arriving as zero,
+            // which the board would otherwise read as the fastest solve ever recorded.
+            dailyDurations: Object.fromEntries(
+              (dailyRows as DailyRow[])
+                .map(row => [fromPgDate(row.completed_date), toDurationMs(Number(row.duration_ms))] as const)
+                .filter(([date, ms]) => date && ms !== null),
+            ),
           }
         : null,
       solvedLevelIdxs: (solvedRows as SolvedRow[]).map(row => row.level_idx),
@@ -166,11 +188,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .filter(date => /^\d{8}$/.test(date));
 
     if (dailyCompletionDates.length) {
+      // Date and time go in together so a first completion carries its own clock, and a
+      // repeat only ever lowers the record: `least` ignores a null on either side, so a day
+      // that already has a time cannot be blanked by a client that forgot to send one.
+      const durations = body.progress?.dailyDurations ?? {};
+      const rows = dailyCompletionDates.map(date => ({
+        completed_date: toPgDate(date),
+        duration_ms: toDurationMs(durations[date]),
+      }));
+
       writes.push(sql`
-        insert into daily_completions (user_id, completed_date)
-        select ${userId}, item.completed_date::date
-        from jsonb_array_elements_text(${JSON.stringify(dailyCompletionDates)}::jsonb) as item(completed_date)
-        on conflict (user_id, completed_date) do nothing
+        insert into daily_completions (user_id, completed_date, duration_ms)
+        select ${userId}, (item->>'completed_date')::date, (item->>'duration_ms')::int
+        from jsonb_array_elements(${JSON.stringify(rows)}::jsonb) as item
+        on conflict (user_id, completed_date) do update set
+          duration_ms = least(daily_completions.duration_ms, excluded.duration_ms)
       `);
     }
 

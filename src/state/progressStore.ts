@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { getDailyDateKey, getDailyStreak } from '@/game/daily';
+import { bestDuration, getDailyDateKey, getDailyStreak } from '@/game/daily';
 import { INITIAL_HINTS, isMilestoneLevel, MAX_HINTS, normalizeHintCount } from '@/game/hints';
 import { goalRewardHints, goalsCompletedBy } from '@/game/goals';
 import { isBetterMedal, type Medal } from '@/game/medals';
@@ -37,12 +37,18 @@ interface ProgressState {
   hints: number;
   dailyCompletedDate: string | null;
   dailyCompletionDates: string[];
+  /**
+   * How long each daily took, keyed by the puzzle's own date. Sparse against
+   * `dailyCompletionDates`: days solved before the clock was kept, or by a client that did not
+   * send one, are completions with no time and stay that way.
+   */
+  dailyDurations: Record<string, number>;
   levelMedals: Record<number, Medal>;
   iosInstallPromptSeen: boolean;
   dailyReminderEnabled: boolean;
   markSolved: (idx: number) => boolean; // returns true if this was a new solve
   spendHint: () => void;
-  markDailyDone: (dateKey?: string) => void;
+  markDailyDone: (dateKey?: string, durationMs?: number) => void;
   isDailyDoneToday: () => boolean;
   dailyStreak: () => number;
   setLevelMedal: (idx: number, medal: Medal) => boolean;
@@ -67,6 +73,7 @@ export const useProgressStore = create<ProgressState>()(
       hints: INITIAL_HINTS,
       dailyCompletedDate: null,
       dailyCompletionDates: [],
+      dailyDurations: {},
       levelMedals: {},
       iosInstallPromptSeen: false,
       dailyReminderEnabled: false,
@@ -91,7 +98,7 @@ export const useProgressStore = create<ProgressState>()(
        * towards the month and can close a gap in the streak — the streak asks whether each
        * day's puzzle is done, not whether the app was opened that day.
        */
-      markDailyDone: (dateKey = getDailyDateKey()) => {
+      markDailyDone: (dateKey = getDailyDateKey(), durationMs?: number) => {
         set(s => {
           // Paid on the transition, like a milestone level, so no record of which goals were
           // already rewarded has to be kept or synced.
@@ -100,6 +107,7 @@ export const useProgressStore = create<ProgressState>()(
             // Only today's puzzle changes what "done today" means.
             dailyCompletedDate: dateKey === getDailyDateKey() ? dateKey : s.dailyCompletedDate,
             dailyCompletionDates: Array.from(new Set([...s.dailyCompletionDates, dateKey])).sort(),
+            dailyDurations: bestDuration(s.dailyDurations, dateKey, durationMs),
             hints: normalizeHintCount(s.hints + reward),
           };
         });
@@ -135,6 +143,7 @@ export const useProgressStore = create<ProgressState>()(
         hints: INITIAL_HINTS,
         dailyCompletedDate: null,
         dailyCompletionDates: [],
+        dailyDurations: {},
         levelMedals: {},
         progressOwnerId: null,
       }),
@@ -149,6 +158,7 @@ export const useProgressStore = create<ProgressState>()(
         hints: INITIAL_HINTS,
         dailyCompletedDate: null,
         dailyCompletionDates: [],
+        dailyDurations: {},
         levelMedals: {},
         iosInstallPromptSeen: false,
         dailyReminderEnabled: false,

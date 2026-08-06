@@ -15,6 +15,7 @@ async function pushProgress(): Promise<void> {
       hints: s.hints,
       dailyCompletedDate: s.dailyCompletedDate,
       dailyCompletionDates: s.dailyCompletionDates,
+      dailyDurations: s.dailyDurations,
     },
   });
 }
@@ -157,7 +158,10 @@ export function initProgressSync(): void {
     if (
       state.hints !== prevState.hints ||
       state.dailyCompletedDate !== prevState.dailyCompletedDate ||
-      state.dailyCompletionDates !== prevState.dailyCompletionDates
+      state.dailyCompletionDates !== prevState.dailyCompletionDates ||
+      // A replayed archive day can better a time without adding a date, and that improvement
+      // is worth as much as the completion was.
+      state.dailyDurations !== prevState.dailyDurations
     ) {
       requestSync();
     }

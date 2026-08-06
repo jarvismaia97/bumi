@@ -15,7 +15,31 @@ export interface LeaderboardEntry {
   medals: { gold: number; silver: number; bronze: number };
   solved: number;
   streak: number;
+  /** Whether today's daily is done, and how long it took when a time was recorded. */
+  dailyDone: boolean;
+  dailyMs: number | null;
   isSelf: boolean;
+}
+
+/**
+ * The board's two contests. Points are the whole record, which a friend who joined today can
+ * never win; today's daily is the same puzzle for everyone and starts level every morning,
+ * which is the only version of the board a new player has a reason to open.
+ */
+export type BoardView = 'points' | 'daily';
+
+/**
+ * Fastest first, then the ones who finished without a recorded time, then everyone still to
+ * play — sorted among themselves by points, so the tail is not arbitrary.
+ */
+export function sortForView(entries: LeaderboardEntry[], view: BoardView): LeaderboardEntry[] {
+  if (view === 'points') return entries;
+  return [...entries].sort((a, b) => {
+    if (a.dailyDone !== b.dailyDone) return a.dailyDone ? -1 : 1;
+    if (a.dailyMs !== null && b.dailyMs !== null) return a.dailyMs - b.dailyMs;
+    if (a.dailyMs !== b.dailyMs) return a.dailyMs === null ? 1 : -1;
+    return b.points - a.points;
+  });
 }
 
 /** The reasons an add can fail that the player can do something about. */

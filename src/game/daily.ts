@@ -8,6 +8,23 @@ export function getDailyDateKey(d: Date = new Date()): string {
 }
 
 /**
+ * Records a daily's time, keeping the better of the two when one is already there. Replaying a
+ * day from the archive should be able to improve a time and never to spoil one, and a call with
+ * no time at all — an older screen, a path that does not measure — must leave the record alone.
+ */
+export function bestDuration(
+  durations: Record<string, number>,
+  dateKey: string,
+  durationMs: number | undefined,
+): Record<string, number> {
+  if (durationMs === undefined || !Number.isFinite(durationMs) || durationMs <= 0) return durations;
+  const rounded = Math.round(durationMs);
+  const current = durations[dateKey];
+  if (current !== undefined && current <= rounded) return durations;
+  return { ...durations, [dateKey]: rounded };
+}
+
+/**
  * Consecutive days ending today, or ending yesterday while today is still open. Counting
  * strictly from today read zero every morning: a player on an eight-day run opened the app and
  * was told to start a streak, and it only came back once they had played. The reminder the app

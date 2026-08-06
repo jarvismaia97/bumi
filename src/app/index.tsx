@@ -255,7 +255,7 @@ export default function GameScreen() {
           // Read before marking: afterwards today is already in the list and the transition
           // that earned the reward is gone.
           const closed = goalsCompletedBy(dailyCompletionDates, dailyChallengeDate);
-          progressActions.markDailyDone(dailyChallengeDate);
+          progressActions.markDailyDone(dailyChallengeDate, durationMs);
           tier = highestTier(
             closed.monthly ? 'island' : null,
             closed.weekly ? 'gold' : null,

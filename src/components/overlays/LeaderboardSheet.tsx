@@ -3,6 +3,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import Copy from 'lucide-react-native/icons/copy';
 import RefreshCw from 'lucide-react-native/icons/refresh-cw';
 import Trash2 from 'lucide-react-native/icons/trash-2';
+import Timer from 'lucide-react-native/icons/timer';
 import Trophy from 'lucide-react-native/icons/trophy';
 import UserPlus from 'lucide-react-native/icons/user-plus';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
@@ -13,7 +14,8 @@ import { shareFriendCode } from '@/lib/friendCodeShare';
 import { playHaptic } from '@/lib/haptics';
 import { artistLabel } from '@/lib/playerName';
 import { titleFor } from '@/game/titles';
-import { newFriends, useFriendsStore, type LeaderboardEntry } from '@/state/friendsStore';
+import { newFriends, sortForView, useFriendsStore, type BoardView, type LeaderboardEntry } from '@/state/friendsStore';
+import { formatResultDuration } from '@/game/medals';
 import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useI18n, type SupportedLanguage } from '@/i18n';
@@ -46,6 +48,8 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
    * rather than watch, that is the wrong kind of surprise.
    */
   const [revealed, setRevealed] = useState<string | null>(null);
+  const [view, setView] = useState<BoardView>('points');
+  const ordered = sortForView(entries, view);
 
   useImperativeHandle(ref, () => ({
     // Opening on a reveal left over from last time would answer a question nobody just asked.
@@ -143,11 +147,32 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
           {!!error && <Text style={[styles.error, { color: semantic.danger }]}>{t(`leaderboard.error.${error}`)}</Text>}
 
           <Text style={[styles.sectionTitle, { color: theme.sub }]}>{t('leaderboard.board')}</Text>
+          {/* Two contests, one board. Picking one only reorders and relabels what is already
+              loaded, so switching costs nothing and never waits on the network. */}
+          <View style={[styles.viewSwitch, { borderColor: theme.gridSep }]}>
+            {(['points', 'daily'] as const).map(option => {
+              const active = view === option;
+              return (
+                <AnimatedPressable
+                  key={option}
+                  accessibilityRole="button"
+                  feedback="control"
+                  accessibilityState={{ selected: active }}
+                  style={[styles.viewOption, active && { backgroundColor: theme.accent }]}
+                  onPress={() => { playHaptic('selection'); setView(option); }}
+                >
+                  <Text style={[styles.viewLabel, { color: active ? '#fff' : theme.sub }]}>
+                    {t(`leaderboard.view.${option}`)}
+                  </Text>
+                </AnimatedPressable>
+              );
+            })}
+          </View>
           {loading && !entries.length && <Text style={[styles.empty, { color: theme.sub }]}>{t('game.preparing')}</Text>}
           {!loading && entries.length <= 1 && (
             <Text style={[styles.empty, { color: theme.sub }]}>{t('leaderboard.alone')}</Text>
           )}
-          {entries.map((entry, index) => {
+          {ordered.map((entry, index) => {
             const title = titleFor({ solved: entry.solved, gold: entry.medals.gold, streak: entry.streak });
             const rowTitle = title ? t(`title.${title.id}`) : null;
             const key = rowKey(entry, index);
@@ -204,12 +229,29 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                     having to send anything it does not already send. */}
                 <Text style={[styles.rowDetail, { color: theme.sub }]} numberOfLines={1}>
                   {rowTitle && <Text style={{ color: theme.accent, fontWeight: '800' }}>{rowTitle} · </Text>}
-                  {t('leaderboard.rowDetail', { solved: entry.solved, gold: entry.medals.gold, streak: entry.streak })}
+                  {view === 'daily'
+                    ? entry.dailyDone
+                      ? t('leaderboard.dailyDone')
+                      : t('leaderboard.dailyPending')
+                    : t('leaderboard.rowDetail', { solved: entry.solved, gold: entry.medals.gold, streak: entry.streak })}
                 </Text>
               </View>
               <View style={styles.rowPoints}>
-                <Trophy size={13} color={semantic.gold} strokeWidth={2.4} />
-                <Text style={[styles.points, { color: theme.text }]}>{entry.points}</Text>
+                {view === 'daily' ? (
+                  <>
+                    <Timer size={13} color={entry.dailyDone ? semantic.success : theme.sub} strokeWidth={2.4} />
+                    {/* A dash rather than a zero: a day not yet played is an unknown time, and
+                        a zero would sort and read as the fastest solve on the board. */}
+                    <Text style={[styles.points, { color: entry.dailyDone ? theme.text : theme.sub }]}>
+                      {entry.dailyMs === null ? '—' : formatResultDuration(entry.dailyMs)}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Trophy size={13} color={semantic.gold} strokeWidth={2.4} />
+                    <Text style={[styles.points, { color: theme.text }]}>{entry.points}</Text>
+                  </>
+                )}
               </View>
               {!entry.isSelf && !!entry.code && (
                 <AnimatedPressable
@@ -232,7 +274,9 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
             </AnimatedPressable>
             );
           })}
-          <Text style={[styles.hint, { color: theme.sub }]}>{t('leaderboard.pointsHint')}</Text>
+          <Text style={[styles.hint, { color: theme.sub }]}>
+            {t(view === 'daily' ? 'leaderboard.dailyHint' : 'leaderboard.pointsHint')}
+          </Text>
         </>
       )}
     </SettingsChildSheet>
@@ -254,6 +298,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8 },
   // Only while revealed: a permanent stacking context would put every row above the one below.
   rowRevealed: { zIndex: 2 },
+  viewSwitch: { flexDirection: 'row', gap: 4, borderWidth: 1.5, borderRadius: 8, padding: 3, marginBottom: 10 },
+  viewOption: { flex: 1, minHeight: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 6 },
+  viewLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
   // Anchored over the name it explains, and inert — the tap belongs to the row underneath.
   tooltip: { position: 'absolute', left: 46, bottom: '82%', maxWidth: '76%', borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
   tooltipText: { fontSize: 12, fontWeight: '800' },
