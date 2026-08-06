@@ -15,6 +15,7 @@ import { IOSInstallPromptSheet, type IOSInstallPromptSheetHandle } from '@/compo
 import { TrainingSheet, type TrainingSheetHandle } from '@/components/overlays/TrainingSheet';
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
 import { formatDuration, getDailyDateKey, getDailyLevel, getDailyStreak, getNextDailyInMs } from '@/game/daily';
+import { isFreezeProtecting } from '@/game/streakFreeze';
 import { getMonthlyProgress, getWeeklyProgress, goalsCompletedBy, isStreakMilestone } from '@/game/goals';
 import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
 import { isCampaignLevelUnlocked, requiresCampaignLogin } from '@/game/access';
@@ -72,12 +73,16 @@ export default function GameScreen() {
   const hints = useProgressStore(state => state.hints);
   const dailyCompletionDates = useProgressStore(state => state.dailyCompletionDates);
   const dailyCompletedDate = useProgressStore(state => state.dailyCompletedDate);
+  const streakFreezes = useProgressStore(state => state.streakFreezes);
   const iosInstallPromptSeen = useProgressStore(state => state.iosInstallPromptSeen);
   // Actions never change identity, so they are read once rather than subscribed to.
   const progressActions = useProgressStore.getState();
 
   const solvedCount = Object.keys(solvedMap).length;
-  const dailyStreak = getDailyStreak(dailyCompletionDates);
+  // Frozen days count towards the run and towards nothing else, so the weekly and monthly
+  // goals below still read only the days that were actually played.
+  const dailyStreak = getDailyStreak([...dailyCompletionDates, ...streakFreezes]);
+  const freezeHeld = isFreezeProtecting(dailyCompletionDates, streakFreezes);
   const dailyDoneToday = dailyCompletedDate === getDailyDateKey();
   const isSolvedByIndex = (idx: number) => !!solvedMap[idx];
   const getLevelMedalByIndex = (idx: number) => levelMedals[idx];
@@ -334,6 +339,7 @@ export default function GameScreen() {
       <MenuScreen
         dailyDone={dailyDoneToday}
         dailyStreak={dailyStreak}
+        freezeHeld={freezeHeld}
         weekly={getWeeklyProgress(dailyCompletionDates)}
         monthly={getMonthlyProgress(dailyCompletionDates)}
         solvedCount={solvedCount}

@@ -10,6 +10,8 @@ type ProgressPayload = {
   dailyCompletionDates?: string[];
   /** Milliseconds per daily, keyed by the puzzle's own `YYYYMMDD`. Sparse by design. */
   dailyDurations?: Record<string, number>;
+  /** Days a streak freeze covered. Kept apart from completions on purpose; see the schema. */
+  streakFreezes?: string[];
 };
 
 /**
@@ -34,6 +36,7 @@ type PostBody = {
 /** Neon returns untyped rows, so the shape of each query is declared where it is read. */
 type ProgressRow = { hints: number; daily_completed_date: string | Date | null };
 type DailyRow = { completed_date: string | Date | null; duration_ms: number | string | null };
+type FreezeRow = { frozen_date: string | Date | null };
 type SolvedRow = { level_idx: number; solved_at: string | Date | null };
 type MedalRow = { level_idx: number; medal: Medal };
 
@@ -101,7 +104,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sql = neon(databaseUrl);
 
   if (req.method === 'GET') {
-    const [progressRows, solvedRows, dailyRows, medalRows] = await Promise.all([
+    const [progressRows, solvedRows, dailyRows, medalRows, freezeRows] = await Promise.all([
       sql`
         select hints, daily_completed_date
         from user_progress
@@ -124,6 +127,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         from level_medals
         where user_id = ${userId}
       `,
+      sql`
+        select frozen_date
+        from streak_freezes
+        where user_id = ${userId}
+        order by frozen_date asc
+      `,
     ]);
 
     const progress = progressRows[0] as ProgressRow | undefined;
@@ -141,6 +150,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 .map(row => [fromPgDate(row.completed_date), toDurationMs(Number(row.duration_ms))] as const)
                 .filter(([date, ms]) => date && ms !== null),
             ),
+            streakFreezes: (freezeRows as FreezeRow[]).map(row => fromPgDate(row.frozen_date)).filter(Boolean),
           }
         : null,
       solvedLevelIdxs: (solvedRows as SolvedRow[]).map(row => row.level_idx),
@@ -203,6 +213,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         from jsonb_array_elements(${JSON.stringify(rows)}::jsonb) as item
         on conflict (user_id, completed_date) do update set
           duration_ms = least(daily_completions.duration_ms, excluded.duration_ms)
+      `);
+    }
+
+    const streakFreezes = [...new Set(body.progress?.streakFreezes ?? [])]
+      .filter(date => /^\d{8}$/.test(date));
+
+    if (streakFreezes.length) {
+      // Insert only: a freeze that was spent stays spent, so the month it belongs to cannot be
+      // handed back by a client that forgot about it.
+      writes.push(sql`
+        insert into streak_freezes (user_id, frozen_date)
+        select ${userId}, item.frozen_date::date
+        from jsonb_array_elements_text(${JSON.stringify(streakFreezes)}::jsonb) as item(frozen_date)
+        on conflict (user_id, frozen_date) do nothing
       `);
     }
 

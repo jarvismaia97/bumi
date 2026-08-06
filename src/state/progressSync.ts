@@ -16,6 +16,7 @@ async function pushProgress(): Promise<void> {
       dailyCompletedDate: s.dailyCompletedDate,
       dailyCompletionDates: s.dailyCompletionDates,
       dailyDurations: s.dailyDurations,
+      streakFreezes: s.streakFreezes,
     },
   });
 }
@@ -161,7 +162,8 @@ export function initProgressSync(): void {
       state.dailyCompletionDates !== prevState.dailyCompletionDates ||
       // A replayed archive day can better a time without adding a date, and that improvement
       // is worth as much as the completion was.
-      state.dailyDurations !== prevState.dailyDurations
+      state.dailyDurations !== prevState.dailyDurations ||
+      state.streakFreezes !== prevState.streakFreezes
     ) {
       requestSync();
     }

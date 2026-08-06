@@ -45,6 +45,7 @@ async function createAuth() {
               progressPool.query('delete from user_progress where user_id = $1', [user.id]),
               progressPool.query('delete from solved_levels where user_id = $1', [user.id]),
               progressPool.query('delete from daily_completions where user_id = $1', [user.id]),
+              progressPool.query('delete from streak_freezes where user_id = $1', [user.id]),
               progressPool.query('delete from level_medals where user_id = $1', [user.id]),
               // Both directions: the friend's own row points back at an account that is gone,
               // and leaving it would keep a dead entry on their board.

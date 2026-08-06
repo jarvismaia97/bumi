@@ -152,10 +152,17 @@ async function statsFor(sql: Sql, userIds: string[]): Promise<StatsRow[]> {
       where user_id in (select user_id from wanted)
       group by user_id
     ),
+    -- Frozen days join the played ones here and nowhere else, so a friend's streak on this
+    -- board reads the same number their own device shows them.
     days as (
       select distinct user_id, completed_date
-      from daily_completions
-      where user_id in (select user_id from wanted)
+      from (
+        select user_id, completed_date from daily_completions
+        where user_id in (select user_id from wanted)
+        union all
+        select user_id, frozen_date as completed_date from streak_freezes
+        where user_id in (select user_id from wanted)
+      ) as all_days
     ),
     islands as (
       select user_id, completed_date,

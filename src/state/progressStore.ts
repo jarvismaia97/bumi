@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { bestDuration, getDailyDateKey, getDailyStreak } from '@/game/daily';
 import { INITIAL_HINTS, isMilestoneLevel, MAX_HINTS, normalizeHintCount } from '@/game/hints';
 import { goalRewardHints, goalsCompletedBy } from '@/game/goals';
+import { claimFreeze } from '@/game/streakFreeze';
 import { isBetterMedal, type Medal } from '@/game/medals';
 
 const CAMPAIGN_CATALOG_VERSION = 3;
@@ -43,6 +44,12 @@ interface ProgressState {
    * send one, are completions with no time and stay that way.
    */
   dailyDurations: Record<string, number>;
+  /**
+   * Days a freeze covered. Counted by the streak and by nothing else: they are not in
+   * `dailyCompletionDates` because a frozen day was forgiven, not played, and the weekly and
+   * monthly goals pay hints for days that were played.
+   */
+  streakFreezes: string[];
   levelMedals: Record<number, Medal>;
   iosInstallPromptSeen: boolean;
   dailyReminderEnabled: boolean;
@@ -51,6 +58,8 @@ interface ProgressState {
   markDailyDone: (dateKey?: string, durationMs?: number) => void;
   isDailyDoneToday: () => boolean;
   dailyStreak: () => number;
+  /** Returns whether a freeze was taken, so the caller can say so. */
+  claimStreakFreeze: () => boolean;
   setLevelMedal: (idx: number, medal: Medal) => boolean;
   getLevelMedal: (idx: number) => Medal | undefined;
   isSolved: (idx: number) => boolean;
@@ -74,6 +83,7 @@ export const useProgressStore = create<ProgressState>()(
       dailyCompletedDate: null,
       dailyCompletionDates: [],
       dailyDurations: {},
+      streakFreezes: [],
       levelMedals: {},
       iosInstallPromptSeen: false,
       dailyReminderEnabled: false,
@@ -115,7 +125,20 @@ export const useProgressStore = create<ProgressState>()(
 
       isDailyDoneToday: () => get().dailyCompletedDate === getDailyDateKey(),
 
-      dailyStreak: () => getDailyStreak(get().dailyCompletionDates),
+      // Frozen days count here and only here, which is the whole of what a freeze buys.
+      dailyStreak: () => getDailyStreak([...get().dailyCompletionDates, ...get().streakFreezes]),
+
+      /**
+       * Takes the month's freeze if a gap has opened that it can cover. Idempotent, so the app
+       * can call it on every resume without having to remember whether it already did.
+       */
+      claimStreakFreeze: () => {
+        const { dailyCompletionDates, streakFreezes } = get();
+        const claimed = claimFreeze(dailyCompletionDates, streakFreezes);
+        if (claimed === streakFreezes) return false;
+        set({ streakFreezes: claimed });
+        return true;
+      },
 
       setLevelMedal: (idx, medal) => {
         const current = get().levelMedals[idx];
@@ -144,6 +167,7 @@ export const useProgressStore = create<ProgressState>()(
         dailyCompletedDate: null,
         dailyCompletionDates: [],
         dailyDurations: {},
+        streakFreezes: [],
         levelMedals: {},
         progressOwnerId: null,
       }),
@@ -159,6 +183,7 @@ export const useProgressStore = create<ProgressState>()(
         dailyCompletedDate: null,
         dailyCompletionDates: [],
         dailyDurations: {},
+        streakFreezes: [],
         levelMedals: {},
         iosInstallPromptSeen: false,
         dailyReminderEnabled: false,

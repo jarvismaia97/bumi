@@ -3,7 +3,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -43,6 +43,8 @@ export default function RootLayout() {
   const dailyReminderEnabled = useProgressStore(s => s.dailyReminderEnabled);
   const dailyCompletedDate = useProgressStore(s => s.dailyCompletedDate);
   const dailyCompletionDates = useProgressStore(s => s.dailyCompletionDates);
+  const streakFreezes = useProgressStore(s => s.streakFreezes);
+  const claimStreakFreeze = useProgressStore(s => s.claimStreakFreeze);
   const appearance = useAppearance();
   const theme = useThemeTokens();
   const semantic = useSemanticTokens();
@@ -89,16 +91,29 @@ export default function RootLayout() {
   // Re-armed on launch and whenever the day's state changes: the schedule depends on
   // whether today is already played and on how long the streak is, and iOS only lets the
   // app schedule while it is running.
+  /**
+   * A missed day is covered before anything else reads the streak, so the reminder below and
+   * every screen agree on one number. Idempotent, and it runs again when the app comes back:
+   * a phone left open overnight crosses midnight without remounting anything.
+   */
+  useEffect(() => {
+    claimStreakFreeze();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') claimStreakFreeze();
+    });
+    return () => subscription.remove();
+  }, [claimStreakFreeze]);
+
   useEffect(() => {
     if (!dailyReminderEnabled) return;
     refreshDailyReminders({
       enabled: true,
       language,
       dailyDoneToday: dailyCompletedDate === getDailyDateKey(),
-      dailyStreak: getDailyStreak(dailyCompletionDates),
+      dailyStreak: getDailyStreak([...dailyCompletionDates, ...streakFreezes]),
       promptForPermission: false,
     }).catch(() => {});
-  }, [dailyReminderEnabled, language, dailyCompletedDate, dailyCompletionDates]);
+  }, [dailyReminderEnabled, language, dailyCompletedDate, dailyCompletionDates, streakFreezes]);
 
   // The reminder carries the screen it wants opened; without this the payload was written
   // and never read, so tapping it just landed on the menu like the app icon does.

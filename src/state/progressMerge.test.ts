@@ -10,6 +10,7 @@ function local(overrides: Partial<LocalProgress> = {}): LocalProgress {
     dailyCompletedDate: null,
     dailyCompletionDates: [],
     dailyDurations: {},
+    streakFreezes: [],
     levelMedals: {},
     ...overrides,
   };

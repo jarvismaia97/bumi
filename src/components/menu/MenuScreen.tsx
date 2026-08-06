@@ -34,6 +34,8 @@ import type { IslandProgress } from '@/game/islands';
 interface MenuScreenProps {
   dailyDone: boolean;
   dailyStreak: number;
+  /** Whether a freeze is holding the current run up, which the card says out loud. */
+  freezeHeld: boolean;
   weekly: GoalProgress;
   monthly: GoalProgress;
   solvedCount: number;
@@ -183,6 +185,7 @@ function GoalCard({ title, goal, reward, accent }: { title: string; goal: GoalPr
 export function MenuScreen({
   dailyDone,
   dailyStreak,
+  freezeHeld,
   weekly,
   monthly,
   solvedCount,
@@ -314,6 +317,13 @@ export function MenuScreen({
             <Text style={[styles.dailyStreak, { color: daily.fg }]} numberOfLines={2}>
               {dailyStreak ? t('menu.streak', { count: dailyStreak, label: t(dailyStreak === 1 ? 'menu.day' : 'menu.days') }) : t('menu.startStreak')}
             </Text>
+            {/* Said only while it is doing something. A freeze the player is never told about
+                is indistinguishable from a streak that silently refused to break. */}
+            {freezeHeld && (
+              <Text style={[styles.dailyStreak, { color: daily.fg, opacity: 0.75 }]} numberOfLines={2}>
+                {t('menu.freezeHeld')}
+              </Text>
+            )}
           </AnimatedPressable>
 
           <AnimatedPressable accessibilityRole="button" style={[styles.dailyBtn, { borderColor: theme.gridSep }]} onPress={onStartTraining}>

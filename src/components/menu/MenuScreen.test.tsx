@@ -50,6 +50,7 @@ function renderMenu(overrides: Partial<React.ComponentProps<typeof MenuScreen>> 
     <MenuScreen
       dailyDone={false}
       dailyStreak={0}
+      freezeHeld={false}
       weekly={goal(1, WEEKLY_TARGET)}
       monthly={goal(4, MONTHLY_TARGET)}
       solvedCount={12}

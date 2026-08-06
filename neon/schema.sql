@@ -81,6 +81,17 @@ alter table daily_completions add column if not exists duration_ms integer;
 -- comparison; without this it is a scan of the table per visit.
 create index if not exists daily_completions_date_idx on daily_completions (completed_date, user_id);
 
+-- Days a streak freeze covered. Deliberately not rows in `daily_completions`: the streak should
+-- count them and the weekly and monthly goals must not, because a frozen day was forgiven
+-- rather than played, and counting it there would mint the hints those goals pay out.
+create table if not exists streak_freezes (
+  user_id text not null,
+  frozen_date date not null,
+  primary key (user_id, frozen_date)
+);
+
+create index if not exists streak_freezes_user_id_idx on streak_freezes (user_id);
+
 create table if not exists level_medals (
   user_id text not null,
   level_idx integer not null,

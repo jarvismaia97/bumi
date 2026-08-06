@@ -15,6 +15,7 @@ export interface LocalProgress {
   dailyCompletedDate: string | null;
   dailyCompletionDates: string[];
   dailyDurations: Record<string, number>;
+  streakFreezes: string[];
   levelMedals: Record<number, Medal>;
 }
 
@@ -24,6 +25,7 @@ export interface RemoteProgressState {
     dailyCompletedDate: string | null;
     dailyCompletionDates: string[];
     dailyDurations?: Record<string, number>;
+    streakFreezes?: string[];
   } | null;
   solvedLevelIdxs: number[];
   solvedLevelDates: Record<number, string>;
@@ -89,6 +91,9 @@ export function mergeProgress(local: LocalProgress, remote: RemoteProgressState)
     dailyCompletedDate: mergedDailyDates.at(-1) ?? null,
     dailyCompletionDates: mergedDailyDates,
     dailyDurations: mergeDurations(local.dailyDurations, remote.progress?.dailyDurations),
+    // Union, like the completions above: a freeze already spent on one device was spent, and
+    // dropping it here would quietly break a streak the player was told was safe.
+    streakFreezes: Array.from(new Set([...local.streakFreezes, ...(remote.progress?.streakFreezes ?? [])])).sort(),
     levelMedals,
     newlyLocalSolved: Object.keys(local.solvedMap)
       .map(Number)
