@@ -3,6 +3,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuth } from '../src/lib/auth';
 import type { Medal } from '../src/game/medals';
 import { normalizeHintCount } from '../src/game/hints';
+import { pointsFromCounts } from '../src/game/points';
+import { artistIndexFor, ARTISTS } from '../src/lib/playerName';
+import { resolveLanguage, translate } from '../src/i18n/messages';
 
 type ProgressPayload = {
   hints?: number;
@@ -73,6 +76,118 @@ function parseBody(req: VercelRequest): PostBody {
   if (!req.body) return {};
   if (typeof req.body === 'string') return JSON.parse(req.body) as PostBody;
   return req.body as PostBody;
+}
+
+type Sql = ReturnType<typeof neon<false, false>>;
+
+/**
+ * Tells the friends this player has just passed on the board.
+ *
+ * Only the crossing is worth a notification: a lead that has stood for a month is not news, so
+ * the previous score is kept on the profile and only friends who sat between it and the new one
+ * are told. The receiving player hears about it once a day at most, however many people pass
+ * them, because the cap belongs on the side that has to live with the noise.
+ *
+ * Best effort throughout, and never blocking the write it follows: progress that saved is saved
+ * whether or not a phone could be reached.
+ */
+async function notifyOvertaken(sql: Sql, userId: string): Promise<void> {
+  try {
+    const scored = (await sql`
+      with counts as (
+        select
+          count(*) filter (where medal = 'gold') as gold,
+          count(*) filter (where medal = 'silver') as silver,
+          count(*) filter (where medal = 'bronze') as bronze
+        from level_medals where user_id = ${userId}
+      )
+      select
+        (select gold from counts) as gold,
+        (select silver from counts) as silver,
+        (select bronze from counts) as bronze,
+        coalesce((select points from profiles where user_id = ${userId}), 0) as previous
+    `) as { gold: number | string; silver: number | string; bronze: number | string; previous: number | string }[];
+
+    const row = scored[0];
+    if (!row) return;
+
+    const points = pointsFromCounts({ gold: Number(row.gold), silver: Number(row.silver), bronze: Number(row.bronze) });
+    const previous = Number(row.previous);
+
+    await sql`
+      insert into profiles (user_id, points) values (${userId}, ${points})
+      on conflict (user_id) do update set points = excluded.points
+    `;
+
+    // Nothing was overtaken if the score did not move, and a score that fell is not an overtake
+    // either — only the gap opened going upwards can contain somebody.
+    if (points <= previous) return;
+
+    // Medal counts come back raw and `pointsFromCounts` turns them into a score, so the board,
+    // the win sheet and this notification cannot drift apart when the medal values change.
+    const friends = (await sql`
+      select friendships.friend_id as user_id,
+        push_tokens.token,
+        profiles.language,
+        count(*) filter (where level_medals.medal = 'gold') as gold,
+        count(*) filter (where level_medals.medal = 'silver') as silver,
+        count(*) filter (where level_medals.medal = 'bronze') as bronze
+      from friendships
+      join push_tokens on push_tokens.user_id = friendships.friend_id
+      join profiles on profiles.user_id = friendships.friend_id
+      left join level_medals on level_medals.user_id = friendships.friend_id
+      where friendships.user_id = ${userId}
+        and (profiles.overtaken_notice_date is null or profiles.overtaken_notice_date < current_date)
+      group by friendships.friend_id, push_tokens.token, profiles.language
+    `) as {
+      user_id: string;
+      token: string;
+      language: string | null;
+      gold: number | string;
+      silver: number | string;
+      bronze: number | string;
+    }[];
+
+    // Behind now, level or ahead before: that half-open window is exactly the set of people
+    // this post moved past, and it excludes anyone who was already behind.
+    const passed = friends.filter(friend => {
+      const theirs = pointsFromCounts({
+        gold: Number(friend.gold),
+        silver: Number(friend.silver),
+        bronze: Number(friend.bronze),
+      });
+      return theirs >= previous && theirs < points;
+    });
+
+    if (!passed.length) return;
+
+    const mover = (await sql`select name from "user" where id = ${userId}`) as { name: string | null }[];
+    const name = mover[0]?.name?.trim() || ARTISTS[artistIndexFor(userId)].name;
+
+    // Stamped before sending, so a retry of the same post cannot double up.
+    await sql`
+      update profiles set overtaken_notice_date = current_date
+      where user_id in (select value from jsonb_array_elements_text(${JSON.stringify(passed.map(row => row.user_id))}::jsonb))
+    `;
+
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(
+        passed.map(row => {
+          const language = resolveLanguage(row.language);
+          return {
+            to: row.token,
+            title: translate(language, 'push.overtakenTitle'),
+            body: translate(language, 'push.overtakenBody', { name }),
+            sound: 'default',
+          };
+        }),
+      ),
+    });
+  } catch {
+    // A notification that could not be sent is not a reason to fail a save.
+  }
 }
 
 async function getUserId(req: VercelRequest): Promise<string | null> {
@@ -249,6 +364,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     await Promise.all(writes);
+
+    // Points come from medals and from nothing else, so a post without one cannot have moved
+    // this player past anybody and does not pay for the queries that would prove it.
+    if (Object.keys(levelMedals).length) await notifyOvertaken(sql, userId);
+
     sendJson(res, 200, { ok: true });
     return;
   }

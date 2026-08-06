@@ -92,6 +92,16 @@ create table if not exists streak_freezes (
 
 create index if not exists streak_freezes_user_id_idx on streak_freezes (user_id);
 
+-- The last board score the server saw for this player. Kept so a progress post can tell the
+-- difference between "is ahead" and "just went ahead", which is the whole of an overtake:
+-- without a previous value every post would re-announce a lead that has stood for weeks.
+alter table profiles add column if not exists points integer not null default 0;
+
+-- The day this player was last told someone passed them, so being overtaken by four friends on
+-- a busy Sunday is one notification rather than four. The cap sits on the person receiving it,
+-- which is the side that has to live with the noise.
+alter table profiles add column if not exists overtaken_notice_date date;
+
 create table if not exists level_medals (
   user_id text not null,
   level_idx integer not null,
