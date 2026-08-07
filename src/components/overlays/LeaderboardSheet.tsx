@@ -194,20 +194,8 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
               style={[
                 styles.row,
                 { backgroundColor: theme.surface, borderColor: entry.isSelf ? theme.accent : theme.gridSep },
-                // Lifts the row so its bubble paints over the rows drawn after it.
-                isRevealed && styles.rowRevealed,
               ]}
             >
-              {isRevealed && (
-                <View
-                  style={[styles.tooltip, { backgroundColor: theme.text, borderColor: theme.text }]}
-                  pointerEvents="none"
-                >
-                  <Text style={[styles.tooltipText, { color: theme.surface }]} numberOfLines={2}>
-                    {entry.name ?? t('leaderboard.noName')}
-                  </Text>
-                </View>
-              )}
               <Text style={[styles.rank, { color: theme.sub }]}>{index + 1}</Text>
               {/* Self is the only row whose account id this device knows, so only it gets the
                   real mosaic; a friend gets one seeded from the code they handed out. */}
@@ -227,13 +215,26 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                     the NEW badge, and a title is permanent where that badge lasts a day. Cut
                     from the numbers that follow it, so a friend gets one without the board
                     having to send anything it does not already send. */}
-                <Text style={[styles.rowDetail, { color: theme.sub }]} numberOfLines={1}>
-                  {rowTitle && <Text style={{ color: theme.accent, fontWeight: '800' }}>{rowTitle} · </Text>}
-                  {view === 'daily'
-                    ? entry.dailyDone
-                      ? t('leaderboard.dailyDone')
-                      : t('leaderboard.dailyPending')
-                    : t('leaderboard.rowDetail', { solved: entry.solved, gold: entry.medals.gold, streak: entry.streak })}
+                {/* While revealed, the detail line answers "who is this" instead of repeating
+                    numbers the player just looked at. In the row rather than floating over it:
+                    a bubble has to be placed against a row whose height varies and flipped below
+                    the first one to stay on screen, and none of that is visible from here. */}
+                <Text
+                  style={[styles.rowDetail, { color: isRevealed ? theme.accent : theme.sub }, isRevealed && styles.rowDetailRevealed]}
+                  numberOfLines={1}
+                >
+                  {isRevealed ? (
+                    entry.name ?? t('leaderboard.noName')
+                  ) : (
+                    <>
+                      {rowTitle && <Text style={{ color: theme.accent, fontWeight: '800' }}>{rowTitle} · </Text>}
+                      {view === 'daily'
+                        ? entry.dailyDone
+                          ? t('leaderboard.dailyDone')
+                          : t('leaderboard.dailyPending')
+                        : t('leaderboard.rowDetail', { solved: entry.solved, gold: entry.medals.gold, streak: entry.streak })}
+                    </>
+                  )}
                 </Text>
               </View>
               <View style={styles.rowPoints}>
@@ -296,14 +297,11 @@ const styles = StyleSheet.create({
   error: { fontSize: 11, fontWeight: '700', marginTop: 8 },
   empty: { fontSize: 12, lineHeight: 17, marginTop: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8 },
-  // Only while revealed: a permanent stacking context would put every row above the one below.
-  rowRevealed: { zIndex: 2 },
+  rowDetailRevealed: { fontSize: 12, fontWeight: '800' },
   viewSwitch: { flexDirection: 'row', gap: 4, borderWidth: 1.5, borderRadius: 8, padding: 3, marginBottom: 10 },
   viewOption: { flex: 1, minHeight: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 6 },
   viewLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
   // Anchored over the name it explains, and inert — the tap belongs to the row underneath.
-  tooltip: { position: 'absolute', left: 46, bottom: '82%', maxWidth: '76%', borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  tooltipText: { fontSize: 12, fontWeight: '800' },
   rank: { flexShrink: 0, minWidth: 16, fontSize: 12, fontWeight: '800' },
   rowCopy: { flex: 1, minWidth: 0 },
   rowNameLine: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
