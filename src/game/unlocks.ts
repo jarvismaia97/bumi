@@ -26,13 +26,20 @@ export const THEME_REQUIREMENTS: Record<ThemeName, UnlockRequirement> = {
   navy: { islands: 3 },
   rose: { goldMedals: 25 },
   sun: { islands: 6 },
-  // These two ask for the season they are named after rather than for a rung on the ladder:
-  // being there in December, being there in October. That is a different axis from skill and
-  // deliberately so — a seasonal theme means you turned up, which is the whole of what it
-  // commemorates. Any year satisfies it, so the player who played one December keeps the
-  // theme for good instead of losing it every January.
-  natal: { dailyInMonth: 12 },
+  // These ask for the season they are named after rather than for a rung on the ladder: being
+  // there in February, in April, in August, in October, in December. That is a different axis
+  // from skill and deliberately so — a seasonal theme means you turned up, which is the whole
+  // of what it commemorates. Any year satisfies it, so the player who played one December keeps
+  // the theme for good instead of losing it every January.
+  //
+  // Every other month, and never two in one: a year with a seasonal theme in it every month
+  // would turn the picker into a wall of locks nobody can do anything about, and the ladder
+  // above would stop being the thing that rewards playing well.
+  carnaval: { dailyInMonth: 2 },
+  primavera: { dailyInMonth: 4 },
+  verao: { dailyInMonth: 8 },
   halloween: { dailyInMonth: 10 },
+  natal: { dailyInMonth: 12 },
 };
 
 export interface UnlockStats {

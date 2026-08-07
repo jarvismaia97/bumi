@@ -31,7 +31,18 @@ export interface SemanticTokens {
   bronze: string;
 }
 
-export type ThemeName = 'classic' | 'mint' | 'violet' | 'navy' | 'rose' | 'sun' | 'natal' | 'halloween';
+export type ThemeName =
+  | 'classic'
+  | 'mint'
+  | 'violet'
+  | 'navy'
+  | 'rose'
+  | 'sun'
+  | 'carnaval'
+  | 'primavera'
+  | 'verao'
+  | 'halloween'
+  | 'natal';
 
 export type Appearance = 'light' | 'dark';
 
@@ -66,10 +77,30 @@ export const THEMES: Record<ThemeName, Record<Appearance, ThemeTokens>> = {
     light: { bg: '#fff9e8', surface: '#fffefa', gridSep: '#f0dfad', text: '#5f4810', sub: '#8a6e27', accent: '#976e1c' },
     dark: { bg: '#19160c', surface: '#242015', gridSep: '#3a3320', text: '#f5efdd', sub: '#bdaa7e', accent: '#dfb35b' },
   },
-  // Seasonal, and the first two designed against `contrast.test.ts` rather than by eye alone.
-  // Both keep a saturated accent: the red is the point of the one and the pumpkin is the point
-  // of the other, and neither had to be washed out to make the clue readable — the light reds
-  // and oranges are dark enough to carry a number, the dark ones bright enough.
+  // Seasonal, and designed against `contrast.test.ts` rather than by eye alone. Every one keeps
+  // a saturated accent: the red is the point of Christmas and the pumpkin is the point of
+  // Halloween, and none had to be washed out to make the clue readable — the light tones are
+  // dark enough to carry a number, the dark ones bright enough.
+  //
+  // Ordered here by the month that opens them, so the five read as a year going round.
+
+  // February. Carnival is traditionally three colours and the clue can only be one, so the
+  // magenta carries it and the rest of the parade stays out of the way of the numbers.
+  carnaval: {
+    light: { bg: '#faf3fa', surface: '#fffcff', gridSep: '#ecd8ec', text: '#33153a', sub: '#6b3c74', accent: '#a51f8f' },
+    dark: { bg: '#160f19', surface: '#211826', gridSep: '#352a3b', text: '#f4ecf6', sub: '#bda6c4', accent: '#e86bc8' },
+  },
+  // April. Blossom on the page and new growth in the accent, which is what keeps it from
+  // reading as a second mint: the green here sits on pink rather than on more green.
+  primavera: {
+    light: { bg: '#fdf4f6', surface: '#fffdfe', gridSep: '#f0dbe2', text: '#2f1c24', sub: '#6d4453', accent: '#31792f' },
+    dark: { bg: '#161014', surface: '#21181d', gridSep: '#362a31', text: '#f6ecf0', sub: '#c4a8b4', accent: '#63c95f' },
+  },
+  // August. Warm sand under a sea accent, deep enough to stay clear of navy.
+  verao: {
+    light: { bg: '#fdf7ec', surface: '#fffdf7', gridSep: '#f0e2c8', text: '#2a2416', sub: '#6b5c38', accent: '#00727f' },
+    dark: { bg: '#0f1416', surface: '#181f21', gridSep: '#293235', text: '#ecf4f5', sub: '#a3b8bc', accent: '#3fc4d4' },
+  },
   natal: {
     light: { bg: '#f3f7f2', surface: '#ffffff', gridSep: '#d5e5d6', text: '#1c3524', sub: '#4d6a56', accent: '#c0273f' },
     dark: { bg: '#111a14', surface: '#1a251d', gridSep: '#2b3a30', text: '#eef4ef', sub: '#a4bcab', accent: '#e35c72' },
@@ -131,7 +162,21 @@ export const SEMANTIC: Record<Appearance, SemanticTokens> = {
   },
 };
 
-export const THEME_OPTIONS: readonly ThemeName[] = ['classic', 'mint', 'violet', 'navy', 'rose', 'sun', 'natal', 'halloween'];
+// Earned first, then the seasonal five in the order their months come round. The picker paints
+// this order, so the calendar half of the list reads as a year rather than as a pile.
+export const THEME_OPTIONS: readonly ThemeName[] = [
+  'classic',
+  'mint',
+  'violet',
+  'navy',
+  'rose',
+  'sun',
+  'carnaval',
+  'primavera',
+  'verao',
+  'halloween',
+  'natal',
+];
 
 // The device scheme arrives as React Native's `ColorSchemeName`, so anything the platform
 // reports that is not an explicit `dark` is painted light.

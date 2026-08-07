@@ -49,6 +49,20 @@ describe('theme unlocks', () => {
     }
   });
 
+  it('gives each season a month of its own, and leaves a gap between them', () => {
+    // A seasonal theme is unreachable eleven months a year, so one per month would turn the
+    // picker into a wall of locks and demote the ladder that rewards playing well.
+    const months = Object.values(THEME_REQUIREMENTS)
+      .map(requirement => requirement.dailyInMonth)
+      .filter((month): month is number => month !== undefined)
+      .sort((a, b) => a - b);
+
+    expect(new Set(months).size).toBe(months.length);
+    expect(months.every(month => month >= 1 && month <= 12)).toBe(true);
+    // Never adjacent: two seasons back to back would read as one long season.
+    expect(months.every((month, i) => i === 0 || month - months[i - 1] >= 2)).toBe(true);
+  });
+
   it('opens a seasonal theme to the daily played in its own month', () => {
     expect(isThemeUnlocked('natal', stats({}, {}, ['20261224']))).toBe(true);
     expect(isThemeUnlocked('halloween', stats({}, {}, ['20261031']))).toBe(true);
