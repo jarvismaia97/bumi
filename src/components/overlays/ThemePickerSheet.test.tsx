@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { forwardRef } from 'react';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { playHaptic } from '@/lib/haptics';
 import { useLanguageStore } from '@/state/languageStore';
@@ -22,6 +22,7 @@ vi.mock('@gorhom/bottom-sheet', () => ({
     return <View>{children}</View>;
   }),
   BottomSheetView: View,
+  BottomSheetScrollView: ScrollView,
 }));
 
 /** Every rendered box that carries copy — the ones Dynamic Type can overflow. */

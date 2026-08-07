@@ -50,7 +50,10 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle>(function Them
   }
 
   return (
-    <SettingsChildSheet ref={sheetRef} title={t('theme.title')} snapPoints={['70%']}>
+    // Scrollable, and at the height the other long sheets use: the list was sized to fit eight
+    // themes exactly, so the five seasonal ones pushed Christmas off the bottom with no way to
+    // reach it. A list that grows every time a season is added has to scroll.
+    <SettingsChildSheet ref={sheetRef} title={t('theme.title')} snapPoints={['82%']} scrollable>
         <View style={styles.list}>
           {THEME_OPTIONS.map(name => {
             const selected = name === themeName;
