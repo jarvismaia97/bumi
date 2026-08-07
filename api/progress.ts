@@ -3,6 +3,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuth } from '../src/lib/auth';
 import type { Medal } from '../src/game/medals';
 import { normalizeHintCount } from '../src/game/hints';
+import { formatResultDuration } from '../src/game/medals';
+import { beatsFriendTime } from '../src/game/dailyRace';
 import { pointsFromCounts } from '../src/game/points';
 import { artistIndexFor, ARTISTS } from '../src/lib/playerName';
 import { resolveLanguage, translate } from '../src/i18n/messages';
@@ -190,6 +192,81 @@ async function notifyOvertaken(sql: Sql, userId: string): Promise<void> {
   }
 }
 
+/** Today's recorded time for this player, or null while today is unplayed or untimed. */
+async function todaysDailyMs(sql: Sql, userId: string): Promise<number | null> {
+  const rows = (await sql`
+    select duration_ms from daily_completions
+    where user_id = ${userId} and completed_date = current_date
+  `) as { duration_ms: number | string | null }[];
+  const value = rows[0]?.duration_ms;
+  return value === undefined || value === null ? null : Number(value);
+}
+
+/**
+ * Tells the friends this player has just beaten on today's daily.
+ *
+ * Everyone gets the same puzzle, so this is the one comparison on the board that is fair, and
+ * the only moment worth interrupting anyone for is the crossing. Somebody already slower than
+ * this player heard about it when it happened; `previous` is what separates the two.
+ *
+ * It only reaches people who have played today, because a time you have not set cannot be
+ * beaten — which also means nobody is nagged about a daily they have not got to yet.
+ */
+async function notifyDailyBeaten(
+  sql: Sql,
+  userId: string,
+  previousMs: number | null,
+  currentMs: number | null,
+): Promise<void> {
+  if (currentMs === null) return;
+
+  try {
+    const friends = (await sql`
+      select push_tokens.token, profiles.language, daily_completions.user_id, daily_completions.duration_ms
+      from friendships
+      join daily_completions on daily_completions.user_id = friendships.friend_id
+        and daily_completions.completed_date = current_date
+      join push_tokens on push_tokens.user_id = friendships.friend_id
+      join profiles on profiles.user_id = friendships.friend_id
+      where friendships.user_id = ${userId}
+        and daily_completions.duration_ms is not null
+        and (profiles.daily_notice_date is null or profiles.daily_notice_date < current_date)
+    `) as { token: string; language: string | null; user_id: string; duration_ms: number | string }[];
+
+    const passed = friends.filter(friend => beatsFriendTime(previousMs, currentMs, Number(friend.duration_ms)));
+
+    if (!passed.length) return;
+
+    const mover = (await sql`select name from "user" where id = ${userId}`) as { name: string | null }[];
+    const name = mover[0]?.name?.trim() || ARTISTS[artistIndexFor(userId)].name;
+    const time = formatResultDuration(currentMs);
+
+    // Stamped before sending, so a retried post cannot double up.
+    await sql`
+      update profiles set daily_notice_date = current_date
+      where user_id in (select value from jsonb_array_elements_text(${JSON.stringify(passed.map(row => row.user_id))}::jsonb))
+    `;
+
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(
+        passed.map(row => {
+          const language = resolveLanguage(row.language);
+          return {
+            to: row.token,
+            title: translate(language, 'push.dailyBeatenTitle'),
+            body: translate(language, 'push.dailyBeatenBody', { name, time }),
+            sound: 'default',
+          };
+        }),
+      ),
+    });
+  } catch {
+    // A notification that could not be sent is not a reason to fail a save.
+  }
+}
+
 async function getUserId(req: VercelRequest): Promise<string | null> {
   const { fromNodeHeaders } = await import('better-auth/node');
   const auth = await getAuth();
@@ -277,6 +354,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'POST') {
     const body = parseBody(req);
+
+    // Read before anything is queued. Neon's tag starts its request the moment it is written,
+    // so a value read after `writes.push` would race the insert that changes it.
+    const postsADailyTime = Object.keys(body.progress?.dailyDurations ?? {}).length > 0;
+    const previousDailyMs = postsADailyTime ? await todaysDailyMs(sql, userId) : null;
+
     const writes: Promise<unknown>[] = [];
 
     if (body.progress) {
@@ -368,6 +451,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Points come from medals and from nothing else, so a post without one cannot have moved
     // this player past anybody and does not pay for the queries that would prove it.
     if (Object.keys(levelMedals).length) await notifyOvertaken(sql, userId);
+
+    // Same gate for the daily: only a post that carried a time can have beaten one.
+    if (postsADailyTime) {
+      await notifyDailyBeaten(sql, userId, previousDailyMs, await todaysDailyMs(sql, userId));
+    }
 
     sendJson(res, 200, { ok: true });
     return;

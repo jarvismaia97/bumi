@@ -102,6 +102,10 @@ alter table profiles add column if not exists points integer not null default 0;
 -- which is the side that has to live with the noise.
 alter table profiles add column if not exists overtaken_notice_date date;
 
+-- The same idea for the daily, and a separate column on purpose: sharing one would let being
+-- passed on points silence being beaten on today's time, and the two are different news.
+alter table profiles add column if not exists daily_notice_date date;
+
 create table if not exists level_medals (
   user_id text not null,
   level_idx integer not null,
