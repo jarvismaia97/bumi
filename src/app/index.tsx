@@ -14,7 +14,7 @@ import { WinSheet, type WinSheetHandle } from '@/components/overlays/WinSheet';
 import { IOSInstallPromptSheet, type IOSInstallPromptSheetHandle } from '@/components/overlays/IOSInstallPromptSheet';
 import { TrainingSheet, type TrainingSheetHandle } from '@/components/overlays/TrainingSheet';
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
-import { formatDuration, getDailyDateKey, getDailyLevel, getDailyStreak, getNextDailyInMs } from '@/game/daily';
+import { getDailyDateKey, getDailyLevel, getDailyStreak } from '@/game/daily';
 import { isFreezeProtecting } from '@/game/streakFreeze';
 import { getMonthlyProgress, getWeeklyProgress, goalsCompletedBy, isStreakMilestone } from '@/game/goals';
 import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
@@ -115,7 +115,6 @@ export default function GameScreen() {
   const [trainingSummary, setTrainingSummary] = useState<string | null>(null);
   const [tutorialWon, setTutorialWon] = useState(false);
   const [tutorialLevelIndex, setTutorialLevelIndex] = useState(0);
-  const [dailyCountdown, setDailyCountdown] = useState(formatDuration(getNextDailyInMs()));
   const [campaignResult, setCampaignResult] = useState<{ medal: Medal; summary: string; pointsGained: number; unlockedIslandName?: string } | null>(null);
   const [celebrationTier, setCelebrationTier] = useState<CelebrationTier>('normal');
   const [dailyResult, setDailyResult] = useState<string | null>(null);
@@ -299,11 +298,6 @@ export default function GameScreen() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [won]);
-
-  useEffect(() => {
-    const id = setInterval(() => setDailyCountdown(formatDuration(getNextDailyInMs())), 60000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -521,7 +515,6 @@ export default function GameScreen() {
         unlockedIslandName={mode === 'campaign' ? campaignResult?.unlockedIslandName : undefined}
         dailySummary={mode === 'training' ? trainingSummary ?? undefined : mode === 'daily' ? dailyResult ?? undefined : undefined}
         dailyStreak={dailyStreak}
-        dailyCountdown={dailyCountdown}
         nextLabel={nextLabel(mode, t)}
         onReview={() => winSheetRef.current?.dismiss()}
         onNext={onNextLevel}

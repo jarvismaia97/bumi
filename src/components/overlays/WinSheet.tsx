@@ -1,11 +1,12 @@
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
 import Share2 from 'lucide-react-native/icons/share-2';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { Logo } from '@/components/Logo';
 import type { Medal } from '@/game/medals';
+import { formatDuration, getNextDailyInMs } from '@/game/daily';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
 import { renderStaticSheetBackdrop } from '@/components/overlays/SheetBackdrop';
@@ -27,15 +28,35 @@ interface WinSheetProps {
   unlockedIslandName?: string;
   dailySummary?: string;
   dailyStreak: number;
-  dailyCountdown: string;
   nextLabel: string;
   onReview: () => void;
   onNext: () => void;
   onShareDailyResult?: () => void;
 }
 
+/**
+ * The wait for tomorrow's puzzle, ticking once a minute — which is as slow as a clock showing
+ * minutes can honestly be.
+ *
+ * It owns the interval rather than taking the string as a prop, and that is the point: the
+ * countdown used to be kept alive on the root screen, which is mounted for the whole session,
+ * so it re-rendered the whole menu every minute to update a line only shown after a daily is
+ * finished. Here it exists exactly as long as the line does.
+ */
+function DailyCountdown({ color }: { color: string }) {
+  const { t } = useI18n();
+  const [remaining, setRemaining] = useState(() => formatDuration(getNextDailyInMs()));
+
+  useEffect(() => {
+    const id = setInterval(() => setRemaining(formatDuration(getNextDailyInMs())), 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  return <Text style={[styles.dailyCountdown, { color }]}>{t('win.nextDaily', { time: remaining })}</Text>;
+}
+
 export const WinSheet = forwardRef<WinSheetHandle, WinSheetProps>(function WinSheet(
-  { title, subtitle, showHintReward, isDaily, campaignMedal, campaignPoints, campaignSummary, unlockedIslandName, dailySummary, dailyStreak, dailyCountdown, nextLabel, onReview, onNext, onShareDailyResult },
+  { title, subtitle, showHintReward, isDaily, campaignMedal, campaignPoints, campaignSummary, unlockedIslandName, dailySummary, dailyStreak, nextLabel, onReview, onNext, onShareDailyResult },
   ref,
 ) {
   const sheetRef = useRef<BottomSheetModal>(null);
@@ -95,7 +116,7 @@ export const WinSheet = forwardRef<WinSheetHandle, WinSheetProps>(function WinSh
           <View style={styles.dailyExtra}>
             {!!dailySummary && <Text style={[styles.dailySummary, { color: theme.text }]}>{dailySummary}</Text>}
             <Text style={[styles.dailyStreak, { color: semantic.success }]}>{t('win.streak', { count: dailyStreak, label: t(dailyStreak === 1 ? 'menu.day' : 'menu.days') })}</Text>
-            <Text style={[styles.dailyCountdown, { color: theme.sub }]}>{t('win.nextDaily', { time: dailyCountdown })}</Text>
+            <DailyCountdown color={theme.sub} />
           </View>
         )}
 

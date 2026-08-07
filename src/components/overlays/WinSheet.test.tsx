@@ -29,7 +29,6 @@ function renderSheet(overrides: Partial<React.ComponentProps<typeof WinSheet>> =
       campaignPoints={5}
       campaignSummary="42s · 0 dicas · 0 tentativas inválidas"
       dailyStreak={0}
-      dailyCountdown="2h"
       nextLabel={t('win.nextLevel')}
       onReview={() => {}}
       onNext={() => {}}
