@@ -22,11 +22,23 @@ Nothing here is done yet beyond what the repo already carries.
 
 ## Blocked on, in order
 
-1. **An Android OAuth client.** Google sign-in on Android checks the app's signing certificate,
-   so the client needs the SHA-1 of the keystore EAS generated. `npx eas-cli credentials
-   --platform android` prints it; the client is created in the same Cloud project as the
-   others, under Credentials > OAuth client ID > Android. Without this, sign-in fails on
-   Android only — the rest of the app works, which makes it easy to miss.
+1. **An Android OAuth client.** Google sign-in on Android checks the certificate the app was
+   signed with, and under Play App Signing that is Google's own certificate, not the keystore
+   EAS generated. Both fingerprints live in Play Console > Test and release > App integrity >
+   App signing — the console has moved this page more than once, and "Protected by Google
+   Play > Automatic protection" is a different thing that only configures installer checks.
+
+   | Certificate | SHA-1 | Covers |
+   | --- | --- | --- |
+   | App signing (Google's) | `A0:62:5E:10:FA:6A:3C:53:68:C0:A8:FD:A1:56:21:38:C4:8D:CE:5C` | anything installed from Play |
+   | Upload (EAS keystore) | read from the same page | `.aab` installed by hand |
+
+   One SHA-1 per client, so covering both means two Android clients in project `606345526586`,
+   package `pt.jogarbumi.app`. The app-signing one is the one that matters.
+
+   Nothing in the app references these. `authStore.ts` passes only `webClientId`, and Google
+   matches the Android client by package and certificate at request time — so creating the
+   client fixes sign-in on builds that are already installed, with no rebuild.
 2. **FCM credentials**, if the friends notification is to arrive on Android. Firebase project,
    `google-services.json` into the repo, and the FCM v1 service account key uploaded to EAS.
    The daily reminder is scheduled on the device and needs none of this.
