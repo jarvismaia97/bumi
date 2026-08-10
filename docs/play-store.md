@@ -49,6 +49,139 @@ Nothing here is done yet beyond what the repo already carries.
 6. **Content rating questionnaire.** A logic puzzle with no ads, no purchases and no user
    content; it lands at the lowest rating in every region.
 
+## Store listing copy
+
+Play's limits are hard: 80 characters for the short description, 4000 for the full one.
+The counts below were measured, not estimated. Paste them verbatim.
+
+### Português (Portugal) — default
+
+**Short description** (79/80)
+
+```
+Divide a grelha em retângulos. Cada número é a área do seu. Centenas de níveis.
+```
+
+**Full description** (1954/4000)
+
+```
+Bumi é um puzzle de lógica feito de uma regra só.
+
+Cada grelha esconde um conjunto de retângulos. Cada número diz a área do retângulo que o contém — e há exactamente uma forma de dividir a grelha que satisfaz todos os números ao mesmo tempo. Sem adivinhar, sem sorte: se olhares o suficiente, a solução está lá.
+
+A regra aprende-se em segundos. As grelhas de doze por doze do fim da campanha demoram bem mais.
+
+CAMPANHA
+500 níveis repartidos por 13 ilhas, que vão crescendo de quatro por quatro até doze por doze. Cada ilha é um degrau, e o mapa mostra até onde chegaste.
+
+DESAFIO DIÁRIO
+Um puzzle novo por dia, o mesmo para toda a gente. A sequência conta os dias seguidos em que o resolveste — e se falhares um dia, uma vez por mês fica perdoado, porque um mês inteiro não se deita fora por causa de uma noite.
+
+TREINO
+Grelhas geradas na hora, na dificuldade que escolheres, sem contarem para nada. Para quando queres jogar sem que o progresso esteja a ver.
+
+MEDALHAS
+Ouro, prata e bronze por nível. O ouro não é por rapidez: é por resolveres sem pistas e sem erros. A diferença entre as medalhas é cuidado, não velocidade.
+
+AMIGOS
+Dás um código a quem quiseres e passam a ver os pontos um do outro. Há dois quadros: o de sempre, e o de hoje — que compara o tempo no desafio diário, o único puzzle que toda a gente joga igual. Esse recomeça todas as manhãs, por isso quem entrou ontem também pode ganhar.
+
+TEMAS
+Onze temas, cada um em claro e escuro. Uns ganham-se a jogar bem: completar ilhas, arrecadar medalhas de ouro, fechar conquistas. Outros pedem apenas que estejas cá na época a que pertencem — Carnaval, Primavera, Verão, Halloween, Natal.
+
+O RESTO
+Joga sem ligação à internet. Entra com Google ou Apple e o progresso segue-te de um dispositivo para o outro. Português, inglês e espanhol. Sem anúncios, sem compras, sem cronómetro a correr no ecrã.
+
+Uma grelha, uns quantos números, e o sossego de ir encaixando as peças até tudo bater certo.
+```
+
+### English
+
+**Short description** (79/80)
+
+```
+Split the grid into rectangles. Each number is the area of its own. 500 levels.
+```
+
+**Full description** (1992/4000)
+
+```
+Bumi is a logic puzzle built on a single rule.
+
+Every grid hides a set of rectangles. Each number gives the area of the rectangle containing it — and exactly one way of dividing the grid satisfies every number at once. No guessing, no luck: if you look long enough, the answer is already there.
+
+The rule takes seconds to learn. The twelve by twelve grids at the end of the campaign take rather longer.
+
+CAMPAIGN
+500 levels across 13 islands, growing from four by four up to twelve by twelve. Each island is a step up, and the map shows how far you have come.
+
+DAILY CHALLENGE
+One new puzzle a day, the same one for everybody. Your streak counts the days you solved it in a row — and if you miss one, it is forgiven once a month, because a whole month should not be thrown away over a single night.
+
+TRAINING
+Grids generated on the spot at whatever difficulty you pick, counting towards nothing. For when you want to play without your progress watching.
+
+MEDALS
+Gold, silver and bronze per level. Gold is not about speed: it is for solving without hints and without mistakes. What separates the medals is care, not haste.
+
+FRIENDS
+Give a code to whoever you like and you each see the other's points. There are two boards: all time, and today — which compares your time on the daily challenge, the one puzzle everybody plays identically. That one starts over each morning, so somebody who joined yesterday can still win it.
+
+THEMES
+Eleven themes, each in light and dark. Some are earned by playing well: completing islands, collecting gold medals, finishing achievements. Others simply ask that you were here in the season they belong to — Carnival, Spring, Summer, Halloween, Christmas.
+
+EVERYTHING ELSE
+Play with no internet connection. Sign in with Google or Apple and your progress follows you between devices. Portuguese, English and Spanish. No ads, no purchases, no timer ticking on screen.
+
+One grid, a handful of numbers, and the quiet of fitting the pieces until everything lines up.
+```
+
+### Español
+
+**Short description** (80/80)
+
+```
+Divide la cuadrícula en rectángulos. Cada número es su área. Cientos de niveles.
+```
+
+**Full description** (2021/4000)
+
+```
+Bumi es un puzle de lógica construido sobre una sola regla.
+
+Cada cuadrícula esconde un conjunto de rectángulos. Cada número indica el área del rectángulo que lo contiene — y existe exactamente una forma de dividir la cuadrícula que satisface todos los números a la vez. Sin adivinar, sin suerte: si miras lo suficiente, la solución ya está ahí.
+
+La regla se aprende en segundos. Las cuadrículas de doce por doce del final de la campaña llevan bastante más.
+
+CAMPAÑA
+500 niveles repartidos en 13 islas, que crecen desde cuatro por cuatro hasta doce por doce. Cada isla es un escalón, y el mapa muestra hasta dónde has llegado.
+
+RETO DIARIO
+Un puzle nuevo cada día, el mismo para todo el mundo. La racha cuenta los días seguidos en que lo has resuelto — y si fallas uno, queda perdonado una vez al mes, porque un mes entero no se tira por una sola noche.
+
+ENTRENAMIENTO
+Cuadrículas generadas al momento, en la dificultad que elijas, sin contar para nada. Para cuando quieres jugar sin que el progreso esté mirando.
+
+MEDALLAS
+Oro, plata y bronce por nivel. El oro no va de rapidez: es por resolver sin pistas y sin errores. Lo que separa las medallas es el cuidado, no la prisa.
+
+AMIGOS
+Das un código a quien quieras y cada uno ve los puntos del otro. Hay dos tablas: la de siempre, y la de hoy — que compara el tiempo en el reto diario, el único puzle que todos juegan igual. Esa vuelve a empezar cada mañana, así que quien entró ayer también puede ganar.
+
+TEMAS
+Once temas, cada uno en claro y oscuro. Algunos se ganan jugando bien: completar islas, reunir medallas de oro, cerrar logros. Otros solo piden que estuvieras aquí en la temporada a la que pertenecen — Carnaval, Primavera, Verano, Halloween, Navidad.
+
+LO DEMÁS
+Juega sin conexión a internet. Entra con Google o Apple y el progreso te sigue de un dispositivo a otro. Portugués, inglés y español. Sin anuncios, sin compras, sin cronómetro corriendo en pantalla.
+
+Una cuadrícula, unos cuantos números, y la calma de ir encajando las piezas hasta que todo cuadra.
+```
+
+The listing claims no ads and no purchases, which is true of the app as shipped. It stops
+being true the day the monetisation work lands, and Play treats a listing that misdescribes
+the app as a policy problem rather than stale copy — so that line comes out in the same
+release that puts an ad in, not afterwards.
+
 ## Before the first build
 
 `npx eas-cli build --profile production --platform android` produces an `.aab`, which is what

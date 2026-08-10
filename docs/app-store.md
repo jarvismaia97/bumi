@@ -170,4 +170,4 @@ subject identifiers, which is why `sub` survived the change — checked rather t
   rotates it automatically. Apple sign-in breaks silently when it lapses. Record the
   expiry date printed by the script here: **expires 2027-01-23** (generated 2026-07-25).
 - App icon must stay free of an alpha channel; App Store Connect rejects transparency.
-- `android.package` is still unset in `app.json`, which blocks any Android build.
+- `android.package` is set to `pt.jogarbumi.app`; the Android side is written up in `play-store.md`.
