@@ -48,7 +48,9 @@ export function isFirstCampaignLevel(context: LabelContext): boolean {
 }
 
 export function hintLabel(context: LabelContext, t: Translate): string {
-  if (context.mode === 'tutorial') return t('game.hint');
+  // Training spends nothing — `onHintPress` skips `spendHint` for both of these — so showing a
+  // count here was a button counting down a balance it never touched.
+  if (context.mode === 'tutorial' || context.mode === 'training') return t('game.hint');
   if (isFirstCampaignLevel(context)) return t('game.noHint');
   return t('game.hintWithCount', { count: context.hints });
 }

@@ -20,6 +20,21 @@ export const TRAINING_TIERS: readonly TrainingTier[] = Object.values(
   }, {}),
 );
 
+/**
+ * What a guest may pick. The two gentlest names, which is enough to learn the rule on and to
+ * decide whether the game is for you — the point of training being open at all.
+ *
+ * The rest asks for an account, and the ask is honest here in a way it would not be if training
+ * were closed outright: signing in unlocks something on the spot rather than only promising to
+ * remember things later. It still records nothing, so this trades no progress for the account.
+ */
+const GUEST_TIER_LABELS = ['easy', 'medium'] as const;
+
+export function isTierLocked(tier: TrainingTier, isSignedIn: boolean): boolean {
+  if (isSignedIn) return false;
+  return !(GUEST_TIER_LABELS as readonly string[]).includes(tier.label);
+}
+
 /** Any seed at all, since nothing has to reproduce it. Injectable so a test can pin one. */
 function looseSeed(): number {
   return Math.floor(Math.random() * 2 ** 31);
