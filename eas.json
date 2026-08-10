@@ -44,7 +44,7 @@
         "ascAppId": "6794318786"
       },
       "android": {
-        "serviceAccountKeyPath": "~/.secrets/bumi-play-service-account.json",
+        "serviceAccountKeyPath": "/Users/jarvis/.secrets/bumi-play-service-account.json",
         "track": "internal"
       }
     }
