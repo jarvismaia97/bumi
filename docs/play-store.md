@@ -39,7 +39,13 @@ Nothing here is done yet beyond what the repo already carries.
    the same on Play.
 5. **Data safety form.** The same answers as Apple's privacy questionnaire: account name and
    email from sign-in, game progress linked to identity, no tracking, no advertising. The
-   friends board shares progress between players and never a name, email or account id.
+   friends board shares the account name between players, and never an email or account id.
+
+   It also asks for an account deletion URL, which is
+   `https://www.jogarbumi.pt/apagar-conta`. Google requires deletion to be reachable *without
+   installing the app*, which an in-app settings row cannot satisfy on its own; the web build
+   is the same app, so signing in there and using Settings deletes exactly what the phone
+   would. The page says so and lists what goes.
 6. **Content rating questionnaire.** A logic puzzle with no ads, no purchases and no user
    content; it lands at the lowest rating in every region.
 
