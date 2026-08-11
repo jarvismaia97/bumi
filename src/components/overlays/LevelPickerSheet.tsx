@@ -1,6 +1,6 @@
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { InteractionManager, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, interpolate, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import MapPinned from 'lucide-react-native/icons/map-pinned';
 import Flame from 'lucide-react-native/icons/flame';
@@ -75,11 +75,16 @@ interface LevelButtonProps {
   progressionLocked: boolean;
   islandColor: string;
   milestone: boolean;
+  /**
+   * Built by the parent, which already holds `t`. Calling `useI18n` here instead subscribed
+   * five hundred buttons to the language store to render five hundred strings that only a
+   * screen reader ever hears — paid in full every time the sheet opens.
+   */
+  label: string;
   onPress: () => void;
 }
 
-function LevelButton({ idx, active, done, medal, locked, progressionLocked, islandColor, milestone, onPress }: LevelButtonProps) {
-  const { t } = useI18n();
+const LevelButton = memo(function LevelButton({ active, done, medal, locked, progressionLocked, islandColor, milestone, label, idx, onPress }: LevelButtonProps) {
   // Island cards are painted from the island art, which stays light in both appearances,
   // so everything sitting on one reads against the light palette.
   const semantic = SEMANTIC.light;
@@ -96,16 +101,7 @@ function LevelButton({ idx, active, done, medal, locked, progressionLocked, isla
       ]}
       disabled={progressionLocked}
       onPress={onPress}
-      accessibilityLabel={t(
-        progressionLocked
-          ? 'a11y.levelLocked'
-          : locked
-            ? 'a11y.levelLoginRequired'
-            : milestone
-              ? 'a11y.levelMilestone'
-              : 'a11y.levelButton',
-        { level: idx + 1 },
-      )}
+      accessibilityLabel={label}
     >
       {locked ? (
         <Lock size={13} color="#827d78" strokeWidth={2.4} />
@@ -118,7 +114,7 @@ function LevelButton({ idx, active, done, medal, locked, progressionLocked, isla
       )}
     </AnimatedPressable>
   );
-}
+});
 
 export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSheetProps>(function LevelPickerSheet(
   { curLvl, isSolved, getLevelMedal, solvedCount, isLevelLocked = () => false, isLevelLoginRequired = () => false, onSelectLevel },
@@ -126,16 +122,40 @@ export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSh
 ) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const [entranceKey, setEntranceKey] = useState(0);
+  /**
+   * Five hundred buttons cannot mount inside the frame budget of an opening sheet, and trying
+   * made the sheet itself late — the cost was paid before anything appeared. The header and the
+   * progress bar come up immediately and the islands follow once the animation is done, which
+   * is also the order they are read in.
+   */
+  const [showIslands, setShowIslands] = useState(false);
   const theme = useThemeTokens();
   const { t } = useI18n();
 
   useImperativeHandle(ref, () => ({
     present: () => {
       setEntranceKey(key => key + 1);
+      setShowIslands(false);
       requestAnimationFrame(() => sheetRef.current?.present());
+      InteractionManager.runAfterInteractions(() => setShowIslands(true));
     },
     dismiss: () => sheetRef.current?.dismiss(),
   }));
+
+  const levelLabelFor = useCallback(
+    (idx: number, progressionLocked: boolean, locked: boolean, milestone: boolean) =>
+      t(
+        progressionLocked
+          ? 'a11y.levelLocked'
+          : locked
+            ? 'a11y.levelLoginRequired'
+            : milestone
+              ? 'a11y.levelMilestone'
+              : 'a11y.levelButton',
+        { level: idx + 1 },
+      ),
+    [t],
+  );
 
   const tierRanges = useMemo<TierRange[]>(
     () => DIFFS.reduce<TierRange[]>((ranges, diff) => {
@@ -177,7 +197,7 @@ export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSh
           </View>
         </View>
 
-        {DIFFS.map((d, di) => {
+        {showIslands && DIFFS.map((d, di) => {
           const island = ISLANDS[di] ?? { id: d.label, color: '#718cc3', bg: '#edf1f8' };
           const { startIdx, endIdx } = tierRanges[di];
           let doneCount = 0;
@@ -235,6 +255,7 @@ export const LevelPickerSheet = forwardRef<LevelPickerSheetHandle, LevelPickerSh
                         progressionLocked={progressionLocked}
                         islandColor={island.color}
                         milestone={LEVEL_META[idx].milestone}
+                        label={levelLabelFor(idx, progressionLocked, locked, LEVEL_META[idx].milestone)}
                         onPress={() => {
                           sheetRef.current?.dismiss();
                           onSelectLevel(idx);
