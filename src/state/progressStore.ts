@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { bestDuration, getDailyDateKey, getDailyStreak } from '@/game/daily';
+import { bestDuration, getDailyDateKey, getDailyStreak, hintsForBest } from '@/game/daily';
 import { INITIAL_HINTS, isMilestoneLevel, MAX_HINTS, normalizeHintCount } from '@/game/hints';
 import { goalRewardHints, goalsCompletedBy } from '@/game/goals';
 import { claimFreeze } from '@/game/streakFreeze';
@@ -45,6 +45,13 @@ interface ProgressState {
    */
   dailyDurations: Record<string, number>;
   /**
+   * Hints spent on each daily, keyed the same way and sparse for the same reason. It is what
+   * separates two times on a puzzle everybody solved: the friends board compares the daily
+   * because it is the one thing played in common, and a hinted solve set against a clean one
+   * is exactly where that stops being true.
+   */
+  dailyHints: Record<string, number>;
+  /**
    * Days a freeze covered. Counted by the streak and by nothing else: they are not in
    * `dailyCompletionDates` because a frozen day was forgiven, not played, and the weekly and
    * monthly goals pay hints for days that were played.
@@ -55,7 +62,7 @@ interface ProgressState {
   dailyReminderEnabled: boolean;
   markSolved: (idx: number) => boolean; // returns true if this was a new solve
   spendHint: () => void;
-  markDailyDone: (dateKey?: string, durationMs?: number) => void;
+  markDailyDone: (dateKey?: string, durationMs?: number, hintsUsed?: number) => void;
   isDailyDoneToday: () => boolean;
   dailyStreak: () => number;
   /** Returns whether a freeze was taken, so the caller can say so. */
@@ -108,7 +115,7 @@ export const useProgressStore = create<ProgressState>()(
        * towards the month and can close a gap in the streak — the streak asks whether each
        * day's puzzle is done, not whether the app was opened that day.
        */
-      markDailyDone: (dateKey = getDailyDateKey(), durationMs?: number) => {
+      markDailyDone: (dateKey = getDailyDateKey(), durationMs?: number, hintsUsed?: number) => {
         set(s => {
           // Paid on the transition, like a milestone level, so no record of which goals were
           // already rewarded has to be kept or synced.
@@ -117,6 +124,9 @@ export const useProgressStore = create<ProgressState>()(
             // Only today's puzzle changes what "done today" means.
             dailyCompletedDate: dateKey === getDailyDateKey() ? dateKey : s.dailyCompletedDate,
             dailyCompletionDates: Array.from(new Set([...s.dailyCompletionDates, dateKey])).sort(),
+            // Hints first: it reads the time already on file to decide whether this solve is
+            // the one whose count to keep, and the line below is about to replace it.
+            dailyHints: hintsForBest(s.dailyDurations, s.dailyHints, dateKey, durationMs, hintsUsed),
             dailyDurations: bestDuration(s.dailyDurations, dateKey, durationMs),
             hints: normalizeHintCount(s.hints + reward),
           };

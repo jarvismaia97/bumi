@@ -31,6 +31,7 @@ type StatsRow = {
   friend_code: string | null;
   name: string | null;
   daily_ms: number | string | null;
+  daily_hints: number | string | null;
   daily_done: boolean | null;
   gold: number | string;
   silver: number | string;
@@ -125,17 +126,39 @@ async function rotateFriendCode(sql: Sql, userId: string): Promise<string> {
 
 /**
  * Points, medals, levels and the daily streak for a set of players, in one round trip. The
- * streak repeats what `getDailyStreak` does on the device — consecutive days counting back from
- * today, zero until today's puzzle is done — except that `current_date` here is the server's,
- * so a friend who plays late can read one day behind until the dates line up again.
+ * streak repeats what `getDailyStreak` does on the device: consecutive days counting back from
+ * today, zero once a day has closed without one.
+ *
+ * "Today" is each player's own, from the offset their device last reported, and it has to be.
+ * Every date stored here is a key the device chose, and reading them against the server's UTC
+ * `current_date` put anyone west of UTC a day ahead of themselves for most of their evening:
+ * their local yesterday was the server's day before last, the anchor missed it, and a streak of
+ * forty read as zero until they played. `viewerId` gets the same treatment for the opposite
+ * reason — today's puzzle is only worth comparing against the person looking at it, so the daily
+ * column is the requester's own day for every row, not each friend's.
  */
-async function statsFor(sql: Sql, userIds: string[]): Promise<StatsRow[]> {
+async function statsFor(sql: Sql, userIds: string[], viewerId: string): Promise<StatsRow[]> {
   if (!userIds.length) return [];
   const ids = JSON.stringify(userIds);
 
   return (await sql`
     with wanted as (
       select value as user_id from jsonb_array_elements_text(${ids}::jsonb) as t(value)
+    ),
+    -- The date it is where each player is. A profile that has not posted an offset since the
+    -- column existed reads as UTC, which is what every row read as before it did.
+    local_today as (
+      select wanted.user_id,
+        ((now() at time zone 'utc') + make_interval(mins => coalesce(profiles.utc_offset_minutes, 0)))::date as day
+      from wanted
+      left join profiles on profiles.user_id = wanted.user_id
+    ),
+    -- The requester's own date, as one row whatever their profile holds, so the daily column
+    -- below cannot lose a friend to a missing offset.
+    viewer_day as (
+      select ((now() at time zone 'utc') + make_interval(mins => coalesce(
+        (select utc_offset_minutes from profiles where user_id = ${viewerId}), 0
+      )))::date as day
     ),
     medals as (
       select user_id,
@@ -172,30 +195,36 @@ async function statsFor(sql: Sql, userIds: string[]): Promise<StatsRow[]> {
     -- The anchor is today when today is played and yesterday otherwise, matching
     -- getDailyStreak: a streak breaks when a day closes without it, not when one opens.
     anchor as (
-      select wanted.user_id,
+      select local_today.user_id,
         case when exists (
-          select 1 from days where days.user_id = wanted.user_id and days.completed_date = current_date
-        ) then current_date else current_date - 1 end as day
-      from wanted
+          select 1 from days where days.user_id = local_today.user_id and days.completed_date = local_today.day
+        ) then local_today.day else local_today.day - 1 end as day
+      from local_today
     ),
     today as (
       select islands.user_id, islands.island
       from islands
       join anchor on anchor.user_id = islands.user_id and anchor.day = islands.completed_date
     ),
+    -- Counting stops at the anchor, which is what getDailyStreak does: it walks backwards and
+    -- never forwards. Without the bound the whole island counts, and a client posting a run of
+    -- dates past its own today would be adding to the number by doing so.
     streaks as (
       select islands.user_id, count(*) as streak
       from islands
       join today on today.user_id = islands.user_id and today.island = islands.island
+      join anchor on anchor.user_id = islands.user_id
+      where islands.completed_date <= anchor.day
       group by islands.user_id
     ),
-    -- Today's puzzle is the same one for everybody, so this is the only number on the board
-    -- that compares like with like. Server date, like the streak above it: a friend playing
-    -- late reads as not started until the dates line up again.
+    -- The requester's today for every row, because the point of this column is that everybody
+    -- solved the same puzzle. Read at each friend's own date instead, a friend a day ahead would
+    -- be showing a time for a puzzle the person reading it has not seen.
     daily as (
-      select user_id, duration_ms
-      from daily_completions
-      where user_id in (select user_id from wanted) and completed_date = current_date
+      select daily_completions.user_id, daily_completions.duration_ms, daily_completions.hints_used
+      from daily_completions, viewer_day
+      where daily_completions.user_id in (select user_id from wanted)
+        and daily_completions.completed_date = viewer_day.day
     )
     select wanted.user_id,
       profiles.friend_code,
@@ -208,6 +237,9 @@ async function statsFor(sql: Sql, userIds: string[]): Promise<StatsRow[]> {
       coalesce(solved.solved, 0) as solved,
       coalesce(streaks.streak, 0) as streak,
       daily.duration_ms as daily_ms,
+      -- What the time cost in hints, so two times on the same puzzle can be told apart. Null,
+      -- not zero, when the row predates the column: an unrecorded count is not a clean solve.
+      daily.hints_used as daily_hints,
       -- Separate from the time: a completion recorded before the clock existed is a day done
       -- with nothing to show, which is not the same as a day not started.
       (daily.user_id is not null) as daily_done
@@ -239,9 +271,11 @@ function toEntry(row: StatsRow, selfId: string, addedAt?: string | null) {
     medals: counts,
     solved: Number(row.solved),
     streak: Number(row.streak),
-    // Today's daily: whether it is done, and how long it took when that was recorded.
+    // Today's daily: whether it is done, how long it took when that was recorded, and what it
+    // cost in hints. Null hints means nobody counted, which is not the same as none used.
     dailyDone: Boolean(row.daily_done),
     dailyMs: row.daily_ms === null ? null : Number(row.daily_ms),
+    dailyHints: row.daily_hints === null ? null : Number(row.daily_hints),
     isSelf: row.user_id === selfId,
   };
 }
@@ -253,7 +287,7 @@ async function board(sql: Sql, userId: string) {
   `) as { friend_id: string; created_at: string | Date }[];
   const friendIds = friendRows.map(row => row.friend_id).slice(0, MAX_FRIENDS);
   const addedAt = new Map(friendRows.map(row => [row.friend_id, new Date(row.created_at).toISOString()]));
-  const rows = await statsFor(sql, [userId, ...friendIds]);
+  const rows = await statsFor(sql, [userId, ...friendIds], userId);
 
   return {
     code,
@@ -352,30 +386,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Removing takes a code the player already has, so only adding is worth rate limiting.
-    if (body.action !== 'remove') {
+    const limited = body.action !== 'remove';
+
+    if (limited) {
+      // Misses only. Enumeration is a run of codes that do not exist; somebody working through
+      // four codes from a group chat is not, and counting their hits spent the same budget on
+      // them. The row still goes in either way — the outcome is what the ceiling ignores.
       const recent = (await sql`
         select count(*)::int as count
         from friend_code_attempts
-        where user_id = ${userId} and attempted_at > now() - interval '1 hour'
+        where user_id = ${userId} and attempted_at > now() - interval '1 hour' and not succeeded
       `) as { count: number }[];
       if ((recent[0]?.count ?? 0) >= MAX_ATTEMPTS_PER_HOUR) {
         sendJson(res, 429, { error: 'too_many_attempts' });
         return;
       }
-      // Logged whether or not the code exists: a miss is what enumeration is made of. Older
-      // rows go with it, so the table stays the size of one hour of use.
-      await sql`
-        insert into friend_code_attempts (user_id) values (${userId})
-      `;
-      await sql`
-        delete from friend_code_attempts where user_id = ${userId} and attempted_at < now() - interval '1 day'
-      `;
     }
 
     const matches = (await sql`
       select user_id, friend_code from profiles where friend_code = ${code}
     `) as CodeRow[];
     const targetId = matches[0]?.user_id;
+
+    if (limited) {
+      // Written after the lookup, so the row can carry what happened. Older rows go with it, so
+      // the table stays the size of a day of use.
+      await sql`
+        insert into friend_code_attempts (user_id, succeeded) values (${userId}, ${!!targetId})
+      `;
+      await sql`
+        delete from friend_code_attempts where user_id = ${userId} and attempted_at < now() - interval '1 day'
+      `;
+    }
 
     if (!targetId) {
       sendJson(res, 404, { error: 'unknown_code' });

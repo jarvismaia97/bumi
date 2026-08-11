@@ -15,8 +15,16 @@ type ProgressPayload = {
   dailyCompletionDates?: string[];
   /** Milliseconds per daily, keyed by the puzzle's own `YYYYMMDD`. Sparse by design. */
   dailyDurations?: Record<string, number>;
+  /** Hints spent per daily, same keys. Sparse for the same reason the durations are. */
+  dailyHints?: Record<string, number>;
   /** Days a streak freeze covered. Kept apart from completions on purpose; see the schema. */
   streakFreezes?: string[];
+  /**
+   * Minutes east of UTC on the device that sent this. Every date above is a key that device
+   * chose, and this is the only thing that says which day it meant: without it the friends
+   * board reads them against UTC and hands anyone west of it a day they have not reached.
+   */
+  utcOffsetMinutes?: number;
 };
 
 /**
@@ -32,6 +40,30 @@ function toDurationMs(value: unknown): number | null {
   return rounded > 0 && rounded < MAX_DURATION_MS ? rounded : null;
 }
 
+/**
+ * A hint count the column will take, or null to leave it alone. The cap is the largest number
+ * of hints a board can absorb before there is nothing left to reveal; anything past it, or
+ * negative, is a bug or a lie and is better recorded as unknown than as a figure.
+ */
+const MAX_HINTS_PER_DAILY = 99;
+
+function toHintsUsed(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  const rounded = Math.round(value);
+  return rounded >= 0 && rounded <= MAX_HINTS_PER_DAILY ? rounded : null;
+}
+
+/**
+ * The device's offset from UTC in minutes, or null when it did not say. Bounded by the real
+ * range of world time zones — UTC-12 to UTC+14 — because the column feeds a date the friends
+ * board reads as a player's own day, and an unbounded number there moves that day at will.
+ */
+function toUtcOffsetMinutes(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  const rounded = Math.round(value);
+  return rounded >= -12 * 60 && rounded <= 14 * 60 ? rounded : null;
+}
+
 type PostBody = {
   progress?: ProgressPayload;
   solvedLevelIdxs?: number[];
@@ -40,7 +72,11 @@ type PostBody = {
 
 /** Neon returns untyped rows, so the shape of each query is declared where it is read. */
 type ProgressRow = { hints: number; daily_completed_date: string | Date | null };
-type DailyRow = { completed_date: string | Date | null; duration_ms: number | string | null };
+type DailyRow = {
+  completed_date: string | Date | null;
+  duration_ms: number | string | null;
+  hints_used: number | string | null;
+};
 type FreezeRow = { frozen_date: string | Date | null };
 type SolvedRow = { level_idx: number; solved_at: string | Date | null };
 type MedalRow = { level_idx: number; medal: Medal };
@@ -116,9 +152,11 @@ async function notifyOvertaken(sql: Sql, userId: string): Promise<void> {
     const points = pointsFromCounts({ gold: Number(row.gold), silver: Number(row.silver), bronze: Number(row.bronze) });
     const previous = Number(row.previous);
 
+    // Stamped with the score: `points` alone cannot say whether it is this morning's or one
+    // left over from March, and everything below reads it as though it were current.
     await sql`
-      insert into profiles (user_id, points) values (${userId}, ${points})
-      on conflict (user_id) do update set points = excluded.points
+      insert into profiles (user_id, points, points_updated_at) values (${userId}, ${points}, now())
+      on conflict (user_id) do update set points = excluded.points, points_updated_at = now()
     `;
 
     // Nothing was overtaken if the score did not move, and a score that fell is not an overtake
@@ -309,7 +347,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         order by level_idx asc
       `,
       sql`
-        select completed_date, duration_ms
+        select completed_date, duration_ms, hints_used
         from daily_completions
         where user_id = ${userId}
         order by completed_date asc
@@ -341,6 +379,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               (dailyRows as DailyRow[])
                 .map(row => [fromPgDate(row.completed_date), toDurationMs(Number(row.duration_ms))] as const)
                 .filter(([date, ms]) => date && ms !== null),
+            ),
+            // Sparse like the durations, and for the same reason: a day nobody counted stays
+            // absent rather than arriving as zero, which would read as a solve with no help.
+            dailyHints: Object.fromEntries(
+              (dailyRows as DailyRow[])
+                .map(row => [
+                  fromPgDate(row.completed_date),
+                  row.hints_used === null ? null : toHintsUsed(Number(row.hints_used)),
+                ] as const)
+                .filter(([date, hints]) => date && hints !== null),
             ),
             streakFreezes: (freezeRows as FreezeRow[]).map(row => fromPgDate(row.frozen_date)).filter(Boolean),
           }
@@ -377,6 +425,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           daily_completed_date = excluded.daily_completed_date,
           updated_at = now()
       `);
+
+      // Only when the device said. An older client sends nothing here, and overwriting a known
+      // offset with a default would put that player back on UTC, which is the bug this fixes.
+      const offset = toUtcOffsetMinutes(progress.utcOffsetMinutes);
+      if (offset !== null) {
+        writes.push(sql`
+          insert into profiles (user_id, utc_offset_minutes) values (${userId}, ${offset})
+          on conflict (user_id) do update set utc_offset_minutes = excluded.utc_offset_minutes
+        `);
+      }
     }
 
     const solvedLevelIdxs = [...new Set(body.solvedLevelIdxs ?? [])]
@@ -400,17 +458,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // repeat only ever lowers the record: `least` ignores a null on either side, so a day
       // that already has a time cannot be blanked by a client that forgot to send one.
       const durations = body.progress?.dailyDurations ?? {};
+      const hints = body.progress?.dailyHints ?? {};
       const rows = dailyCompletionDates.map(date => ({
         completed_date: toPgDate(date),
         duration_ms: toDurationMs(durations[date]),
+        hints_used: toHintsUsed(hints[date]),
       }));
 
       writes.push(sql`
-        insert into daily_completions (user_id, completed_date, duration_ms)
-        select ${userId}, (item->>'completed_date')::date, (item->>'duration_ms')::int
+        insert into daily_completions (user_id, completed_date, duration_ms, hints_used)
+        select ${userId}, (item->>'completed_date')::date, (item->>'duration_ms')::int, (item->>'hints_used')::int
         from jsonb_array_elements(${JSON.stringify(rows)}::jsonb) as item
         on conflict (user_id, completed_date) do update set
-          duration_ms = least(daily_completions.duration_ms, excluded.duration_ms)
+          duration_ms = least(daily_completions.duration_ms, excluded.duration_ms),
+          -- Follows the time rather than taking the smaller count: what the record is is the
+          -- fastest solve, and its hints are the ones that solve spent. A replay that was
+          -- slower but cleaner does not get to lend its zero to a time it did not set.
+          hints_used = case
+            when excluded.duration_ms is not null
+              and (daily_completions.duration_ms is null or excluded.duration_ms < daily_completions.duration_ms)
+            then excluded.hints_used
+            else coalesce(daily_completions.hints_used, excluded.hints_used)
+          end
       `);
     }
 

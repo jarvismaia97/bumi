@@ -117,6 +117,33 @@ create table if not exists level_medals (
 
 create index if not exists level_medals_user_id_idx on level_medals (user_id);
 
+-- The player's own clock, in minutes east of UTC, as their device last reported it. Everything
+-- dated here is a date key the device chose, and the friends board was reading those against
+-- `current_date`, which is UTC. For anyone west of it that is tomorrow for most of their evening:
+-- their streak read zero from the moment their local yesterday became the server's day before
+-- last, which is every evening before they have played. Nullable, and read as zero when it is:
+-- a player who has not posted since this column existed is treated at UTC, as they were before.
+alter table profiles add column if not exists utc_offset_minutes smallint;
+
+-- Hints spent on that day's puzzle. The daily is the one number on the friends board where
+-- everybody solved the same thing, and a hinted solve set against a clean one is the one way
+-- that stops being true. Nullable for the reason `duration_ms` is: no row written before this
+-- column existed has an answer, and none of them ever will.
+alter table daily_completions add column if not exists hints_used smallint;
+
+-- When the freeze was taken, as against the day it covers. A freeze arrives from the device that
+-- spent it, so without this a backfilled one covering a gap from two years ago is
+-- indistinguishable from one claimed this morning.
+alter table streak_freezes add column if not exists claimed_at timestamptz not null default now();
+
+-- When `points` was last written. The number on its own cannot say whether it is this morning's
+-- score or one left over from March, and the overtake check reads it as though it were current.
+alter table profiles add column if not exists points_updated_at timestamptz;
+
+-- Whether the code was found. Enumeration is made of misses; a player working through four codes
+-- from a group chat is not, and until now both spent the same hourly budget.
+alter table friend_code_attempts add column if not exists succeeded boolean not null default false;
+
 -- Preserve the last recorded daily completion when upgrading existing users.
 insert into daily_completions (user_id, completed_date)
 select user_id, daily_completed_date
@@ -135,3 +162,47 @@ alter table solved_levels alter column user_id type text using user_id::text;
 alter table profiles drop column if exists display_name;
 alter table profiles drop column if exists avatar_url;
 alter table user_progress drop column if exists infinite_best;
+
+-- Account deletion removes the rows below by hand, in `beforeDelete` (src/lib/auth.ts), and that
+-- list is right only for as long as somebody remembers to extend it. These say it once, where
+-- adding a table cannot miss it. `not valid` on purpose: it enforces every row written from here
+-- on and skips the scan of what is already there, so an orphan left by a deletion predating that
+-- hook cannot fail the migration. The cascade fires either way — validation is about rows that
+-- already exist, not about the trigger.
+--
+-- Last in the file because the column-type alters above have to have run first. `"user"` is
+-- better-auth's own table, created by its schema rather than this one, so a database that has
+-- not seen better-auth yet skips the whole block rather than failing on it.
+do $$
+declare
+  child text;
+  children text[] := array[
+    'profiles', 'friendships', 'push_tokens', 'friend_code_attempts', 'user_progress',
+    'solved_levels', 'daily_completions', 'streak_freezes', 'level_medals'
+  ];
+begin
+  if to_regclass('public."user"') is null then return; end if;
+
+  foreach child in array children loop
+    if not exists (
+      select 1 from pg_constraint
+      where conrelid = to_regclass('public.' || quote_ident(child))
+        and conname = child || '_user_id_fk'
+    ) then
+      execute format(
+        'alter table %I add constraint %I foreign key (user_id) references "user"(id) on delete cascade not valid',
+        child, child || '_user_id_fk'
+      );
+    end if;
+  end loop;
+
+  -- Both directions of a friendship point at an account, and the other one has no column named
+  -- `user_id` to be caught by the loop above.
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = to_regclass('public.friendships') and conname = 'friendships_friend_id_fk'
+  ) then
+    alter table friendships add constraint friendships_friend_id_fk
+      foreign key (friend_id) references "user"(id) on delete cascade not valid;
+  end if;
+end $$;

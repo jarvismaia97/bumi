@@ -25,6 +25,39 @@ export function bestDuration(
 }
 
 /**
+ * The hint count that belongs with the recorded time. Hints follow the time rather than being
+ * minimised on their own: the record for a day is its fastest solve, and the count that belongs
+ * to it is what that solve spent. A slower replay that used fewer would otherwise lend its
+ * number to a time it did not set.
+ *
+ * Call it before `bestDuration` writes the new time — it reads the old one to decide.
+ */
+export function hintsForBest(
+  durations: Record<string, number>,
+  hints: Record<string, number>,
+  dateKey: string,
+  durationMs: number | undefined,
+  hintsUsed: number | undefined,
+): Record<string, number> {
+  if (hintsUsed === undefined || !Number.isFinite(hintsUsed) || hintsUsed < 0) return hints;
+  const rounded = Math.round(hintsUsed);
+  // Nothing recorded for the day yet, so this solve is the record whether or not it was timed.
+  if (hints[dateKey] === undefined) return { ...hints, [dateKey]: rounded };
+  // Otherwise only a time that beat the one on file takes the count with it.
+  if (bestDuration(durations, dateKey, durationMs) === durations) return hints;
+  return { ...hints, [dateKey]: rounded };
+}
+
+/**
+ * Minutes east of UTC on this device — the sign the server wants, and the opposite of the one
+ * `getTimezoneOffset` gives. Sent with progress so the friends board can work out which day a
+ * date key meant instead of reading them all at UTC.
+ */
+export function utcOffsetMinutes(d: Date = new Date()): number {
+  return -d.getTimezoneOffset();
+}
+
+/**
  * Consecutive days ending today, or ending yesterday while today is still open. Counting
  * strictly from today read zero every morning: a player on an eight-day run opened the app and
  * was told to start a streak, and it only came back once they had played. The reminder the app
