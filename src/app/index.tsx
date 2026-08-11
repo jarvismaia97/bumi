@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { PixelRatio, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,12 +35,22 @@ import { canShowIOSInstallPrompt } from '@/lib/iosInstallPrompt';
 import { useI18n, type Translate } from '@/i18n';
 import Animated, { FadeIn, ReduceMotion, useReducedMotion } from 'react-native-reanimated';
 
+/**
+ * A cell size that lands on whole device pixels, not merely on whole points.
+ *
+ * The grid is a wall of adjacent squares over a `gridSep` background, and the lines between them
+ * are the background showing through. A size that is an integer in points is still fractional in
+ * pixels wherever the density is not — Android ships 2.75x and 3.5x displays, so 34pt became
+ * 93.5px and every seam leaked half a pixel of that background *through the placed rectangles*,
+ * drawing a grid over shapes that are supposed to be solid. iOS never showed it because 2x and
+ * 3x turn whole points into whole pixels on their own.
+ */
 function useGridCellSize(size: number) {
   const { width, height } = useWindowDimensions();
   const availW = Math.min(width, 480) - 40;
   const availH = height * 0.48;
   const px = Math.max(140, Math.min(availW, availH));
-  return Math.floor(px / size);
+  return PixelRatio.roundToNearestPixel(Math.floor(px / size));
 }
 
 /** "1m 20s · 2 dicas · 0 tentativas inválidas" and its English counterpart. */
