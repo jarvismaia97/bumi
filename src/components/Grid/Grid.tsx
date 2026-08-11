@@ -6,7 +6,7 @@ import { rectOk } from '@/game/geometry';
 import type { Level, PlacedRect, SolutionRect } from '@/game/types';
 import { BD_PAL, BG_PAL, clueInkOn } from '@/theme/palette';
 import { useThemeTokens } from '@/state/themeStore';
-import { Cell, type CellEdges, type CellState } from './Cell';
+import { Cell, type CellState } from './Cell';
 import {
   type CelebrationTier,
   GLOW_REPEAT_GAP_MS,
@@ -40,14 +40,12 @@ interface GridProps {
   locked?: boolean;
 }
 
+/** Which rectangle covers a square, which is all the squares still need to know. */
 interface CellInfo {
   colorIndex: number;
   colors?: PlacedRect['colors'];
   correct: boolean;
-  edges: CellEdges;
 }
-
-const EMPTY_EDGES: CellEdges = { top: false, bottom: false, left: false, right: false };
 
 export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating = false, celebrationTier = 'normal', locked = false }: GridProps) {
   const { size, clues } = level;
@@ -63,17 +61,7 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
       const correct = rectOk(rect, level);
       for (let r = rect.r1; r < rect.r2; r++) {
         for (let c = rect.c1; c < rect.c2; c++) {
-          grid[r][c] = {
-            colorIndex: rect.ci,
-            colors: rect.colors,
-            correct,
-            edges: {
-              top: r === rect.r1,
-              bottom: r === rect.r2 - 1,
-              left: c === rect.c1,
-              right: c === rect.c2 - 1,
-            },
-          };
+          grid[r][c] = { colorIndex: rect.ci, colors: rect.colors, correct };
         }
       }
     });
@@ -91,6 +79,38 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
     <View style={{ width: gridWidth, height: gridHeight }}>
       <GestureDetector gesture={gesture}>
       <View style={[styles.grid, { width: gridWidth, height: gridHeight, backgroundColor: theme.gridSep }]}>
+        {/* One view per rectangle, before the squares so it paints underneath them: a covered
+            square is transparent and lets its piece show through, while its clue still draws on
+            top. Composing a rectangle out of the squares themselves is what let the board's own
+            lines leak through it wherever a cell was a fractional number of pixels wide. */}
+        {placed.map((rect, index) => {
+          const correct = rectOk(rect, level);
+          const border = rect.colors?.border ?? borderPal[rect.ci % borderPal.length];
+          return (
+            <View
+              key={`${rect.r1}-${rect.c1}-${index}`}
+              // Named so the overlay tests can tell a piece, which never moves, from the
+              // preview and the celebration, which are the animated layers they are about.
+              testID="grid-piece"
+              pointerEvents="none"
+              style={[
+                styles.piece,
+                {
+                  left: rect.c1 * cellSize,
+                  top: rect.r1 * cellSize,
+                  width: (rect.c2 - rect.c1) * cellSize,
+                  height: (rect.r2 - rect.r1) * cellSize,
+                  // A rectangle that does not yet satisfy its clue is held rather than solved,
+                  // and reads as a wash instead of as its own colour.
+                  backgroundColor: correct
+                    ? (rect.colors?.fill ?? fillPal[rect.ci % fillPal.length])
+                    : 'rgba(113,140,195,0.12)',
+                  borderColor: border,
+                },
+              ]}
+            />
+          );
+        })}
         {Array.from({ length: rows }).map((_, r) => (
           <View key={r} style={styles.row}>
             {Array.from({ length: columns }).map((_, c) => {
@@ -98,12 +118,7 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
               const clue = clues.find(cl => cl.r === r && cl.c === c);
               const state: CellState = info ? (info.correct ? 'correct' : 'placed') : 'empty';
 
-              let fillColor: string | undefined;
-              let borderColor: string | undefined;
-              if (info) {
-                fillColor = info.colors?.fill ?? fillPal[info.colorIndex % fillPal.length];
-                borderColor = info.colors?.border ?? borderPal[info.colorIndex % borderPal.length];
-              }
+              const fillColor = info ? (info.colors?.fill ?? fillPal[info.colorIndex % fillPal.length]) : undefined;
 
               // What the clue is actually painted on. The theme's own surface is left out: there
               // the accent is the intended look and reads on it, so only a colour the level or a
@@ -117,9 +132,6 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
                   clueValue={clue && clue.v > 1 ? clue.v : undefined}
                   clueColor={clueBackdrop ? clueInkOn(clueBackdrop) : theme.accent}
                   state={state}
-                  edges={info?.edges ?? EMPTY_EDGES}
-                  fillColor={fillColor}
-                  borderColor={borderColor}
                   emptyColor={level.emptyFillColor ?? theme.surface}
                   gapColor={theme.gridSep}
                 />
@@ -255,6 +267,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
+  piece: { position: 'absolute', borderWidth: 3, borderRadius: 10 },
   celebrationRect: { position: 'absolute', borderWidth: 3, borderRadius: 10 },
   completionGlow: { position: 'absolute', inset: 2, borderWidth: 3, borderRadius: 10 },
 });

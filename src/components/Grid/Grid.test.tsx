@@ -28,13 +28,17 @@ const LEVEL: Level = {
 };
 const PLACED: PlacedRect[] = [{ r1: 0, c1: 0, r2: 1, c2: 2, ci: 0 }];
 
-/** The absolutely-positioned overlays: the drag preview, the celebration border, the glow. */
+/**
+ * The absolutely-positioned *animated* overlays: the drag preview, the celebration border, the
+ * glow. The placed rectangles are absolute too — they are drawn as whole shapes under the
+ * squares rather than assembled from them — but they never move, so they are filtered out.
+ */
 function renderOverlays(celebrating: boolean) {
   const { container } = render(
     <Grid level={LEVEL} placed={PLACED} cellSize={40} celebrating={celebrating} onPlace={() => {}} onRemoveAt={() => {}} />,
   );
   return Array.from(container.querySelectorAll<HTMLElement>('div')).filter(
-    node => getComputedStyle(node).position === 'absolute',
+    node => getComputedStyle(node).position === 'absolute' && node.dataset.testid !== 'grid-piece',
   );
 }
 
