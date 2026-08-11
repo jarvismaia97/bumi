@@ -1,5 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { authClient, AUTH_STORAGE_KEYS } from '@/lib/auth-client';
 import { playHaptic } from '@/lib/haptics';
 import { useProgressStore } from '@/state/progressStore';
@@ -133,7 +135,15 @@ function signedIn(data: { user: AuthUser } | null): void {
   if (data?.user) playHaptic('success');
 }
 
-export const useAuthStore = create<AuthState>()((set) => ({
+/**
+ * Only `user` is kept on the device, and only so an app opened without a signal can go on
+ * saying whose board it is. It grants nothing: every request still carries the real session,
+ * and a launch that reaches the server overwrites this within a second either way.
+ *
+ * `session` is deliberately not persisted. It expires, and a stale one restored from disk would
+ * be a lie the app then had to catch itself telling.
+ */
+export const useAuthStore = create<AuthState>()(persist((set) => ({
   session: null,
   user: null,
   loading: true,
@@ -160,7 +170,15 @@ export const useAuthStore = create<AuthState>()((set) => ({
         sessionResolved = true;
         setSession(set, data ?? null, error);
       })
-      .catch(() => set({ loading: false }));
+      // Deliberately does not touch `user`. Whoever was here last is still whoever is here;
+      // the network failing is not them leaving, and the persisted copy below is what lets the
+      // menu keep saying so — but only once it has been read back, or the menu paints a
+      // signed-out state for the frame before it arrives.
+      .catch(() => {
+        const done = () => set({ loading: false });
+        if (useAuthStore.persist.hasHydrated()) done();
+        else useAuthStore.persist.onFinishHydration(done);
+      });
   },
 
   signInWithGoogle: async () => {
@@ -282,6 +300,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
     useFriendsStore.getState().reset();
     set({ session: null, user: null, error: null });
   },
+}), {
+  name: 'bumi-auth-store',
+  storage: createJSONStorage(() => AsyncStorage),
+  // Not the session, and not `loading` — a launch has to start by asking, not by assuming.
+  partialize: state => ({ user: state.user }),
 }));
 
 export function resetAuthStoreForTests(): void {

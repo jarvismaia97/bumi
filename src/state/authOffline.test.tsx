@@ -40,6 +40,30 @@ describe('opening the app with no network', () => {
     expect(useAuthStore.getState().error).toBeNull();
   });
 
+  it('keeps saying whose board it is when the server cannot be reached', async () => {
+    // The whole point of persisting the user: a player with 471 levels and a 16-day streak
+    // opening the app on a plane is not somebody who signed out.
+    const known = { id: 'u', name: 'Ana', email: 'a@b.c' };
+    useAuthStore.setState({ user: known });
+    getSession.mockRejectedValueOnce(new Error('Network request failed'));
+
+    useAuthStore.getState().init();
+    await vi.waitFor(() => expect(useAuthStore.getState().loading).toBe(false));
+
+    expect(useAuthStore.getState().user).toEqual(known);
+  });
+
+  it('does let go once the server says there is nobody', async () => {
+    // A reachable server answering "no session" is the one thing that means signed out.
+    useAuthStore.setState({ user: { id: 'u', name: 'Ana', email: 'a@b.c' } });
+    getSession.mockResolvedValueOnce({ data: null, error: null });
+
+    useAuthStore.getState().init();
+    await vi.waitFor(() => expect(useAuthStore.getState().loading).toBe(false));
+
+    expect(useAuthStore.getState().user).toBeNull();
+  });
+
   it('asks again the next time it is called, having never got an answer', async () => {
     getSession.mockRejectedValueOnce(new Error('Network request failed'));
     useAuthStore.getState().init();
