@@ -1,6 +1,7 @@
 import { useAuthStore } from './authStore';
 import { useProgressStore } from './progressStore';
 import type { Medal } from '@/game/medals';
+import { utcOffsetMinutes } from '@/game/daily';
 import { mergeProgress, type RemoteProgressState } from './progressMerge';
 import { apiRequest } from '@/lib/apiClient';
 import { useSyncStore } from '@/state/syncStore';
@@ -16,7 +17,11 @@ async function pushProgress(): Promise<void> {
       dailyCompletedDate: s.dailyCompletedDate,
       dailyCompletionDates: s.dailyCompletionDates,
       dailyDurations: s.dailyDurations,
+      dailyHints: s.dailyHints,
       streakFreezes: s.streakFreezes,
+      // Read at the moment of the post rather than held anywhere: a player who flies somewhere
+      // is on the new clock as soon as their device is, and the dates above are already in it.
+      utcOffsetMinutes: utcOffsetMinutes(),
     },
   });
 }
@@ -163,6 +168,7 @@ export function initProgressSync(): void {
       // A replayed archive day can better a time without adding a date, and that improvement
       // is worth as much as the completion was.
       state.dailyDurations !== prevState.dailyDurations ||
+      state.dailyHints !== prevState.dailyHints ||
       state.streakFreezes !== prevState.streakFreezes
     ) {
       requestSync();

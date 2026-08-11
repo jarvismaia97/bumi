@@ -15,6 +15,7 @@ export interface LocalProgress {
   dailyCompletedDate: string | null;
   dailyCompletionDates: string[];
   dailyDurations: Record<string, number>;
+  dailyHints: Record<string, number>;
   streakFreezes: string[];
   levelMedals: Record<number, Medal>;
 }
@@ -25,6 +26,7 @@ export interface RemoteProgressState {
     dailyCompletedDate: string | null;
     dailyCompletionDates: string[];
     dailyDurations?: Record<string, number>;
+    dailyHints?: Record<string, number>;
     streakFreezes?: string[];
   } | null;
   solvedLevelIdxs: number[];
@@ -63,6 +65,33 @@ function mergeDurations(
   return merged;
 }
 
+/**
+ * Hints go with whichever side's time won above, because that is what they are a count of. The
+ * cheaper count is not the better record: taking the smaller of the two would let a slow, clean
+ * replay on one device attach its zero to a fast, hinted solve on the other.
+ *
+ * A day only one side has a time for keeps that side's hints, and a day neither timed keeps
+ * whichever count exists, local first — the same rule the durations follow.
+ */
+function mergeHints(local: LocalProgress, remote: RemoteProgressState): Record<string, number> {
+  const localDurations = local.dailyDurations;
+  const remoteDurations = remote.progress?.dailyDurations ?? {};
+  const localHints = local.dailyHints;
+  const remoteHints = remote.progress?.dailyHints ?? {};
+
+  const merged: Record<string, number> = {};
+  for (const date of new Set([...Object.keys(localHints), ...Object.keys(remoteHints)])) {
+    const mine = localDurations[date];
+    const theirs = remoteDurations[date];
+    const localWins = mine !== undefined && (theirs === undefined || mine <= theirs);
+    const winner = localWins ? localHints[date] : remoteHints[date];
+    const other = localWins ? remoteHints[date] : localHints[date];
+    const count = winner ?? other;
+    if (count !== undefined) merged[date] = count;
+  }
+  return merged;
+}
+
 export function mergeProgress(local: LocalProgress, remote: RemoteProgressState): MergeResult {
   const remoteSolvedMap: Record<number, true> = {};
   remote.solvedLevelIdxs.forEach(idx => {
@@ -91,6 +120,7 @@ export function mergeProgress(local: LocalProgress, remote: RemoteProgressState)
     dailyCompletedDate: mergedDailyDates.at(-1) ?? null,
     dailyCompletionDates: mergedDailyDates,
     dailyDurations: mergeDurations(local.dailyDurations, remote.progress?.dailyDurations),
+    dailyHints: mergeHints(local, remote),
     // Union, like the completions above: a freeze already spent on one device was spent, and
     // dropping it here would quietly break a streak the player was told was safe.
     streakFreezes: Array.from(new Set([...local.streakFreezes, ...(remote.progress?.streakFreezes ?? [])])).sort(),

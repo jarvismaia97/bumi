@@ -19,6 +19,7 @@ import { formatResultDuration } from '@/game/medals';
 import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useI18n, type SupportedLanguage } from '@/i18n';
+import type { Translate } from '@/i18n/messages';
 
 export type LeaderboardSheetHandle = SettingsChildSheetHandle;
 
@@ -30,6 +31,20 @@ function entryName(entry: LeaderboardEntry, language: SupportedLanguage): string
 /** Rows are keyed by code; the player's own row has none until the server assigns one. */
 function rowKey(entry: LeaderboardEntry, index: number): string {
   return entry.code ?? `entry-${index}`;
+}
+
+/**
+ * What a finished daily says. The count only appears when hints were actually spent: a zero
+ * would put a line about hints under every clean solve, and a null — a day recorded before the
+ * count was kept — has nothing to say either way, so it reads as it always did.
+ */
+function dailyDoneDetail(entry: LeaderboardEntry, t: Translate): string {
+  const count = entry.dailyHints;
+  if (!count) return t('leaderboard.dailyDone');
+  return t('leaderboard.dailyDoneHinted', {
+    count,
+    hints: t(count === 1 ? 'game.hintOne' : 'game.hintMany'),
+  });
 }
 
 export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function LeaderboardSheet(_, ref) {
@@ -230,7 +245,7 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                       {rowTitle && <Text style={{ color: theme.accent, fontWeight: '800' }}>{rowTitle} · </Text>}
                       {view === 'daily'
                         ? entry.dailyDone
-                          ? t('leaderboard.dailyDone')
+                          ? dailyDoneDetail(entry, t)
                           : t('leaderboard.dailyPending')
                         : t('leaderboard.rowDetail', { solved: entry.solved, gold: entry.medals.gold, streak: entry.streak })}
                     </>

@@ -18,6 +18,12 @@ export interface LeaderboardEntry {
   /** Whether today's daily is done, and how long it took when a time was recorded. */
   dailyDone: boolean;
   dailyMs: number | null;
+  /**
+   * Hints that time cost. Null where nobody counted — every day recorded before the count was
+   * kept — which is not a claim that the solve was clean, so the row says nothing rather than
+   * showing a zero it cannot stand behind.
+   */
+  dailyHints: number | null;
   isSelf: boolean;
 }
 
