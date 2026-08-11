@@ -1,6 +1,5 @@
 import { useRef, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
 import Check from 'lucide-react-native/icons/check';
 import Flame from 'lucide-react-native/icons/flame';
@@ -10,11 +9,12 @@ import Settings from 'lucide-react-native/icons/settings';
 import Trophy from 'lucide-react-native/icons/trophy';
 import Dumbbell from 'lucide-react-native/icons/dumbbell';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { AppleSignInButton } from '@/components/AppleSignInButton';
 import { GoogleMark } from '@/components/GoogleMark';
 import { BrandMark } from '@/components/BrandMark';
 import { PlayerAvatarTile } from '@/components/PlayerAvatar';
 import { playerName } from '@/lib/identity';
-import { useAppleSignInAvailable } from '@/lib/appleSignIn';
+import { useAppleSignInOffered } from '@/lib/appleSignIn';
 import { MIN_TOUCH_TARGET } from '@/lib/touchTarget';
 import { ThemePickerSheet, type ThemePickerSheetHandle } from '@/components/overlays/ThemePickerSheet';
 import { SettingsSheet, type SettingsSheetHandle } from '@/components/overlays/SettingsSheet';
@@ -24,7 +24,6 @@ import { LanguageSheet, type LanguageSheetHandle } from '@/components/overlays/L
 import { LeaderboardSheet, type LeaderboardSheetHandle } from '@/components/overlays/LeaderboardSheet';
 import { DailyArchiveSheet, type DailyArchiveSheetHandle } from '@/components/overlays/DailyArchiveSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppearance } from '@/state/appearanceStore';
 import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
@@ -65,13 +64,9 @@ function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
   const loading = useAuthStore(s => s.loading);
   const signInWithGoogle = useAuthStore(s => s.signInWithGoogle);
   const signInWithApple = useAuthStore(s => s.signInWithApple);
-  const appleAvailable = useAppleSignInAvailable();
+  const appleOffered = useAppleSignInOffered();
   const authError = useAuthStore(s => s.error);
   const semantic = useSemanticTokens();
-  // Apple's own button ships two fixed colourways, so the one that reads is picked by
-  // appearance rather than by the theme's tokens, which it will not take.
-  const appearance = useAppearance();
-
   if (loading) return null;
 
   if (!user) {
@@ -85,15 +80,9 @@ function AuthPill({ onOpenSettings }: { onOpenSettings: () => void }) {
           <GoogleMark size={16} />
           <Text style={[styles.authPillText, { color: theme.text }]}>{t('auth.signInGoogle')}</Text>
         </AnimatedPressable>
-        {appleAvailable ? (
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-            buttonStyle={
-              appearance === 'dark'
-                ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-                : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-            }
-            cornerRadius={AUTH_BUTTON_HEIGHT / 2}
+        {appleOffered ? (
+          <AppleSignInButton
+            height={AUTH_BUTTON_HEIGHT}
             style={styles.authApplePill}
             onPress={() => signInWithApple().catch(() => {})}
           />

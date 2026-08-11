@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { AppleSignInButton } from '@/components/AppleSignInButton';
 import { GoogleMark } from '@/components/GoogleMark';
 import { Logo } from '@/components/Logo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppleSignInAvailable } from '@/lib/appleSignIn';
+import { useAppleSignInOffered } from '@/lib/appleSignIn';
 import { hitSlopFor } from '@/lib/touchTarget';
 import { useAuthStore } from '@/state/authStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
@@ -24,7 +24,7 @@ export default function LoginScreen() {
   const signInWithApple = useAuthStore(s => s.signInWithApple);
   const authError = useAuthStore(s => s.error);
   const [submitting, setSubmitting] = useState(false);
-  const appleAvailable = useAppleSignInAvailable();
+  const appleOffered = useAppleSignInOffered();
   const insets = useSafeAreaInsets();
   const { t } = useI18n();
 
@@ -104,14 +104,8 @@ export default function LoginScreen() {
         <Text style={styles.signInText}>{submitting ? t('auth.opening') : t('auth.signInGoogle')}</Text>
       </AnimatedPressable>
 
-      {appleAvailable ? (
-        <AppleAuthentication.AppleAuthenticationButton
-          buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-          cornerRadius={8}
-          style={styles.appleButton}
-          onPress={() => onAppleSignIn().catch(() => {})}
-        />
+      {appleOffered ? (
+        <AppleSignInButton height={48} style={styles.appleButton} onPress={() => onAppleSignIn().catch(() => {})} />
       ) : null}
 
       {authError ? <Text style={[styles.error, { color: semantic.danger }]}>{authError}</Text> : null}

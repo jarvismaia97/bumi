@@ -16,17 +16,27 @@ import { importPKCS8, SignJWT } from 'jose';
 
 const TEAM_ID = 'UTCM3TBG22';
 const KEY_ID = 'AN9QJ8343L';
-// Native-only Apple sign-in, so the App ID doubles as the client id. A Services ID
-// would only be needed to offer Apple sign-in on the web.
-const CLIENT_ID = 'pt.jogarbumi.app';
+/**
+ * The bundle id, which is what an iOS build presents. Apple refuses it as the `client_id` of a
+ * web OAuth flow, so offering Apple sign-in on the web or on Android needs a Services ID as
+ * well — pass it as the second argument and the secret is signed for that instead. Better Auth
+ * then takes the Services ID as `clientId` and the bundle id as `appBundleIdentifier`, which is
+ * how one server accepts both routes.
+ */
+const BUNDLE_ID = 'pt.jogarbumi.app';
 const SIX_MONTHS_SECONDS = 15777000;
 
 async function main(): Promise<void> {
   const keyPath = process.argv[2];
   if (!keyPath) {
-    console.error('Usage: npm run generate-apple-secret -- /path/to/AuthKey_XXXXXXXXXX.p8');
+    console.error('Usage: npm run generate-apple-secret -- /path/to/AuthKey_XXXXXXXXXX.p8 [servicesId]');
     process.exit(1);
   }
+
+  // Apple signs the secret for whoever is asking: the Services ID when there is one, since the
+  // web flow is the only route that cannot fall back to the bundle id.
+  const servicesId = process.argv[3]?.trim();
+  const subject = servicesId || BUNDLE_ID;
 
   const privateKey = await importPKCS8(readFileSync(keyPath, 'utf8'), 'ES256');
   const issuedAt = Math.floor(Date.now() / 1000);
@@ -38,11 +48,11 @@ async function main(): Promise<void> {
     .setIssuedAt(issuedAt)
     .setExpirationTime(expiresAt)
     .setAudience('https://appleid.apple.com')
-    .setSubject(CLIENT_ID)
+    .setSubject(subject)
     .sign(privateKey);
 
-  console.log(`\nAPPLE_CLIENT_ID=${CLIENT_ID}`);
-  console.log(`APPLE_APP_BUNDLE_IDENTIFIER=${CLIENT_ID}`);
+  console.log(`\nAPPLE_CLIENT_ID=${subject}`);
+  console.log(`APPLE_APP_BUNDLE_IDENTIFIER=${BUNDLE_ID}`);
   console.log(`APPLE_CLIENT_SECRET=${token}`);
   console.log(`\nExpires ${new Date(expiresAt * 1000).toISOString().slice(0, 10)} — regenerate before then.\n`);
 }

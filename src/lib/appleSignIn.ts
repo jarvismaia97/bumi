@@ -11,6 +11,17 @@ import { Platform } from 'react-native';
  * It reads false on the first pass everywhere, since the check is asynchronous. The button
  * appears once it answers, rather than flashing and disappearing on the devices that cannot.
  */
+/**
+ * Whether to offer Apple sign-in at all, which is a different question from whether the native
+ * sheet exists. Away from iOS the browser can do it, so the button is shown wherever the web
+ * flow is configured — see `EXPO_PUBLIC_APPLE_WEB_SIGN_IN_ENABLED` and `authStore`.
+ */
+export function useAppleSignInOffered(): boolean {
+  const nativeAvailable = useAppleSignInAvailable();
+  if (Platform.OS === 'ios') return nativeAvailable;
+  return process.env.EXPO_PUBLIC_APPLE_WEB_SIGN_IN_ENABLED === 'true';
+}
+
 export function useAppleSignInAvailable(): boolean {
   const [available, setAvailable] = useState(false);
   const enabled = process.env.EXPO_PUBLIC_APPLE_SIGN_IN_ENABLED === 'true';

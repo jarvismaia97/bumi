@@ -42,6 +42,13 @@ let initialized = false;
 let sessionResolved = false;
 let googleConfigured = false;
 
+/**
+ * Whether Apple sign-in is offered away from iOS. It needs a Services ID, a verified domain and
+ * a client secret signed for that Services ID rather than for the bundle id — none of which the
+ * app can detect, so it is declared. Off, the button stays iOS-only and nothing else changes.
+ */
+const APPLE_WEB_ENABLED = process.env.EXPO_PUBLIC_APPLE_WEB_SIGN_IN_ENABLED === 'true';
+
 /** Thrown when the user dismisses the native Google sheet; not surfaced as an error. */
 const GOOGLE_CANCELLED = 'google/cancelled';
 
@@ -227,9 +234,38 @@ export const useAuthStore = create<AuthState>()(persist((set) => ({
     signedIn(session.data ?? null);
   },
 
+  /**
+   * Two routes to the same account. iOS has Apple's own sheet and hands back an identity token
+   * signed for the bundle id; nowhere else has that module at all, so the browser does the
+   * OAuth round trip against the Services ID instead. The server takes either — `auth.ts`
+   * passes `clientId` and `appBundleIdentifier` separately for exactly this reason — and the
+   * `sub` Apple issues is per team, so both routes land on one account rather than two.
+   */
   signInWithApple: async () => {
-    if (Platform.OS !== 'ios') throw new Error(translate(currentLanguage(), 'auth.appleUnavailable'));
     set({ error: null });
+
+    if (Platform.OS !== 'ios') {
+      if (!APPLE_WEB_ENABLED) throw new Error(translate(currentLanguage(), 'auth.appleUnavailable'));
+
+      const { error } = await authClient.signIn.social({
+        provider: 'apple',
+        // The web returns to the page it left; the expo plugin deep-links a native build back.
+        ...(Platform.OS === 'web'
+          ? { callbackURL: `${window.location.pathname}${window.location.search}` }
+          : {}),
+      });
+      if (error) {
+        set({ error: error.message });
+        playHaptic('error');
+        throw error;
+      }
+
+      const session = await authClient.getSession();
+      setSession(set, session.data ?? null, session.error);
+      signedIn(session.data ?? null);
+      return;
+    }
+
     const AppleAuthentication = await import('expo-apple-authentication');
     const credential = await AppleAuthentication.signInAsync({
       requestedScopes: [AppleAuthentication.AppleAuthenticationScope.FULL_NAME, AppleAuthentication.AppleAuthenticationScope.EMAIL],
