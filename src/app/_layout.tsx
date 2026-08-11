@@ -76,6 +76,14 @@ export default function RootLayout() {
     init();
     initProgressSync();
     configureNotificationHandler().catch(() => {});
+
+    // `init` returns immediately once the server has answered, so this only does anything for a
+    // launch that could not reach it — an app opened offline finds out who it belongs to as
+    // soon as it comes back, instead of looking signed out until it is restarted.
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') init();
+    });
+    return () => subscription.remove();
   }, [init]);
 
   // Registered per signed-in session, since the token is what a friend's add is delivered to.

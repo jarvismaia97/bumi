@@ -36,6 +36,8 @@ interface AuthState {
 }
 
 let initialized = false;
+/** Whether the server ever answered. A rejected request leaves this false so init can retry. */
+let sessionResolved = false;
 let googleConfigured = false;
 
 /** Thrown when the user dismisses the native Google sheet; not surfaced as an error. */
@@ -137,13 +139,28 @@ export const useAuthStore = create<AuthState>()((set) => ({
   loading: true,
   error: null,
 
+  /**
+   * Asks the server who this is, and stops asking once it has an answer.
+   *
+   * The answer can fail to arrive at all: `getSession` rejects on a dead network rather than
+   * resolving with an error, and without a `catch` the rejection left `loading` true forever —
+   * the app sat on "Getting ready…" and never opened. Offline play is the thing the store
+   * listing promises, and it was the one state that could not reach the game.
+   *
+   * A failure is not a signed-out player, so nothing is cleared: the session stays unknown, the
+   * board keeps whatever is on this device, and the question is asked again on the next resume.
+   * Only `signOut` empties anything.
+   */
   init: () => {
-    if (initialized) return;
+    if (initialized && sessionResolved) return;
     initialized = true;
 
-    authClient.getSession().then(({ data, error }) => {
-      setSession(set, data ?? null, error);
-    });
+    authClient.getSession()
+      .then(({ data, error }) => {
+        sessionResolved = true;
+        setSession(set, data ?? null, error);
+      })
+      .catch(() => set({ loading: false }));
   },
 
   signInWithGoogle: async () => {
@@ -269,6 +286,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
 export function resetAuthStoreForTests(): void {
   initialized = false;
+  sessionResolved = false;
   // Per-process in the app, so a test that asserts the SDK is configured before it is used has
   // to be able to put it back to how a fresh launch finds it.
   googleConfigured = false;
