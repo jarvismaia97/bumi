@@ -57,3 +57,4 @@ example
 .vercel
 content/social/
 .env*.local
+.planning/
