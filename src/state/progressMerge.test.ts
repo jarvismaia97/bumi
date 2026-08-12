@@ -10,6 +10,7 @@ function local(overrides: Partial<LocalProgress> = {}): LocalProgress {
     dailyCompletedDate: null,
     dailyCompletionDates: [],
     dailyDurations: {},
+    dailyHints: {},
     streakFreezes: [],
     levelMedals: {},
     ...overrides,
@@ -107,5 +108,55 @@ describe('merging daily completions', () => {
       remote({ progress: { hints: 3, dailyCompletedDate: '20260712', dailyCompletionDates: ['20260712'] } }),
     );
     expect(merged.dailyCompletionDates).toEqual(['20260712']);
+  });
+});
+
+describe('mergeProgress daily hints', () => {
+  it('keeps the hints belonging to the faster side, not the smaller count', () => {
+    const merged = mergeProgress(
+      local({ dailyDurations: { '20260811': 4000 }, dailyHints: { '20260811': 3 } }),
+      remote({
+        progress: {
+          hints: 3,
+          dailyCompletedDate: null,
+          dailyCompletionDates: [],
+          dailyDurations: { '20260811': 9000 },
+          dailyHints: { '20260811': 0 },
+        },
+      }),
+    );
+    expect(merged.dailyDurations['20260811']).toBe(4000);
+    expect(merged.dailyHints['20260811']).toBe(3);
+  });
+
+  it('takes the only count there is when one side never recorded one', () => {
+    const merged = mergeProgress(
+      local({ dailyDurations: { '20260811': 4000 }, dailyHints: {} }),
+      remote({
+        progress: {
+          hints: 3,
+          dailyCompletedDate: null,
+          dailyCompletionDates: [],
+          dailyDurations: { '20260811': 9000 },
+          dailyHints: { '20260811': 2 },
+        },
+      }),
+    );
+    expect(merged.dailyHints['20260811']).toBe(2);
+  });
+
+  it('leaves a day nobody counted absent rather than zero', () => {
+    const merged = mergeProgress(
+      local({ dailyDurations: { '20260811': 4000 } }),
+      remote({
+        progress: {
+          hints: 3,
+          dailyCompletedDate: null,
+          dailyCompletionDates: [],
+          dailyDurations: { '20260811': 9000 },
+        },
+      }),
+    );
+    expect('20260811' in merged.dailyHints).toBe(false);
   });
 });

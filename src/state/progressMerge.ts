@@ -83,10 +83,12 @@ function mergeHints(local: LocalProgress, remote: RemoteProgressState): Record<s
   for (const date of new Set([...Object.keys(localHints), ...Object.keys(remoteHints)])) {
     const mine = localDurations[date];
     const theirs = remoteDurations[date];
-    const localWins = mine !== undefined && (theirs === undefined || mine <= theirs);
-    const winner = localWins ? localHints[date] : remoteHints[date];
-    const other = localWins ? remoteHints[date] : localHints[date];
-    const count = winner ?? other;
+    // The remote count only takes the day off a timed local solve by having beaten it, and off
+    // an untimed one by being timed at all. Everything else stays with the device in hand.
+    const remoteWins = theirs !== undefined && (mine === undefined || theirs < mine);
+    const winner = remoteWins ? remoteHints[date] : localHints[date];
+    const fallback = remoteWins ? localHints[date] : remoteHints[date];
+    const count = winner ?? fallback;
     if (count !== undefined) merged[date] = count;
   }
   return merged;

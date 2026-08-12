@@ -471,9 +471,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         from jsonb_array_elements(${JSON.stringify(rows)}::jsonb) as item
         on conflict (user_id, completed_date) do update set
           duration_ms = least(daily_completions.duration_ms, excluded.duration_ms),
-          -- Follows the time rather than taking the smaller count: what the record is is the
-          -- fastest solve, and its hints are the ones that solve spent. A replay that was
-          -- slower but cleaner does not get to lend its zero to a time it did not set.
+          -- Follows the time rather than taking the smaller count: the record for a day is its
+          -- fastest solve, and the hints that belong to it are the ones that solve spent. A
+          -- replay that was slower but cleaner does not get to lend its zero to a time it did
+          -- not set. A faster solve from a client that sends no count takes the column back to
+          -- null with it, which is the truth — nobody counted the solve now on the record.
           hints_used = case
             when excluded.duration_ms is not null
               and (daily_completions.duration_ms is null or excluded.duration_ms < daily_completions.duration_ms)

@@ -19,6 +19,7 @@ function entry(overrides: Partial<LeaderboardEntry> = {}): LeaderboardEntry {
     streak: 1,
     dailyDone: false,
     dailyMs: null,
+    dailyHints: null,
     isSelf: false,
     ...overrides,
   };
