@@ -134,7 +134,14 @@ alter table daily_completions add column if not exists hints_used smallint;
 -- When the freeze was taken, as against the day it covers. A freeze arrives from the device that
 -- spent it, so without this a backfilled one covering a gap from two years ago is
 -- indistinguishable from one claimed this morning.
-alter table streak_freezes add column if not exists claimed_at timestamptz not null default now();
+--
+-- In two steps, and they are not interchangeable. Adding the column with a default fills every
+-- row already there with it, which would stamp the whole history with the moment this ran and
+-- read ever after as though every freeze on file was claimed that day — the exact confusion the
+-- column exists to end. Added bare, the rows that predate it stay null, which is what they are:
+-- unknown. The default is set afterwards and so reaches only what is written from here on.
+alter table streak_freezes add column if not exists claimed_at timestamptz;
+alter table streak_freezes alter column claimed_at set default now();
 
 -- When `points` was last written. The number on its own cannot say whether it is this morning's
 -- score or one left over from March, and the overtake check reads it as though it were current.
