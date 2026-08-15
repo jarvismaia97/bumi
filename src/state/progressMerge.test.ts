@@ -7,6 +7,8 @@ function local(overrides: Partial<LocalProgress> = {}): LocalProgress {
     solvedMap: {},
     solvedDateMap: {},
     hints: 3,
+    hintsEarned: 3,
+    hintsSpent: 0,
     dailyCompletedDate: null,
     dailyCompletionDates: [],
     dailyDurations: {},
@@ -61,19 +63,99 @@ describe('merging medals', () => {
   });
 });
 
+/** A server row with the counters on it, which is what the current API answers with. */
+function remoteHints(hintsEarned: number, hintsSpent: number): RemoteProgressState {
+  return remote({
+    progress: {
+      hints: Math.min(MAX_HINTS, Math.max(0, hintsEarned - hintsSpent)),
+      hintsEarned,
+      hintsSpent,
+      dailyCompletedDate: null,
+      dailyCompletionDates: [],
+    },
+  });
+}
+
 describe('merging hints', () => {
-  it('takes the higher balance rather than adding, which would mint hints on every merge', () => {
-    expect(mergeProgress(local({ hints: 5 }), remote({ progress: { hints: 2, dailyCompletedDate: null, dailyCompletionDates: [] } })).hints).toBe(5);
-    expect(mergeProgress(local({ hints: 1 }), remote({ progress: { hints: 4, dailyCompletedDate: null, dailyCompletionDates: [] } })).hints).toBe(4);
+  it('leaves a spent hint spent, however long the other device holds the old balance', () => {
+    // The failure the counters exist for. Device A has ten and spends four; device B still holds
+    // ten and posts it, so the server's `greatest` on a balance answered ten and A's own
+    // `Math.max(6, 10)` handed the four back — every merge, for as long as the two kept meeting.
+    const spender = local({ hints: 6, hintsEarned: 10, hintsSpent: 4 });
+    const server = remoteHints(10, 0);
+
+    const merged = mergeProgress(spender, server);
+    expect(merged.hints).toBe(6);
+    expect(merged.hintsEarned).toBe(10);
+    expect(merged.hintsSpent).toBe(4);
+
+    // And it stays gone once the server has been told: merging the same board again is the loop
+    // the resurrection lived in.
+    expect(mergeProgress(merged, remoteHints(10, 4)).hints).toBe(6);
   });
 
-  it('clamps a balance the server should never have sent', () => {
-    const merged = mergeProgress(local(), remote({ progress: { hints: 9999, dailyCompletedDate: null, dailyCompletionDates: [] } }));
+  it('never takes back a hint earned on another device', () => {
+    // The rollback that last-write-wins would have caused: this phone has been offline since the
+    // tablet finished the month, and its own idea of the balance is older, not smaller.
+    const offline = local({ hints: 3, hintsEarned: 3, hintsSpent: 0 });
+    const merged = mergeProgress(offline, remoteHints(9, 1));
+    expect(merged.hintsEarned).toBe(9);
+    expect(merged.hintsSpent).toBe(1);
+    expect(merged.hints).toBe(8);
+  });
+
+  it('keeps the larger spend when two devices each spent while apart', () => {
+    // Neither side can say which spend came first, and the counters do not need to: the player
+    // ends on the smaller balance, which is the direction to be wrong in about a currency.
+    const merged = mergeProgress(local({ hints: 8, hintsEarned: 10, hintsSpent: 2 }), remoteHints(10, 5));
+    expect(merged.hintsSpent).toBe(5);
+    expect(merged.hints).toBe(5);
+  });
+
+  it('is the same board whichever side runs the merge, and does not move when run twice', () => {
+    const a = { hints: 6, hintsEarned: 12, hintsSpent: 6 };
+    const b = { earned: 15, spent: 3 };
+
+    const once = mergeProgress(local(a), remoteHints(b.earned, b.spent));
+    expect([once.hintsEarned, once.hintsSpent]).toEqual([15, 6]);
+    // Merging the answer back into itself is what every later sync does.
+    const twice = mergeProgress(once, remoteHints(once.hintsEarned, once.hintsSpent));
+    expect([twice.hintsEarned, twice.hintsSpent]).toEqual([15, 6]);
+  });
+
+  it('clamps the derived balance at the cap without touching the counters', () => {
+    // The cap is on the balance and only ever on the balance, so a pair that outran it reads as
+    // full rather than as an error, and the counters keep saying what actually happened.
+    const merged = mergeProgress(local({ hintsEarned: 40, hintsSpent: 0 }), remoteHints(40, 0));
     expect(merged.hints).toBe(MAX_HINTS);
+    expect(merged.hintsEarned).toBe(40);
+  });
+
+  it('reads a server that answers without counters as all earned and nothing spent', () => {
+    // An API rolled back under a newer client. That is the reading the migration backfills the
+    // column with, so the two cannot disagree — and this device's own spend still protects it,
+    // which is what stops the old high-water balance from resurrecting anything.
+    const legacy = { progress: { hints: 10, dailyCompletedDate: null, dailyCompletionDates: [] } };
+    const merged = mergeProgress(local({ hints: 6, hintsEarned: 10, hintsSpent: 4 }), remote(legacy));
+    expect(merged.hintsEarned).toBe(10);
+    expect(merged.hintsSpent).toBe(4);
+    expect(merged.hints).toBe(6);
   });
 
   it('survives a server that has no progress row yet', () => {
-    expect(mergeProgress(local({ hints: 4 }), remote({ progress: null })).hints).toBe(4);
+    const merged = mergeProgress(local({ hints: 4, hintsEarned: 7, hintsSpent: 3 }), remote({ progress: null }));
+    expect(merged.hints).toBe(4);
+    expect(merged.hintsEarned).toBe(7);
+    expect(merged.hintsSpent).toBe(3);
+  });
+
+  it('reads a counter that is not a number as nothing rather than as NaN', () => {
+    const merged = mergeProgress(
+      local({ hints: 2, hintsEarned: 5, hintsSpent: 3 }),
+      remote({ progress: { hints: 0, hintsEarned: undefined, hintsSpent: 'lots' as unknown as number, dailyCompletedDate: null, dailyCompletionDates: [] } }),
+    );
+    expect(merged.hints).toBe(2);
+    expect(merged.hintsSpent).toBe(3);
   });
 });
 

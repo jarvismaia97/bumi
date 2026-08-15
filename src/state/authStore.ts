@@ -8,6 +8,7 @@ import { useProgressStore } from '@/state/progressStore';
 import { Platform } from 'react-native';
 import { resolveLanguage, translate } from '@/i18n/messages';
 import { unregisterPushToken } from '@/lib/pushToken';
+import { cancelDailyReminders } from '@/lib/dailyReminder';
 import { useFriendsStore } from '@/state/friendsStore';
 import { useLanguageStore } from '@/state/languageStore';
 import { getLocales } from 'expo-localization';
@@ -30,7 +31,8 @@ interface AuthState {
   user: AuthUser | null;
   loading: boolean;
   error: string | null;
-  init: () => void;
+  /** Resolves when the question has been answered, or when the answer failed to arrive. */
+  init: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -40,6 +42,14 @@ interface AuthState {
 let initialized = false;
 /** Whether the server ever answered. A rejected request leaves this false so init can retry. */
 let sessionResolved = false;
+/**
+ * The request that is currently asking. `init` runs again on every resume, and the guard above it
+ * only closes once an answer has arrived — so a request still in flight was no guard at all: a
+ * flapping connection started a fresh `getSession` per foreground, each one able to overwrite the
+ * store when it landed, in whatever order they happened to land in. Holding the promise makes the
+ * repeat calls join the request already running instead of racing it.
+ */
+let sessionRequest: Promise<void> | null = null;
 let googleConfigured = false;
 
 /**
@@ -169,10 +179,13 @@ export const useAuthStore = create<AuthState>()(persist((set) => ({
    * Only `signOut` empties anything.
    */
   init: () => {
-    if (initialized && sessionResolved) return;
+    if (initialized && sessionResolved) return Promise.resolve();
+    // Someone is already asking. Returned rather than ignored, so a caller that wants to wait
+    // for the answer can — and so the resume that arrives mid-request adds nothing.
+    if (sessionRequest) return sessionRequest;
     initialized = true;
 
-    authClient.getSession()
+    sessionRequest = authClient.getSession()
       .then(({ data, error }) => {
         sessionResolved = true;
         setSession(set, data ?? null, error);
@@ -183,9 +196,22 @@ export const useAuthStore = create<AuthState>()(persist((set) => ({
       // signed-out state for the frame before it arrives.
       .catch(() => {
         const done = () => set({ loading: false });
-        if (useAuthStore.persist.hasHydrated()) done();
-        else useAuthStore.persist.onFinishHydration(done);
+        if (useAuthStore.persist.hasHydrated()) {
+          done();
+          return;
+        }
+        // Unsubscribed from inside itself. Left behind, every failed launch added another
+        // listener to a store that lives as long as the app does.
+        const stop = useAuthStore.persist.onFinishHydration(() => {
+          stop();
+          done();
+        });
+      })
+      .finally(() => {
+        sessionRequest = null;
       });
+
+    return sessionRequest;
   },
 
   signInWithGoogle: async () => {
@@ -332,6 +358,13 @@ export const useAuthStore = create<AuthState>()(persist((set) => ({
     await forgetGoogleAccount();
     // Deliberately silent on success: the confirmation tap already fired `warning`, and the
     // sheet closing onto a signed-out menu says the rest.
+    //
+    // The reminders go by name. `reset` below turns the setting off, and the root layout cancels
+    // whatever is armed whenever it does — but a schedule that outlives its account is not
+    // something to leave to a mounted effect. Seven daily reminders and a streak warning were
+    // going on firing for an account that no longer existed, each one opening an app that had
+    // nothing left to show.
+    await cancelDailyReminders();
     useProgressStore.getState().reset();
     useFriendsStore.getState().reset();
     set({ session: null, user: null, error: null });
@@ -346,6 +379,7 @@ export const useAuthStore = create<AuthState>()(persist((set) => ({
 export function resetAuthStoreForTests(): void {
   initialized = false;
   sessionResolved = false;
+  sessionRequest = null;
   // Per-process in the app, so a test that asserts the SDK is configured before it is used has
   // to be able to put it back to how a fresh launch finds it.
   googleConfigured = false;

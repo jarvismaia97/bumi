@@ -80,18 +80,25 @@ export function getMonthlyProgress(completedDates: readonly string[], now: Date 
  * Whether this particular completion is the one that finished the goal. The store grants the
  * reward on that transition, the same way a milestone level does, so nothing has to remember
  * which goals were already paid out.
+ *
+ * `recordedDates` is the list as it stands before the completion, and a day that is already in
+ * it finished nothing: it is a replay from the archive, which loads the level afresh and so
+ * runs the win flow again. This used to subtract `justCompleted` out of the list first, which
+ * manufactured a transition for a day already on file — with the month sitting exactly on
+ * twelve, re-solving any day of it minted three hints, repeatably. Taking the untouched list
+ * and answering nothing for a day it already contains is what makes that unsayable.
  */
 export function goalsCompletedBy(
-  completedDates: readonly string[],
+  recordedDates: readonly string[],
   justCompleted: string,
   now: Date = new Date(),
 ): { weekly: boolean; monthly: boolean } {
-  const before = completedDates.filter(date => date !== justCompleted);
-  const after = [...before, justCompleted];
+  if (recordedDates.includes(justCompleted)) return { weekly: false, monthly: false };
+  const after = [...recordedDates, justCompleted];
 
   return {
-    weekly: !getWeeklyProgress(before, now).complete && getWeeklyProgress(after, now).complete,
-    monthly: !getMonthlyProgress(before, now).complete && getMonthlyProgress(after, now).complete,
+    weekly: !getWeeklyProgress(recordedDates, now).complete && getWeeklyProgress(after, now).complete,
+    monthly: !getMonthlyProgress(recordedDates, now).complete && getMonthlyProgress(after, now).complete,
   };
 }
 

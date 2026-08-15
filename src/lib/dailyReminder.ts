@@ -18,6 +18,14 @@ const LOOKAHEAD_DAYS = 7;
 const dailyId = (offset: number) => `bumi-daily-reminder-${offset}`;
 const STREAK_ID = 'bumi-streak-at-risk';
 
+/**
+ * The Android channel everything here is filed under. Named in two places that have to agree —
+ * where the channel is created, and on every trigger that asks for it — because a notification
+ * naming no channel does not fall back to the one the app created. It goes to "Miscellaneous",
+ * which expo-notifications creates for exactly that case.
+ */
+const ANDROID_CHANNEL_ID = 'daily-reminder';
+
 /** Below this a lost streak is no loss, and the notification would just be noise. */
 const STREAK_WORTH_SAVING = 2;
 
@@ -87,6 +95,21 @@ async function cancelAll(Notifications: typeof import('expo-notifications')): Pr
   await Promise.all(ids.map(id => Notifications.cancelScheduledNotificationAsync(id).catch(() => {})));
 }
 
+/**
+ * Drops the week of reminders and the streak warning, and schedules nothing in their place.
+ *
+ * `refreshDailyReminders({ enabled: false })` does the same thing and is what the reminder toggle
+ * goes through. This exists for the one caller that is not turning a setting off: deleting the
+ * account, which has to leave nothing behind that could fire for an account that no longer
+ * exists — and which must not depend on a React effect still being mounted to notice.
+ */
+export async function cancelDailyReminders(): Promise<void> {
+  if (Platform.OS === 'web') return;
+
+  const Notifications = await import('expo-notifications');
+  await cancelAll(Notifications);
+}
+
 export async function refreshDailyReminders({
   enabled,
   language,
@@ -97,15 +120,20 @@ export async function refreshDailyReminders({
   if (Platform.OS === 'web') return false;
 
   const Notifications = await import('expo-notifications');
+
+  await cancelAll(Notifications);
+  // Cancelling runs for everyone — it is the only path that reaches a schedule left over from a
+  // setting that has since been turned off. Creating the channel does not: an Android channel is
+  // visible in system settings the moment it exists, and a player who has never asked for
+  // reminders should not find a switch for them sitting in the OS.
+  if (!enabled) return true;
+
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('daily-reminder', {
+    await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
       name: translate(language, 'reminder.channel'),
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
-
-  await cancelAll(Notifications);
-  if (!enabled) return true;
 
   const current = await Notifications.getPermissionsAsync();
   if (!current.granted && !promptForPermission) return false;
@@ -115,7 +143,16 @@ export async function refreshDailyReminders({
   const now = Date.now();
   const schedule = (identifier: string, when: Date, title: string, body: string) => {
     if (when.getTime() <= now) return null;
-    const trigger: DateTriggerInput = { type: Notifications.SchedulableTriggerInputTypes.DATE, date: when };
+    const trigger: DateTriggerInput = {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: when,
+      // `channelId` belongs to the trigger, not to the content — which is why the channel created
+      // above, under a name the player would recognise, was then never used by anything. Every
+      // reminder was delivered on the "Miscellaneous" channel expo-notifications makes for
+      // notifications that name none, so the only way to silence the daily nudge in the Android
+      // settings was to silence the whole app. Android-only: nowhere else has channels.
+      ...(Platform.OS === 'android' ? { channelId: ANDROID_CHANNEL_ID } : {}),
+    };
     return Notifications.scheduleNotificationAsync({
       identifier,
       content: { title, body, data: { screen: REMINDER_SCREEN } },

@@ -11,7 +11,15 @@ import { normalizeHintCount } from '@/game/hints';
 export interface LocalProgress {
   solvedMap: Record<number, true>;
   solvedDateMap: Record<number, string>;
+  /**
+   * The balance the game spends, derived from the two counters below and carried beside them so
+   * everything that only wants a number can go on reading one. It is never merged; it is what
+   * the merged counters come to.
+   */
   hints: number;
+  /** Every hint this account has ever been granted, and every one it has ever spent. */
+  hintsEarned: number;
+  hintsSpent: number;
   dailyCompletedDate: string | null;
   dailyCompletionDates: string[];
   dailyDurations: Record<string, number>;
@@ -22,7 +30,10 @@ export interface LocalProgress {
 
 export interface RemoteProgressState {
   progress: {
+    /** The balance the server derives. Read only when it answers without the counters. */
     hints: number;
+    hintsEarned?: number;
+    hintsSpent?: number;
     dailyCompletedDate: string | null;
     dailyCompletionDates: string[];
     dailyDurations?: Record<string, number>;
@@ -39,6 +50,21 @@ export interface MergeResult extends LocalProgress {
   newlyLocalSolved: number[];
   /** Medals the server either lacks or has a worse one for. */
   newlyLocalMedals: Record<number, Medal>;
+}
+
+/**
+ * The balance two counters describe. Floored at zero and capped at the game's own ceiling, so a
+ * pair that somehow arrived the wrong way round reads as an empty balance rather than a negative
+ * one, and a pair that outran the cap reads as full.
+ */
+export function hintBalance(earned: number, spent: number): number {
+  return normalizeHintCount(earned - spent);
+}
+
+/** A counter as it can be used: whole, never below zero, and zero for anything that is not a number. */
+function toCounter(value: unknown): number {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
 }
 
 /** An older client stored only the last completion, so fall back to it when the list is empty. */
@@ -94,6 +120,36 @@ function mergeHints(local: LocalProgress, remote: RemoteProgressState): Record<s
   return merged;
 }
 
+/**
+ * The two counters, each taken at its larger side.
+ *
+ * Hints are counted rather than balanced because of what a merge has to do with them, and no rule
+ * for merging a single balance survives it. Taking the higher balance resurrected every hint ever
+ * spent: spend four on the phone and the tablet's untouched ten put them back at the next merge,
+ * for as long as the two devices kept meeting. Taking the last one written traded that for the
+ * opposite loss — a phone offline since Tuesday overwriting every hint earned on the tablet since.
+ * Either rule is a claim about which side is more recent, and neither side knows.
+ *
+ * Two counters that only ever grow have no such claim to make. `max` is the only merge each one
+ * admits, it is what both sides would compute in either order, and the balance falls out of them.
+ * Two devices that each spend while apart converge on the larger spend, so the player is left with
+ * the smaller balance — which is the direction to be wrong in about a currency.
+ *
+ * A server answering without the counters predates them: an API rolled back under a newer client.
+ * Its balance is read the way the migration backfills the column — all earned, nothing spent — so
+ * it can still raise what this device has earned, and it cannot lower the spend that protects it.
+ */
+function mergeHintCounters(local: LocalProgress, remote: RemoteProgressState): { hintsEarned: number; hintsSpent: number } {
+  const progress = remote.progress;
+  const remoteEarned = toCounter(progress?.hintsEarned ?? progress?.hints ?? 0);
+  const remoteSpent = toCounter(progress?.hintsSpent ?? 0);
+
+  return {
+    hintsEarned: Math.max(toCounter(local.hintsEarned), remoteEarned),
+    hintsSpent: Math.max(toCounter(local.hintsSpent), remoteSpent),
+  };
+}
+
 export function mergeProgress(local: LocalProgress, remote: RemoteProgressState): MergeResult {
   const remoteSolvedMap: Record<number, true> = {};
   remote.solvedLevelIdxs.forEach(idx => {
@@ -113,12 +169,15 @@ export function mergeProgress(local: LocalProgress, remote: RemoteProgressState)
     if (isBetterMedal(medal, levelMedals[levelIdx])) levelMedals[levelIdx] = medal;
   }
 
+  const { hintsEarned, hintsSpent } = mergeHintCounters(local, remote);
+
   return {
     solvedMap: { ...local.solvedMap, ...remoteSolvedMap },
     solvedDateMap: { ...local.solvedDateMap, ...remote.solvedLevelDates },
-    // Hints are a balance, not a tally, so the higher side wins rather than the sum: adding
-    // them would mint a hint on every merge.
-    hints: normalizeHintCount(Math.max(local.hints, remote.progress?.hints ?? 0)),
+    hintsEarned,
+    hintsSpent,
+    // Derived, never merged: the two counters above are the state, and this is what they say.
+    hints: hintBalance(hintsEarned, hintsSpent),
     dailyCompletedDate: mergedDailyDates.at(-1) ?? null,
     dailyCompletionDates: mergedDailyDates,
     dailyDurations: mergeDurations(local.dailyDurations, remote.progress?.dailyDurations),
