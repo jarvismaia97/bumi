@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { BD_PAL, BG_PAL } from '@/theme/palette';
 import { BURST_DELAY_MS, BURST_FADE_MS, BURST_TRAVEL_MS, burstParticleCount, type CelebrationTier } from './celebration';
 
@@ -94,6 +94,9 @@ function BurstParticle({ particle, active }: { particle: Particle; active: boole
   return (
     <Animated.View
       pointerEvents="none"
+      // Named for the same reason `grid-piece` is: the burst is the layer a test about reduced
+      // motion has to be able to count, and every other overlay is absolutely positioned too.
+      testID="burst-particle"
       style={[
         styles.particle,
         style,
@@ -112,9 +115,25 @@ function BurstParticle({ particle, active }: { particle: Particle; active: boole
 
 export function RectBurst({ tier, active, width, height }: RectBurstProps) {
   const count = burstParticleCount(tier);
-  if (count === 0) return null;
+  const reduceMotion = useReducedMotion();
 
-  const particles = buildParticles(count, Math.max(width, height) * 0.78);
+  // Radius from the board's long side: at 0.78 the farthest particles clear the edge the burst
+  // is thrown from, so it reads as leaving the puzzle rather than settling inside it. Derived
+  // from the index by design, so the same count and radius always give the same burst and the
+  // memo is free — without it 44 objects were allocated on every render of a celebrating board.
+  const radius = Math.max(width, height) * 0.78;
+  const particles = useMemo(() => buildParticles(count, radius), [count, radius]);
+
+  /**
+   * The burst is nothing but movement — there is no reduced version of it that still means
+   * anything, unlike the rectangles and the glow, which keep a lit border and fade. It was
+   * already gone under the setting, but only by accident: Reanimated's default `ReduceMotion
+   * .System` disables the timing, `progress` snaps to 1, and the opacity below evaluates to 0
+   * at 1. That is a suppressed animation still mounting 44 views and running 44 style worklets.
+   * Saying so here makes it deliberate, and `celebrationDurationMs` already holds the shorter
+   * reduced beat on the same assumption.
+   */
+  if (count === 0 || reduceMotion) return null;
 
   return (
     <Animated.View pointerEvents="none" style={styles.origin}>

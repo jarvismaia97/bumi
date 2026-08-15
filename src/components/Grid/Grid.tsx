@@ -4,6 +4,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, { interpolate, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 import { rectOk } from '@/game/geometry';
 import type { Level, PlacedRect, SolutionRect } from '@/game/types';
+import { useI18n } from '@/i18n';
 import { BD_PAL, BG_PAL, clueInkOn } from '@/theme/palette';
 import { useThemeTokens } from '@/state/themeStore';
 import { Cell, type CellState } from './Cell';
@@ -40,12 +41,39 @@ interface GridProps {
   locked?: boolean;
 }
 
-/** Which rectangle covers a square, which is all the squares still need to know. */
+/**
+ * Which rectangle covers a square, which is all the squares still need to know — already
+ * resolved down to the two values a `Cell` takes, so nothing per-square is left to compute.
+ */
 interface CellInfo {
-  colorIndex: number;
-  colors?: PlacedRect['colors'];
   correct: boolean;
+  /**
+   * The ink for a clue landing on this rectangle. It lives here because `clueInkOn` is a regex,
+   * three `parseInt`s and two luminance computations, and it used to run once per *covered
+   * square* — the same answer recomputed for every square of the same rectangle.
+   */
+  clueColor: string;
 }
+
+/** A placed rectangle with its colours resolved, so the render pass only positions it. */
+interface PieceInfo {
+  rect: PlacedRect;
+  correct: boolean;
+  fill: string;
+  border: string;
+}
+
+/**
+ * The label the board answers a screen reader with. `a11y.board` is not in the catalogue yet
+ * and `src/i18n` is not this change's to edit; `translate` answers an unknown key with the key
+ * itself, which would be read out loud as "a11y dot board", so an absent string falls back to
+ * the board's own dimensions. It is not prose, but it is true in every language and it tells
+ * the user this is a picture rather than something they can operate.
+ *
+ * Strings wanted: pt "Tabuleiro de {rows} por {columns}", en "{rows} by {columns} board",
+ * es "Tablero de {rows} por {columns}".
+ */
+const BOARD_LABEL_KEY = 'a11y.board';
 
 export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating = false, celebrationTier = 'normal', locked = false }: GridProps) {
   const { size, clues } = level;
@@ -54,85 +82,123 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
   const gridWidth = columns * cellSize;
   const gridHeight = rows * cellSize;
   const theme = useThemeTokens();
+  const { t } = useI18n();
 
-  const cellInfo = useMemo(() => {
-    const grid: (CellInfo | null)[][] = Array.from({ length: rows }, () => Array(columns).fill(null));
-    placed.forEach((rect) => {
+  /**
+   * A rectangle that does not yet satisfy its clue is held rather than solved, so it reads as a
+   * wash instead of as its own colour. The wash was the literal `rgba(113,140,195,0.12)` —
+   * classic's light accent — so it stayed blue under the red or the amber theme, and at 12% it
+   * measured 1.10-1.18:1 against the board it sits on, which is to say the fill said nothing and
+   * only the border carried the state. Derived from the live accent at 22% it measures
+   * 1.25-1.57:1 against the board and 1.62-2.04:1 against the empty squares beside it. It stops
+   * there rather than going further because a solved fill only reaches 2.56:1 in the light
+   * themes: any stronger and the held state would read as the solved one.
+   */
+  const heldWash = theme.accent + '38';
+
+  const board = useMemo(() => {
+    /**
+     * Clues arrive as a flat list, so finding the one on a square was a linear scan *inside* the
+     * square loop: 144 squares against ~52 clues is about 7,500 comparisons, redone on every
+     * drag-end, every theme change and every parent render. Keyed by `r * columns + c` it is one
+     * hash lookup. Clues of 1 are dropped here rather than at the call site — a one-square
+     * rectangle needs no number on it.
+     */
+    const clueAt = new Map<number, number>();
+    for (const clue of clues) {
+      if (clue.v > 1) clueAt.set(clue.r * columns + clue.c, clue.v);
+    }
+
+    const cells: (CellInfo | null)[][] = Array.from({ length: rows }, () => Array(columns).fill(null));
+    const pieces: PieceInfo[] = placed.map((rect) => {
+      // `rectOk` used to run twice for every rectangle — once here and once again in the render
+      // pass that draws the piece — and `clueInkOn` once per covered square. Both are facts
+      // about the whole rectangle, so both are settled once, here.
       const correct = rectOk(rect, level);
+      const fill = rect.colors?.fill ?? BG_PAL[rect.ci % BG_PAL.length];
+      const border = rect.colors?.border ?? BD_PAL[rect.ci % BD_PAL.length];
+      // What the clue is actually painted on, which is the fill only once the rectangle is
+      // solved. A held one is painted in `heldWash`, which is the board tinted — so the clue on
+      // it belongs to the board and takes the board's own ink. Measuring against the fill
+      // regardless is what put near-black clues on the dark themes' held rectangles at
+      // 1.83-2.29:1; `theme.text` reads 5.17-9.22:1 on the wash across all twenty-two pairs.
+      const info: CellInfo = { correct, clueColor: correct ? clueInkOn(fill) : theme.text };
       for (let r = rect.r1; r < rect.r2; r++) {
         for (let c = rect.c1; c < rect.c2; c++) {
-          grid[r][c] = { colorIndex: rect.ci, colors: rect.colors, correct };
+          cells[r][c] = info;
         }
       }
+      return { rect, correct, fill, border };
     });
-    return grid;
-  }, [placed, level, rows, columns]);
+
+    // An uncovered square shows the theme's own surface, where the accent is the intended look
+    // and reads on it, unless the level brought a colour of its own — the tutorial paints the
+    // logo out of them — in which case the ink is measured against that.
+    const emptyClueColor = level.emptyFillColor ? clueInkOn(level.emptyFillColor) : theme.accent;
+
+    return { clueAt, cells, pieces, emptyClueColor };
+  }, [placed, level, clues, rows, columns, theme]);
 
   const { gesture, previewStyle } = useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, onRemoveAt, locked });
 
-  const fillPal = BG_PAL;
-  const borderPal = BD_PAL;
+  const emptyColor = level.emptyFillColor ?? theme.surface;
+  const described = t(BOARD_LABEL_KEY, { rows, columns });
+  const boardLabel = described === BOARD_LABEL_KEY ? `${rows} × ${columns}` : described;
 
   return (
     // The board clips its own children so the rounded corners hold; the burst has to sit
     // outside that or every particle is cut off at the edge it is trying to fly past.
-    <View style={{ width: gridWidth, height: gridHeight }}>
+    //
+    // One accessible node rather than 144: the board is drawn from squares and clue numbers,
+    // and a screen reader walking them one at a time reads out a column of unlabelled digits
+    // with nothing saying what they belong to. Rolled up under `image` because that is the
+    // honest answer — the board is drawn with a drag, which assistive touch takes over, so a
+    // screen-reader user needs to know it is a picture and not something they failed to operate.
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={boardLabel}
+      style={{ width: gridWidth, height: gridHeight }}
+    >
       <GestureDetector gesture={gesture}>
       <View style={[styles.grid, { width: gridWidth, height: gridHeight, backgroundColor: theme.gridSep }]}>
         {/* One view per rectangle, before the squares so it paints underneath them: a covered
             square is transparent and lets its piece show through, while its clue still draws on
-            top. Composing a rectangle out of the squares themselves is what let the board's own
-            lines leak through it wherever a cell was a fractional number of pixels wide. */}
-        {placed.map((rect, index) => {
-          const correct = rectOk(rect, level);
-          const border = rect.colors?.border ?? borderPal[rect.ci % borderPal.length];
-          return (
-            <View
-              key={`${rect.r1}-${rect.c1}-${index}`}
-              // Named so the overlay tests can tell a piece, which never moves, from the
-              // preview and the celebration, which are the animated layers they are about.
-              testID="grid-piece"
-              pointerEvents="none"
-              style={[
-                styles.piece,
-                {
-                  left: rect.c1 * cellSize,
-                  top: rect.r1 * cellSize,
-                  width: (rect.c2 - rect.c1) * cellSize,
-                  height: (rect.r2 - rect.r1) * cellSize,
-                  // A rectangle that does not yet satisfy its clue is held rather than solved,
-                  // and reads as a wash instead of as its own colour.
-                  backgroundColor: correct
-                    ? (rect.colors?.fill ?? fillPal[rect.ci % fillPal.length])
-                    : 'rgba(113,140,195,0.12)',
-                  borderColor: border,
-                },
-              ]}
-            />
-          );
-        })}
+            top. See `Cell` for why a rectangle cannot be composed out of the squares. */}
+        {board.pieces.map(({ rect, correct, fill, border }, index) => (
+          <View
+            key={`${rect.r1}-${rect.c1}-${index}`}
+            // Named so the overlay tests can tell a piece, which never moves, from the
+            // preview and the celebration, which are the animated layers they are about.
+            testID="grid-piece"
+            pointerEvents="none"
+            style={[
+              styles.piece,
+              {
+                left: rect.c1 * cellSize,
+                top: rect.r1 * cellSize,
+                width: (rect.c2 - rect.c1) * cellSize,
+                height: (rect.r2 - rect.r1) * cellSize,
+                backgroundColor: correct ? fill : heldWash,
+                borderColor: border,
+              },
+            ]}
+          />
+        ))}
         {Array.from({ length: rows }).map((_, r) => (
           <View key={r} style={styles.row}>
             {Array.from({ length: columns }).map((_, c) => {
-              const info = cellInfo[r][c];
-              const clue = clues.find(cl => cl.r === r && cl.c === c);
+              const info = board.cells[r][c];
               const state: CellState = info ? (info.correct ? 'correct' : 'placed') : 'empty';
-
-              const fillColor = info ? (info.colors?.fill ?? fillPal[info.colorIndex % fillPal.length]) : undefined;
-
-              // What the clue is actually painted on. The theme's own surface is left out: there
-              // the accent is the intended look and reads on it, so only a colour the level or a
-              // placed rectangle brought needs the ink measured against it.
-              const clueBackdrop = fillColor ?? level.emptyFillColor;
 
               return (
                 <Cell
                   key={c}
                   size={cellSize}
-                  clueValue={clue && clue.v > 1 ? clue.v : undefined}
-                  clueColor={clueBackdrop ? clueInkOn(clueBackdrop) : theme.accent}
+                  clueValue={board.clueAt.get(r * columns + c)}
+                  clueColor={info ? info.clueColor : board.emptyClueColor}
                   state={state}
-                  emptyColor={level.emptyFillColor ?? theme.surface}
+                  emptyColor={emptyColor}
                   gapColor={theme.gridSep}
                 />
               );
@@ -145,15 +211,30 @@ export function Grid({ level, placed, cellSize, onPlace, onRemoveAt, celebrating
           style={[
             styles.preview,
             previewStyle,
-            { borderColor: theme.accent + '70', backgroundColor: theme.accent + '2d' },
+            {
+              // The border is the drag's whole affordance, and at 44% alpha it measured
+              // 1.58-2.73:1 against the board in all twenty-two theme/appearance pairs — under
+              // the 3:1 a non-text control is held to, everywhere. Solid, the same accent reads
+              // 3.22-6.63:1 against the board's own lines and 4.52-8.82:1 against an empty
+              // square. The fill stays at 18% so the preview still reads as a rectangle being
+              // drawn rather than one already placed.
+              borderColor: theme.accent,
+              backgroundColor: theme.accent + '2d',
+              // The shadow used to be a hardcoded slate belonging to no theme, declared through
+              // the legacy `shadow*` props — which react-native-web deprecates outright and
+              // Android only honours in part (`shadowOffset`, `shadowOpacity` and `shadowRadius`
+              // are iOS-only). One `boxShadow` string is the documented form and is the same
+              // shadow on all three platforms. `24` is the 0.14 opacity it replaced.
+              boxShadow: `0px 3px 6px ${theme.accent}24`,
+            },
           ]}
         />
-        {placed.map((rect, index) => (
+        {board.pieces.map(({ rect, border }, index) => (
           <CelebrationRect
             key={`${rect.r1}-${rect.c1}-${rect.r2}-${rect.c2}-${index}`}
             rect={rect}
             cellSize={cellSize}
-            color={rect.colors?.border ?? borderPal[rect.ci % borderPal.length]}
+            color={border}
             active={celebrating}
             index={index}
           />
@@ -257,16 +338,8 @@ function CompletionGlow({ active, color, repeat = false }: { active: boolean; co
 const styles = StyleSheet.create({
   grid: { position: 'relative', borderRadius: 10, overflow: 'hidden' },
   row: { flexDirection: 'row' },
-  preview: {
-    position: 'absolute',
-    borderWidth: 2.5,
-    borderRadius: 10,
-    shadowColor: '#4f6794',
-    shadowOpacity: 0.14,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
-  },
+  // The shadow is not here because it is drawn in the theme's own accent; see the preview.
+  preview: { position: 'absolute', borderWidth: 2.5, borderRadius: 10 },
   piece: { position: 'absolute', borderWidth: 3, borderRadius: 10 },
   celebrationRect: { position: 'absolute', borderWidth: 3, borderRadius: 10 },
   completionGlow: { position: 'absolute', inset: 2, borderWidth: 3, borderRadius: 10 },

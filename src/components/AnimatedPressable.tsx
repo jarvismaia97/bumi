@@ -64,7 +64,6 @@ export const AnimatedPressable = forwardRef<ComponentRef<typeof Pressable>, Anim
         // what keeps a resting opacity the call site painted (a dimmed button) intact.
         style={disabled ? style : [style, pressStyle]}
         onPressIn={event => {
-          // Reanimated shared values intentionally mutate outside React state.
           press.value = withTiming(1, PRESS_IN);
           onPressIn?.(event);
         }}

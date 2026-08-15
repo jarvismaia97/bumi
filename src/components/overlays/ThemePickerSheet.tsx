@@ -14,6 +14,11 @@ import { useI18n } from '@/i18n';
 
 export type ThemePickerSheetHandle = SettingsChildSheetHandle;
 
+// The swatch hairline exists to separate a pale swatch from a pale ground, so a fixed tenth of
+// black stops doing its job on the sheet it is most needed on: the dark themes' own swatches
+// lose their edge against a dark sheet. Chrome, not identity, so it is local rather than a token.
+const SWATCH_EDGE = { light: 'rgba(0,0,0,0.08)', dark: 'rgba(255,255,255,0.14)' } as const;
+
 export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle>(function ThemePickerSheet(_, ref) {
   const sheetRef = useRef<SettingsChildSheetHandle>(null);
   const appearance = useAppearance();
@@ -76,7 +81,7 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle>(function Them
               >
                 <View style={styles.optionCopy}>
                   <View style={styles.swatches}>
-                    {[optionTheme.bg, optionTheme.accent, optionTheme.text].map(color => <View key={color} style={[styles.swatch, { backgroundColor: color, opacity: unlocked ? 1 : 0.45 }]} />)}
+                    {[optionTheme.bg, optionTheme.accent, optionTheme.text].map(color => <View key={color} style={[styles.swatch, { backgroundColor: color, borderColor: SWATCH_EDGE[appearance], opacity: unlocked ? 1 : 0.45 }]} />)}
                   </View>
                   <View style={styles.optionText}>
                     <Text style={[styles.optionLabel, { color: optionTheme.text, opacity: unlocked ? 1 : 0.5 }]}>{t(`theme.${name}`)}</Text>
@@ -94,14 +99,11 @@ export const ThemePickerSheet = forwardRef<ThemePickerSheetHandle>(function Them
 });
 
 const styles = StyleSheet.create({
-  // Painted at 36 beside a 20pt title; hitSlop, not size, takes the tap area to 44.
-  // Centred between two 36pt buttons; flex lets a long translated title wrap instead of
-  // shoving the back button off the sheet.
   list: { gap: 8, marginTop: 18 },
   option: { minHeight: 48, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 13, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   optionCopy: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
   swatches: { flexShrink: 0, flexDirection: 'row', gap: 3 },
-  swatch: { width: 15, height: 15, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' },
+  swatch: { width: 15, height: 15, borderRadius: 8, borderWidth: 1 },
   optionText: { flexShrink: 1, minWidth: 0 },
   optionLabel: { flexShrink: 1, minWidth: 0, fontSize: 15, fontWeight: '700' },
   lockHint: { fontSize: 11, marginTop: 2 },

@@ -31,4 +31,15 @@ describe('every theme is legible, in both appearances', () => {
       expect(contrast(tokens.sub, tokens.bg), name).toBeGreaterThanOrEqual(4.5);
     }
   });
+
+  it('reads the label on a filled accent, which is the button that starts the game', () => {
+    // Every check above this one measures a token used as a foreground on `bg` or `surface`.
+    // Nothing measured a token used as a *background*, which is where the app actually failed:
+    // white was hardcoded on `accent` at thirteen of these twenty-two pairs, as low as 1.96:1
+    // on sun dark. 4.5 and not 3.0 because the label is 15px at weight 700 and WCAG large text
+    // starts at 18.66px bold, so it is ordinary text however heavy it looks.
+    for (const [name, tokens] of themes) {
+      expect(contrast(tokens.onAccent, tokens.accent), name).toBeGreaterThanOrEqual(4.5);
+    }
+  });
 });

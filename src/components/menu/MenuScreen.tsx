@@ -130,7 +130,15 @@ function StatCard({ icon, title, value, progress, accent }: { icon: ReactNode; t
       <View style={styles.goalCountRow}>
         <Text style={[styles.goalCount, { color: theme.text }]}>{value}</Text>
       </View>
-      <View style={[styles.goalBar, { backgroundColor: theme.gridSep }]}>
+      {/* The bar is the only thing here that says how far along the count is — the number above
+          it says how many, not how many of. Without a role a reader walks past a decoration. */}
+      <View
+        accessibilityRole="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(Math.min(progress, 1) * 100)}
+        style={[styles.goalBar, { backgroundColor: theme.gridSep }]}
+      >
         <View style={[styles.goalBarFill, { width: `${Math.min(progress, 1) * 100}%`, backgroundColor: accent }]} />
       </View>
     </View>
@@ -164,7 +172,13 @@ function GoalCard({ title, goal, reward, accent }: { title: string; goal: GoalPr
           subtraction the count above already shows both sides of, and on the other branch a
           line saying the goal was met — which the full bar, the count reading `3 / 3` and the
           border taking the accent colour say between them. */}
-      <View style={[styles.goalBar, { backgroundColor: theme.gridSep }]}>
+      <View
+        accessibilityRole="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={goal.target}
+        aria-valuenow={Math.min(goal.done, goal.target)}
+        style={[styles.goalBar, { backgroundColor: theme.gridSep }]}
+      >
         <View style={[styles.goalBarFill, { width: `${filled * 100}%`, backgroundColor: accent }]} />
       </View>
     </View>
@@ -269,29 +283,53 @@ export function MenuScreen({
       )}
 
       {completedIslandCount > 0 && (
-      <AnimatedPressable accessibilityRole="button" feedback="control" style={styles.islandProgress} onPress={onOpenMap}>
+      <AnimatedPressable accessibilityRole="button" feedback="control" style={styles.islandProgress} onPress={onOpenMap} accessibilityHint={t('a11y.openLevels')}>
         <MapPinned size={15} color={theme.accent} strokeWidth={2.3} />
         <Text style={[styles.islandProgressText, { color: theme.sub }]}>{t('menu.islands', { completed: completedIslandCount, total: islandTotal })}</Text>
       </AnimatedPressable>
       )}
 
       <View style={styles.menuBtns}>
-        <AnimatedPressable accessibilityRole="button" style={[styles.playBtn, { backgroundColor: theme.accent }]} onPress={onStartGame}>
+        {/* The percentage is repeated here, on the button, because iOS VoiceOver collapses an
+            accessible container into one node — the bar's `aria-*` below reaches web and
+            Android but never survives that collapse. `accessibilityValue` is the half RNW
+            drops and iOS reads, so between the two every platform hears the number. */}
+        <AnimatedPressable
+          accessibilityRole="button"
+          accessibilityValue={currentIsland ? { min: 0, max: 100, now: islandShare } : undefined}
+          style={[styles.playBtn, { backgroundColor: theme.accent }]}
+          onPress={onStartGame}
+        >
+          {/* Three lines and a bar, all in the one colour that reads on this fill. They used to
+              be told apart by alpha — 0.72 on the eyebrow, 0.75 on the detail — which on a dark
+              theme's accent left both under 2:1. Size and weight carry the hierarchy instead:
+              10/800 tracked out, 15/700, 11/600. */}
           <View style={styles.campaignCopy}>
-            <Text style={styles.campaignLabel} numberOfLines={1}>
+            <Text style={[styles.campaignLabel, { color: theme.onAccent }]} numberOfLines={1}>
               {currentIsland ? `${t('menu.campaign')} · ${t(`island.${currentIsland.id}.name`)}` : t('menu.campaign')}
             </Text>
-            <Text style={styles.playBtnText}>{campaignComplete ? t('menu.playAgain') : solvedCount === 0 ? t('menu.startCampaign') : t('menu.continueLevel', { level: campaignLevel })}</Text>
-            <Text style={styles.campaignDetail}>{campaignComplete ? t('menu.levelsComplete', { count: campaignTotal }) : t('menu.levelsExplore', { count: campaignTotal - campaignLevel + 1 })}</Text>
+            <Text style={[styles.playBtnText, { color: theme.onAccent }]}>{campaignComplete ? t('menu.playAgain') : solvedCount === 0 ? t('menu.startCampaign') : t('menu.continueLevel', { level: campaignLevel })}</Text>
+            <Text style={[styles.campaignDetail, { color: theme.onAccent }]}>{campaignComplete ? t('menu.levelsComplete', { count: campaignTotal }) : t('menu.levelsExplore', { count: campaignTotal - campaignLevel + 1 })}</Text>
             {/* The island's own progress, on the button that continues it. The card this
-                replaces said the same in three lines and a heading of its own. */}
+                replaces said the same in three lines and a heading of its own.
+
+                Track and fill are the same ink, the track thinned to 22% — the boundary a
+                reader has to see is where the fill stops, not where the bar sits on the
+                button, and those two cannot both clear 3:1 when the ink is only 4.5 from
+                the accent to begin with. The one carrying the number wins. */}
             {!!currentIsland && (
-              <View style={styles.campaignBar}>
-                <View style={[styles.campaignBarFill, { width: `${islandShare}%` }]} />
+              <View
+                accessibilityRole="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={islandShare}
+                style={[styles.campaignBar, { backgroundColor: `${theme.onAccent}38` }]}
+              >
+                <View style={[styles.campaignBarFill, { width: `${islandShare}%`, backgroundColor: theme.onAccent }]} />
               </View>
             )}
           </View>
-          <ArrowRight size={20} color="#fff" strokeWidth={2.4} />
+          <ArrowRight size={20} color={theme.onAccent} strokeWidth={2.4} />
         </AnimatedPressable>
 
         {/* The daily and training sit as a pair: one board everyone gets today, and as many as
@@ -356,7 +394,9 @@ const styles = StyleSheet.create({
   // Same box as `goalCard`, and no longer centring its contents: three rows starting at the top
   // line up with the goals underneath, where a centred column would not.
   stat: { flex: 1, minWidth: 0, borderWidth: 1.5, borderRadius: 8, padding: 12 },
-  islandProgress: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 20 },
+  // A full-width row, so height is the only axis that ever fell short and the only one that
+  // has to be bought back. 20 was the painted height of the text inside it.
+  islandProgress: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: MIN_TOUCH_TARGET },
   islandProgressText: { flexShrink: 1, minWidth: 0, fontSize: 12, fontWeight: '700' },
   goalsRow: { flexDirection: 'row', alignItems: 'stretch', width: '100%', maxWidth: 320, gap: 8 },
   goalCard: { flex: 1, minWidth: 0, borderWidth: 1.5, borderRadius: 8, padding: 12 },
@@ -370,11 +410,11 @@ const styles = StyleSheet.create({
   menuBtns: { gap: 8, width: '100%', maxWidth: 320 },
   playBtn: { borderRadius: 8, paddingVertical: 13, paddingHorizontal: 15, alignItems: 'center', flexDirection: 'row', gap: 8 },
   campaignCopy: { flex: 1 },
-  campaignLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: 'rgba(255,255,255,0.72)' },
-  playBtnText: { color: '#fff', fontSize: 15, fontWeight: '700', marginTop: 2 },
-  campaignDetail: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)', marginTop: 3 },
-  campaignBar: { height: 4, borderRadius: 2, overflow: 'hidden', marginTop: 8, backgroundColor: 'rgba(255,255,255,0.28)' },
-  campaignBarFill: { height: '100%', borderRadius: 2, backgroundColor: '#fff' },
+  campaignLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  playBtnText: { fontSize: 15, fontWeight: '700', marginTop: 2 },
+  campaignDetail: { fontSize: 11, fontWeight: '600', marginTop: 3 },
+  campaignBar: { height: 4, borderRadius: 2, overflow: 'hidden', marginTop: 8 },
+  campaignBarFill: { height: '100%', borderRadius: 2 },
   playRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   dailyBtn: { flex: 1, minWidth: 0, borderWidth: 1.5, borderRadius: 8, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' },
   dailyTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },

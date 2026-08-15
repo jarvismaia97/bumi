@@ -108,6 +108,25 @@ describe('SettingsSheet archive row', () => {
   });
 });
 
+describe('SettingsSheet reminder switch', () => {
+  // The label is a sibling Text, which a screen reader has no reason to tie to the control:
+  // the switch announced itself as "on" with no word for what was on.
+  it('names the control it is, not just its state', () => {
+    renderSheet();
+
+    expect(screen.getByRole('switch').getAttribute('aria-label')).toBe(translate('pt-PT', 'settings.dailyReminder'));
+  });
+
+  it('takes its name from the same key as the visible label', () => {
+    useLanguageStore.setState({ preference: 'en' });
+    renderSheet();
+
+    const label = translate('en', 'settings.dailyReminder');
+    expect(screen.getByText(label)).toBeTruthy();
+    expect(screen.getByRole('switch').getAttribute('aria-label')).toBe(label);
+  });
+});
+
 describe('SettingsSheet haptics', () => {
   it('stays silent opening the language sheet, like every other row that navigates', () => {
     renderSheet();

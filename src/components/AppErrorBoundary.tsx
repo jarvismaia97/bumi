@@ -32,7 +32,7 @@ export function AppErrorBoundary({ error, retry }: { error: Error; retry: () => 
       <Text style={[styles.body, { color: theme.sub }]}>{t('error.body')}</Text>
 
       <AnimatedPressable accessibilityRole="button" style={[styles.primary, { backgroundColor: theme.accent }]} onPress={backToMenu}>
-        <Text style={styles.primaryText}>{t('error.backToMenu')}</Text>
+        <Text style={[styles.primaryText, { color: theme.onAccent }]}>{t('error.backToMenu')}</Text>
       </AnimatedPressable>
       <AnimatedPressable
         accessibilityRole="button"
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '800', marginTop: 14 },
   body: { fontSize: 13, lineHeight: 19, textAlign: 'center', maxWidth: 320 },
   primary: { minWidth: 200, borderRadius: 8, paddingVertical: 13, alignItems: 'center', marginTop: 14 },
-  primaryText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  primaryText: { fontSize: 15, fontWeight: '700' },
   secondary: { minWidth: 200, borderWidth: 1.5, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
   secondaryText: { fontSize: 14, fontWeight: '700' },
   detail: { fontSize: 10, textAlign: 'center', marginTop: 18, opacity: 0.7 },

@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { forwardRef } from 'react';
 import { View } from 'react-native';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { translate } from '@/i18n/messages';
+import { useAppearanceStore } from '@/state/appearanceStore';
+import { THEMES } from '@/theme/themes';
 import { WinSheet } from './WinSheet';
 
 vi.mock('react-native-svg', () => ({ default: View, Rect: View, Path: View }));
@@ -37,6 +39,16 @@ function renderSheet(overrides: Partial<React.ComponentProps<typeof WinSheet>> =
   );
 }
 
+/** What jsdom answers with, so an expectation can be written as the token it came from. */
+function rgb(hex: string): string {
+  const at = (i: number) => parseInt(hex.slice(i, i + 2), 16);
+  return `rgb(${at(1)}, ${at(3)}, ${at(5)})`;
+}
+
+afterEach(() => {
+  useAppearanceStore.setState({ preference: 'auto' });
+});
+
 describe('WinSheet', () => {
   it('says what the medal added to the board', () => {
     renderSheet();
@@ -56,6 +68,15 @@ describe('WinSheet', () => {
     renderSheet({ campaignPoints: 0 });
 
     expect(screen.queryByText(/pontos/)).toBeNull();
+  });
+
+  // The label on the filled accent was hardcoded white, which on a dark theme's accent is as
+  // low as 1.96:1 — and this is the button that starts the next level.
+  it('reads the next action against the fill it sits on', () => {
+    useAppearanceStore.setState({ preference: 'dark' });
+    renderSheet();
+
+    expect(getComputedStyle(screen.getByText(t('win.nextLevel'))).color).toBe(rgb(THEMES.classic.dark.onAccent));
   });
 
   it('leaves the points out of a daily result, which is not scored by medal', () => {

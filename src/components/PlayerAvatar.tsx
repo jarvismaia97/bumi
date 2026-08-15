@@ -9,7 +9,6 @@ interface PlayerAvatarProps {
   frame?: string;
 }
 
-/** Mirrored mosaic derived from the account id — the player's stand-in for a photo. */
 /**
  * A border in React Native eats the content box, so the padding gives back exactly what the
  * frame takes. The mosaic comes out the same size framed or bare, and a row of avatars keeps
@@ -21,6 +20,7 @@ export function avatarMetrics(size: number, framed: boolean) {
   return { frameWidth, padding, cellSize: (size - frameWidth * 2 - padding * 2) / AVATAR_GRID };
 }
 
+/** Mirrored mosaic derived from the account id — the player's stand-in for a photo. */
 export function PlayerAvatarTile({ userId, size = 40, frame }: PlayerAvatarProps) {
   const { cells, fill } = useMemo(() => playerAvatar(userId), [userId]);
   const { frameWidth, padding, cellSize } = avatarMetrics(size, !!frame);

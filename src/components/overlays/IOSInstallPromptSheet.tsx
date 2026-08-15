@@ -11,8 +11,10 @@ import { hitSlopFor } from '@/lib/touchTarget';
 import { useI18n } from '@/i18n';
 import { renderSheetBackdrop } from '@/components/overlays/SheetBackdrop';
 
-const CLOSE_SIZE = 34;
-// The button floats over the sheet corner, so its slop has to stay on the sheet. The 5pt it
+// 36 is the size every other icon button in the app is painted at — the header's two and the
+// sheet back arrow — and this one was the odd 34 for no reason the layout depends on.
+const CLOSE_SIZE = 36;
+// The button floats over the sheet corner, so its slop has to stay on the sheet. The 4pt it
 // needs fits inside both its 18pt right inset and its 10pt drop below the drag handle.
 const CLOSE_HIT_SLOP = hitSlopFor({ width: CLOSE_SIZE, height: CLOSE_SIZE });
 
@@ -53,7 +55,7 @@ export const IOSInstallPromptSheet = forwardRef<IOSInstallPromptSheetHandle>(fun
       handleIndicatorStyle={{ backgroundColor: theme.gridSep }}
     >
       <BottomSheetView style={styles.content}>
-        <AnimatedPressable feedback="icon" style={[styles.close, { borderColor: theme.gridSep }]} hitSlop={CLOSE_HIT_SLOP} onPress={() => sheetRef.current?.dismiss()} accessibilityLabel={t('a11y.close')}>
+        <AnimatedPressable accessibilityRole="button" feedback="icon" style={[styles.close, { borderColor: theme.gridSep }]} hitSlop={CLOSE_HIT_SLOP} onPress={() => sheetRef.current?.dismiss()} accessibilityLabel={t('a11y.close')}>
           <X size={17} color={theme.sub} strokeWidth={2.4} />
         </AnimatedPressable>
         <View style={[styles.logo, { backgroundColor: theme.surface }]}><Logo size={40} /></View>

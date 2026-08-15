@@ -26,8 +26,13 @@ interface SettingsChildSheetProps {
   children: ReactNode;
 }
 
-const BACK_BUTTON_SIZE = 36;
-const BACK_BUTTON_HIT_SLOP = hitSlopFor({ width: BACK_BUTTON_SIZE, height: BACK_BUTTON_SIZE });
+/**
+ * The back button and the slot facing it across the title are one number, so a sheet that puts
+ * something real in that slot starts from the same width the empty spacer has rather than
+ * guessing at one. Exported for those sheets to floor their own content with.
+ */
+export const HEADER_SLOT_WIDTH = 36;
+const BACK_BUTTON_HIT_SLOP = hitSlopFor({ width: HEADER_SLOT_WIDTH, height: HEADER_SLOT_WIDTH });
 
 /**
  * Everything Settings opens — themes, achievements, language, the privacy policy — is the
@@ -105,10 +110,10 @@ export const SettingsChildSheet = forwardRef<SettingsChildSheetHandle, SettingsC
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 8 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  backButton: { minWidth: BACK_BUTTON_SIZE, minHeight: BACK_BUTTON_SIZE, borderWidth: 1.5, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  backButton: { minWidth: HEADER_SLOT_WIDTH, minHeight: HEADER_SLOT_WIDTH, borderWidth: 1.5, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   title: { flexShrink: 1, minWidth: 0, fontSize: 20, fontWeight: '800', textAlign: 'center' },
   headerCopy: { flex: 1, minWidth: 0 },
   titleLeading: { fontSize: 22, fontWeight: '800' },
   subtitle: { fontSize: 12, fontWeight: '600', marginTop: 3 },
-  headerSpacer: { width: BACK_BUTTON_SIZE, flexShrink: 0 },
+  headerSpacer: { width: HEADER_SLOT_WIDTH, flexShrink: 0 },
 });

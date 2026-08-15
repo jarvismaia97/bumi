@@ -27,15 +27,14 @@ export function FooterButtons({
   onHint,
   bottomInset = 0,
 }: FooterButtonsProps) {
-  const theme = useThemeTokens();
   const { t } = useI18n();
 
   return (
     <View style={[styles.footer, { paddingBottom: Math.max(16, bottomInset) }]}>
       <View style={styles.row}>
-        <FooterBtn Icon={Undo2} label={t('game.undo')} onPress={onUndo} theme={theme} disabled={editDisabled} />
-        <FooterBtn Icon={Eraser} label={t('game.clear')} onPress={onClear} theme={theme} disabled={editDisabled} />
-        <FooterBtn Icon={Lightbulb} label={hintLabel} onPress={onHint} theme={theme} disabled={hintDisabled} />
+        <FooterBtn Icon={Undo2} label={t('game.undo')} onPress={onUndo} disabled={editDisabled} />
+        <FooterBtn Icon={Eraser} label={t('game.clear')} onPress={onClear} disabled={editDisabled} />
+        <FooterBtn Icon={Lightbulb} label={hintLabel} onPress={onHint} disabled={hintDisabled} />
       </View>
     </View>
   );
@@ -45,15 +44,18 @@ function FooterBtn({
   Icon,
   label,
   onPress,
-  theme,
   disabled,
 }: {
   Icon: LucideIcon;
   label: string;
   onPress: () => void;
-  theme: { text: string; surface: string; gridSep: string };
   disabled?: boolean;
 }) {
+  // Reads the theme itself rather than taking it down as a prop. The prop was typed to the
+  // three fields this button happened to use, which is a shape that stops matching ThemeTokens
+  // the moment a token is added, silently and only here.
+  const theme = useThemeTokens();
+
   return (
     <AnimatedPressable
       accessibilityRole="button"

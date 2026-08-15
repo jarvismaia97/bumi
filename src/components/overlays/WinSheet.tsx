@@ -130,7 +130,7 @@ export const WinSheet = forwardRef<WinSheetHandle, WinSheetProps>(function WinSh
             <Text style={[styles.secondaryBtnText, { color: theme.text }]}>{t('win.review')}</Text>
           </AnimatedPressable>
           <AnimatedPressable accessibilityRole="button" style={[styles.primaryBtn, { backgroundColor: theme.accent }]} onPress={onNext}>
-            <Text style={styles.primaryBtnText}>{nextLabel}</Text>
+            <Text style={[styles.primaryBtnText, { color: theme.onAccent }]}>{nextLabel}</Text>
           </AnimatedPressable>
         </View>
       </BottomSheetView>
@@ -166,5 +166,5 @@ const styles = StyleSheet.create({
   secondaryBtn: { flexShrink: 1, minWidth: 0, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 18, alignItems: 'center' },
   secondaryBtnText: { fontSize: 15, fontWeight: '600', textAlign: 'center' },
   primaryBtn: { flex: 1, minWidth: 0, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '600', textAlign: 'center' },
+  primaryBtnText: { fontSize: 15, fontWeight: '600', textAlign: 'center' },
 });
