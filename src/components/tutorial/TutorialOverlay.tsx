@@ -50,8 +50,8 @@ export function TutorialOverlay({ visible, lessonIndex, readyToPlay, won, onStar
         <Text style={[styles.title, { color: card.text }]}>{title}</Text>
         <Text style={[styles.body, { color: card.text }]}>{body}</Text>
         <AnimatedPressable accessibilityRole="button" style={[styles.button, { backgroundColor: theme.accent }]} onPress={onPress}>
-          <Text style={styles.buttonText}>{button}</Text>
-          <ArrowRight size={18} color="#fff" strokeWidth={2.4} />
+          <Text style={[styles.buttonText, { color: theme.onAccent }]}>{button}</Text>
+          <ArrowRight size={18} color={theme.onAccent} strokeWidth={2.4} />
         </AnimatedPressable>
       </View>
     </View>
@@ -67,5 +67,5 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '800', marginBottom: 8 },
   body: { fontSize: 14, opacity: 0.82, lineHeight: 21, marginBottom: 18 },
   button: { borderRadius: 8, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
-  buttonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  buttonText: { fontSize: 15, fontWeight: '700' },
 });

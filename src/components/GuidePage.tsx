@@ -67,7 +67,7 @@ export function GuidePage({ guide }: { guide: Guide }) {
         {/* Above the rules as well as below them: someone who already knows Shikaku should not
             have to read three rules to find the way in. */}
         <Link href="/" style={[styles.play, { backgroundColor: theme.accent }]}>
-          <Text style={styles.playText}>{guide.play}</Text>
+          <Text style={[styles.playText, { color: theme.onAccent }]}>{guide.play}</Text>
         </Link>
 
         {guide.rules.map(rule => (
@@ -85,7 +85,7 @@ export function GuidePage({ guide }: { guide: Guide }) {
         <Text style={[styles.pitch, { color: theme.text }]}>{guide.pitch}</Text>
 
         <Link href="/" style={[styles.play, { backgroundColor: theme.accent }]}>
-          <Text style={styles.playText}>{guide.play}</Text>
+          <Text style={[styles.playText, { color: theme.onAccent }]}>{guide.play}</Text>
         </Link>
 
         <Text style={[styles.elsewhere, { color: theme.sub }]}>{guide.elsewhere}</Text>
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   heading: { fontSize: 30, fontWeight: '800', lineHeight: 36 },
   intro: { fontSize: 16, lineHeight: 24, marginTop: 12 },
   play: { alignSelf: 'flex-start', borderRadius: 10, paddingVertical: 13, paddingHorizontal: 22, marginTop: 22, marginBottom: 8 },
-  playText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  playText: { fontSize: 16, fontWeight: '700' },
   section: { marginTop: 22 },
   sectionTitle: { fontSize: 18, fontWeight: '700' },
   body: { fontSize: 15, lineHeight: 23, marginTop: 6 },

@@ -9,7 +9,7 @@ import Route from 'lucide-react-native/icons/route';
 import Trophy from 'lucide-react-native/icons/trophy';
 import Zap from 'lucide-react-native/icons/zap';
 import { getAchievements, type AchievementProgress } from '@/game/achievements';
-import { SettingsChildSheet, type SettingsChildSheetHandle } from '@/components/overlays/SettingsChildSheet';
+import { HEADER_SLOT_WIDTH, SettingsChildSheet, type SettingsChildSheetHandle } from '@/components/overlays/SettingsChildSheet';
 import { useProgressStore } from '@/state/progressStore';
 import { useSemanticTokens, useThemeTokens } from '@/state/themeStore';
 import { useI18n } from '@/i18n';
@@ -82,7 +82,20 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle>(function Ac
                       <Text style={[styles.progressLabel, { color: complete ? semantic.success : theme.sub }]}>{Math.min(achievement.current, achievement.target)} / {achievement.target}</Text>
                     </View>
                     <Text style={[styles.description, { color: theme.sub }]}>{t(`achievement.${achievement.id}.description`)}</Text>
-                    <View style={[styles.bar, { backgroundColor: theme.gridSep }]}>
+                    {/* The bar is the same count the label beside it already spells out, so the
+                        role is what stops it being read as an unnamed box rather than new
+                        information. The numbers go through `aria-value*` and not
+                        `accessibilityValue`: react-native-web drops the latter on the floor —
+                        it reaches no DOM attribute — while these are understood by both it and
+                        React Native, and the clamp keeps a beaten achievement from reporting a
+                        progress above its own maximum. */}
+                    <View
+                      style={[styles.bar, { backgroundColor: theme.gridSep }]}
+                      accessibilityRole="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={achievement.target}
+                      aria-valuenow={Math.min(achievement.current, achievement.target)}
+                    >
                       <View style={[styles.barFill, { width: `${progress * 100}%`, backgroundColor: accent }]} />
                     </View>
                   </View>
@@ -96,11 +109,15 @@ export const AchievementsSheet = forwardRef<AchievementsSheetHandle>(function Ac
 });
 
 const styles = StyleSheet.create({
-  // Painted at 36 beside a 22pt title; hitSlop, not size, takes the tap area to 44.
-  count: { flexShrink: 0, minWidth: 54, minHeight: 38, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
+  // The header's right-hand counterweight, and a badge rather than a control, so there is no
+  // touch target to meet. It floors at the shell's own slot width instead of the 54 that used
+  // to sit here: one number nobody has to keep in sync, and the trophy and count grow past it.
+  count: { flexShrink: 0, minWidth: HEADER_SLOT_WIDTH, minHeight: 38, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
   countText: { fontSize: 14, fontWeight: '800' },
   section: { gap: 8, marginBottom: 20 },
-  sectionTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8, marginBottom: 1 },
+  // Matches SettingsSheet.sectionLabel exactly. These two sheets open from the same list, and
+  // the category names are sentence case in every translation, so the case is set here.
+  sectionTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 1 },
   card: { borderWidth: 1.5, borderRadius: 8, padding: 11, flexDirection: 'row', gap: 11 },
   icon: { width: 38, height: 38, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1, minWidth: 0 },

@@ -101,7 +101,7 @@ export default function LoginScreen() {
         onPress={onSignIn}
       >
         <GoogleMark size={18} />
-        <Text style={styles.signInText}>{submitting ? t('auth.opening') : t('auth.signInGoogle')}</Text>
+        <Text style={[styles.signInText, { color: theme.onAccent }]}>{submitting ? t('auth.opening') : t('auth.signInGoogle')}</Text>
       </AnimatedPressable>
 
       {appleOffered ? (
@@ -122,6 +122,6 @@ const styles = StyleSheet.create({
   sub: { fontSize: 14, lineHeight: 20, maxWidth: 320, textAlign: 'center', marginBottom: 10 },
   signInButton: { width: '100%', maxWidth: 300, borderRadius: 14, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   appleButton: { width: '100%', maxWidth: 300, height: 48 },
-  signInText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  signInText: { fontSize: 15, fontWeight: '700' },
   error: { fontSize: 12, lineHeight: 17, maxWidth: 300, textAlign: 'center' },
 });

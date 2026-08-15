@@ -16,7 +16,7 @@ function contrast(a: string, b: string): number {
 }
 
 const APPEARANCES = ['light', 'dark'] as const;
-const TOKENS: (keyof ThemeTokens)[] = ['bg', 'surface', 'gridSep', 'text', 'sub', 'accent'];
+const TOKENS: (keyof ThemeTokens)[] = ['bg', 'surface', 'gridSep', 'text', 'sub', 'accent', 'onAccent'];
 const FAMILIES = ['danger', 'warning', 'success', 'info'] as const;
 /** Carried by shape alone (a medal dot, a progress bar), so the non-text floor applies. */
 const GRAPHIC_TOKENS: (keyof SemanticTokens)[] = ['streak', 'gold', 'silver', 'bronze'];

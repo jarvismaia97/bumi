@@ -89,13 +89,6 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
       : t('settings.synced');
   const SyncIcon = hasPendingChanges ? CloudOff : Cloud;
 
-  // No dismiss first: the modal provider's default 'switch' stack behaviour minimises
-  // this sheet and restores it when the child is dismissed, so the old dismiss-wait-open
-  // dance was fighting the library and showing an empty screen for its 180ms.
-  function openChildSheet(next: () => void) {
-    next();
-  }
-
   function confirmDeleteAccount() {
     Alert.alert(
       t('settings.deleteTitle'),
@@ -135,6 +128,10 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
   }
 
   return (
+    // The rows below present their child sheet without dismissing this one first: the modal
+    // provider's default 'switch' stack behaviour minimises this sheet and restores it when
+    // the child is dismissed. The old dismiss-wait-open dance was fighting the library and
+    // showing an empty screen for its 180ms.
     <BottomSheetModal
       backdropComponent={renderSheetBackdrop}
       ref={sheetRef}
@@ -185,7 +182,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         ) : null}
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.game')}</Text>
-        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenLeaderboard)}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={onOpenLeaderboard}>
           <View style={styles.rowCopy}><Users size={18} color={theme.accent} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('leaderboard.open')}</Text></View>
           <View style={styles.rowValue}>
             {/* Someone adding you is the one thing on this board that happens without you. */}
@@ -197,12 +194,12 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
             <ChevronRight size={18} color={theme.sub} />
           </View>
         </AnimatedPressable>
-        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenAchievements)}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={onOpenAchievements}>
           <View style={styles.rowCopy}><Trophy size={18} color={semantic.gold} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.achievements')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
         </AnimatedPressable>
 
-        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenArchive)}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={onOpenArchive}>
           <View style={styles.rowCopy}><CalendarDays size={18} color={theme.accent} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('archive.open')}</Text></View>
           <View style={styles.rowValue}>
             {hydrated && (
@@ -215,12 +212,12 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         </AnimatedPressable>
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.appearance')}</Text>
-        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenThemes)}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={onOpenThemes}>
           <View style={styles.rowCopy}><Palette size={18} color={theme.accent} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.themes')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
         </AnimatedPressable>
 
-        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenLanguage)}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={onOpenLanguage}>
           <View style={styles.rowCopy}><Languages size={18} color={theme.accent} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.language')}</Text></View>
           <View style={styles.rowValue}>
             <Text style={[styles.rowValueText, { color: theme.sub }]}>{languageValueLabel}</Text>
@@ -229,7 +226,7 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         </AnimatedPressable>
 
         <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.privacySupport')}</Text>
-        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={() => openChildSheet(onOpenPrivacy)}>
+        <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={onOpenPrivacy}>
           <View style={styles.rowCopy}><ShieldCheck size={18} color={theme.text} strokeWidth={2.2} /><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.privacy')}</Text></View>
           <ChevronRight size={18} color={theme.sub} />
         </AnimatedPressable>
@@ -245,7 +242,15 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
               <View style={styles.rowCopy}>
                 <View style={styles.rowCopyStack}><Text style={[styles.rowLabel, { color: theme.text }]}>{t('settings.dailyReminder')}</Text><Text style={[styles.rowDetail, { color: theme.sub }]}>{t('settings.reminderTime')}</Text></View>
               </View>
-              <Switch value={dailyReminderEnabled} onValueChange={toggleDailyReminder} trackColor={{ false: theme.gridSep, true: theme.accent }} />
+              {/* The label beside it is a sibling Text, which a screen reader has no reason to
+                  read as this control's name — the switch announced itself as "on" with no
+                  word for what was on. Same key as the visible label, so they cannot drift. */}
+              <Switch
+                value={dailyReminderEnabled}
+                onValueChange={toggleDailyReminder}
+                accessibilityLabel={t('settings.dailyReminder')}
+                trackColor={{ false: theme.gridSep, true: theme.accent }}
+              />
             </View>
           </>
         ) : null}
@@ -266,7 +271,6 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
 });
 
 const styles = StyleSheet.create({
-  // One 4px scale throughout: 4 / 8 / 12 / 14 / 20 / 28.
   body: { width: '100%' },
   content: { paddingHorizontal: 20, paddingTop: 4, gap: 8 },
   title: { fontSize: 20, fontWeight: '800', marginBottom: 12 },
@@ -293,7 +297,9 @@ const styles = StyleSheet.create({
   syncRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 2, paddingVertical: 4 },
   syncCopy: { flex: 1, fontSize: 12, lineHeight: 17 },
   // Binds to the rows below it: 8 down (the container gap), 28 up from the previous group.
-  sectionLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8, marginTop: 20, marginBottom: 0 },
+  // The uppercase is declared here rather than left to the translations, which shout in some
+  // languages and not others; every sheet's section heading is the same 11/800/0.8/uppercase.
+  sectionLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 20, marginBottom: 0 },
   // 52 is the resting touch target, not the row height: padding + minHeight so a label that
   // wraps at the accessibility text sizes pushes the row taller instead of being clipped.
   row: { minHeight: 52, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -304,8 +310,6 @@ const styles = StyleSheet.create({
   rowDetail: { fontSize: 11, lineHeight: 15, marginTop: 2 },
   rowValue: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
   rowValueText: { fontSize: 13, fontWeight: '600' },
-  // 44 = 14 padding + the 18pt icon column + its 12pt gap, so option labels sit under
-  // the trigger's label instead of under its icon.
   dangerText: { flexShrink: 1, minWidth: 0, fontSize: 14, fontWeight: '700' },
   error: { fontSize: 12, lineHeight: 17, marginTop: 4 },
 });

@@ -45,6 +45,8 @@ export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, o
   }, [placed, placedShared]);
 
   const dragging = useSharedValue(0);
+  /** Its own value rather than a tween read off `dragging`; see `onFinalize` for why. */
+  const previewOpacity = useSharedValue(0);
   const startRow = useSharedValue(0);
   const startCol = useSharedValue(0);
   const curRow = useSharedValue(0);
@@ -86,6 +88,7 @@ export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, o
       curRow.value = row;
       curCol.value = col;
       dragging.value = 1;
+      previewOpacity.value = withTiming(1, { duration: 90, reduceMotion: ReduceMotion.Never });
       hitRectIndex.value = rectIndexAt(placedShared.value, row, col);
     })
     // Touch callbacks run whether or not the gesture has activated yet. `onUpdate` does not,
@@ -118,6 +121,13 @@ export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, o
     })
     .onFinalize(() => {
       dragging.value = 0;
+      // Opacity is the one property here that carries no movement, so it keeps its fade under
+      // the setting: `Never` overrides Reanimated's default, which would otherwise blink the
+      // preview out. Driven from the gesture rather than from inside `useAnimatedStyle`, where
+      // a `withTiming` is re-evaluated on every style pass and so restarts its tween whenever
+      // any other captured value changes — which for a style that also reads the current row
+      // and column is on every frame of the drag.
+      previewOpacity.value = withTiming(0, { duration: 130, reduceMotion: ReduceMotion.Never });
     });
 
   // Covers the touch that never moved, which on iOS never activates the pan and so never
@@ -146,17 +156,18 @@ export function useDragToPlaceRect({ rows, columns, cellSize, placed, onPlace, o
     const c2 = Math.max(startCol.value, curCol.value) + 1;
     const width = (c2 - c1) * cellSize;
     const height = (r2 - r1) * cellSize;
-    // Opacity is the one property here that carries no movement, so it keeps its fade under the
-    // setting: `Never` overrides Reanimated's default, which would otherwise blink the preview.
-    const opacity = withTiming(dragging.value ? 1 : 0, {
-      duration: dragging.value ? 90 : 130,
-      reduceMotion: ReduceMotion.Never,
-    });
+    const opacity = previewOpacity.value;
 
     // This rectangle is where the player's finger is, not a flourish about it, so reduced motion
     // takes away only the entrance scale and the 90ms tween that let the edges lag the drag.
     if (reduceMotion) return { opacity, top: r1 * cellSize, left: c1 * cellSize, width, height };
 
+    // `width`/`height` are animated rather than a fixed box scaled with `scaleX`/`scaleY`, which
+    // would keep the whole thing off the layout pass. It is deliberate and it stays: the preview
+    // is a 2.5pt border, and scaling a box from one cell to twelve smears that border by the
+    // same factor — a 30pt edge on one side and a hairline on the other. Whether the layout cost
+    // is real here has not been measured on a low-end Android, and a rewrite that is visibly
+    // wrong to buy an unmeasured win is the worse trade. Profile it before touching this.
     return {
       opacity,
       top: r1 * cellSize,

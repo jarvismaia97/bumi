@@ -11,6 +11,7 @@ import { PlayerAvatarTile } from '@/components/PlayerAvatar';
 import { SettingsChildSheet, type SettingsChildSheetHandle } from '@/components/overlays/SettingsChildSheet';
 import { FRIEND_CODE_LENGTH } from '@/lib/friendCode';
 import { shareFriendCode } from '@/lib/friendCodeShare';
+import { hitSlopFor, MIN_TOUCH_TARGET } from '@/lib/touchTarget';
 import { playHaptic } from '@/lib/haptics';
 import { artistLabel } from '@/lib/playerName';
 import { titleFor } from '@/game/titles';
@@ -22,6 +23,16 @@ import { useI18n, type SupportedLanguage } from '@/i18n';
 import type { Translate } from '@/i18n/messages';
 
 export type LeaderboardSheetHandle = SettingsChildSheetHandle;
+
+// Derived from the painted boxes rather than shared with the header's, the same way login.tsx
+// does it: the two happen to be 36pt squares, and a slop that comes from the box moves when
+// the box does instead of leaving a stale constant behind.
+const ICON_BUTTON_SIZE = 36;
+const ICON_BUTTON_HIT_SLOP = hitSlopFor({ width: ICON_BUTTON_SIZE, height: ICON_BUTTON_SIZE });
+// The destructive one, and the smallest thing on the row. It sits about 10pt from a toggle
+// that spans the row, so a tap that misses it used to land on "reveal this friend's name".
+const REMOVE_BUTTON_SIZE = 28;
+const REMOVE_BUTTON_HIT_SLOP = hitSlopFor({ width: REMOVE_BUTTON_SIZE, height: REMOVE_BUTTON_SIZE });
 
 /** The board shows painter nicknames, the same identity the settings sheet shows. */
 function entryName(entry: LeaderboardEntry, language: SupportedLanguage): string {
@@ -53,7 +64,7 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
   const semantic = useSemanticTokens();
   const { t, language } = useI18n();
   const user = useAuthStore(state => state.user);
-  const { code, entries, loading, busy, error, load, addFriend, removeFriend, rotateCode, clearError } = useFriendsStore();
+  const { code, entries, friendCount, truncated, loading, busy, error, load, addFriend, removeFriend, rotateCode, clearError } = useFriendsStore();
   const arrived = new Set(newFriends(entries).map(entry => entry.code));
   const [input, setInput] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
@@ -114,6 +125,7 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                 accessibilityRole="button"
                 feedback="icon"
                 style={[styles.iconButton, { borderColor: theme.gridSep }]}
+                hitSlop={ICON_BUTTON_HIT_SLOP}
                 onPress={onShareCode}
                 disabled={!code}
                 accessibilityLabel={t('leaderboard.shareCode')}
@@ -124,6 +136,7 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                 accessibilityRole="button"
                 feedback="icon"
                 style={[styles.iconButton, { borderColor: theme.gridSep }]}
+                hitSlop={ICON_BUTTON_HIT_SLOP}
                 onPress={() => { playHaptic('selection'); rotateCode(); }}
                 disabled={busy || !code}
                 accessibilityLabel={t('leaderboard.rotateCode')}
@@ -156,7 +169,7 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
               disabled={busy}
               accessibilityLabel={t('leaderboard.addFriend')}
             >
-              <UserPlus size={18} color="#fff" strokeWidth={2.3} />
+              <UserPlus size={18} color={theme.onAccent} strokeWidth={2.3} />
             </AnimatedPressable>
           </View>
           {!!error && <Text style={[styles.error, { color: semantic.danger }]}>{t(`leaderboard.error.${error}`)}</Text>}
@@ -176,7 +189,7 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                   style={[styles.viewOption, active && { backgroundColor: theme.accent }]}
                   onPress={() => { playHaptic('selection'); setView(option); }}
                 >
-                  <Text style={[styles.viewLabel, { color: active ? '#fff' : theme.sub }]}>
+                  <Text style={[styles.viewLabel, { color: active ? theme.onAccent : theme.sub }]}>
                     {t(`leaderboard.view.${option}`)}
                   </Text>
                 </AnimatedPressable>
@@ -204,6 +217,8 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                 setRevealed(current => (current === key ? null : key));
               }}
               // Web only, and additive: the pointer answers without having to commit to a tap.
+              // It stays additive because react-native-web drops hover for `pointerType`
+              // 'touch', so a tap never opens the reveal on its way to toggling it shut.
               onHoverIn={() => setRevealed(key)}
               onHoverOut={() => setRevealed(current => (current === key ? null : current))}
               style={[
@@ -213,7 +228,11 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
             >
               <Text style={[styles.rank, { color: theme.sub }]}>{index + 1}</Text>
               {/* Self is the only row whose account id this device knows, so only it gets the
-                  real mosaic; a friend gets one seeded from the code they handed out. */}
+                  real mosaic — and it is also the one row with no `code`, since there is
+                  nothing there to remove. Everyone else is seeded from the removal handle,
+                  which is a per-viewer HMAC rather than the add-code it used to be: still
+                  deterministic, so a friend's tile is stable on this board, but the same
+                  friend no longer draws the same tile on somebody else's. */}
               <PlayerAvatarTile userId={entry.isSelf ? user.id : entry.code ?? ''} size={34} frame={title ? semantic[title.frame] : undefined} />
               <View style={styles.rowCopy}>
                 <View style={styles.rowNameLine}>
@@ -226,14 +245,13 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                     </Text>
                   )}
                 </View>
-                {/* On this line rather than beside the name: the name already truncates against
-                    the NEW badge, and a title is permanent where that badge lasts a day. Cut
-                    from the numbers that follow it, so a friend gets one without the board
-                    having to send anything it does not already send. */}
-                {/* While revealed, the detail line answers "who is this" instead of repeating
-                    numbers the player just looked at. In the row rather than floating over it:
-                    a bubble has to be placed against a row whose height varies and flipped below
-                    the first one to stay on screen, and none of that is visible from here. */}
+                {/* The title sits on this line rather than beside the name, which already
+                    truncates against the NEW badge — and it is cut from the numbers that follow
+                    it, so a friend gets one without the board sending anything extra.
+
+                    While revealed the line answers "who is this" instead. Inside the row rather
+                    than floating over it: a bubble would have to be placed against a row whose
+                    height varies and flipped below the first one to stay on screen. */}
                 <Text
                   style={[styles.rowDetail, { color: isRevealed ? theme.accent : theme.sub }, isRevealed && styles.rowDetailRevealed]}
                   numberOfLines={1}
@@ -274,6 +292,7 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                   accessibilityRole="button"
                   feedback="icon"
                   style={styles.removeButton}
+                  hitSlop={REMOVE_BUTTON_HIT_SLOP}
                   // Native gives the touch to the inner responder, but on web the click bubbles
                   // to the row and would toggle the reveal on the way out.
                   onPress={event => {
@@ -290,6 +309,15 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
             </AnimatedPressable>
             );
           })}
+          {/* Adding is capped, but a friendship is written in both directions — so a player whose
+              code has gone around can be carried past the cap by other people, and the board is
+              cut to fit. Without this the list simply ends, and rows they cannot see look
+              exactly like having no more friends. */}
+          {truncated && (
+            <Text style={[styles.empty, { color: theme.sub }]}>
+              {t('leaderboard.truncated', { count: friendCount, shown: ordered.filter(entry => !entry.isSelf).length })}
+            </Text>
+          )}
           <Text style={[styles.hint, { color: theme.sub }]}>
             {t(view === 'daily' ? 'leaderboard.dailyHint' : 'leaderboard.pointsHint')}
           </Text>
@@ -300,11 +328,14 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
 });
 
 const styles = StyleSheet.create({
-  sectionTitle: { fontSize: 10, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase', marginTop: 18, marginBottom: 8 },
+  // The heading every sibling sheet uses, stated the same way here: this one was a point
+  // smaller and tracked out further, which read as a different kind of heading rather than
+  // the same one on a different sheet.
+  sectionTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 18, marginBottom: 8 },
   codeCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12 },
   code: { flexShrink: 1, minWidth: 0, fontSize: 22, fontWeight: '800', letterSpacing: 3 },
   codeActions: { flexDirection: 'row', gap: 8, flexShrink: 0 },
-  iconButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderRadius: 8 },
+  iconButton: { width: ICON_BUTTON_SIZE, height: ICON_BUTTON_SIZE, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderRadius: 8 },
   hint: { fontSize: 11, lineHeight: 15, marginTop: 8 },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   input: { flex: 1, minWidth: 0, minHeight: 44, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, fontSize: 16, fontWeight: '700', letterSpacing: 2 },
@@ -314,16 +345,17 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8 },
   rowDetailRevealed: { fontSize: 12, fontWeight: '800' },
   viewSwitch: { flexDirection: 'row', gap: 4, borderWidth: 1.5, borderRadius: 8, padding: 3, marginBottom: 10 },
-  viewOption: { flex: 1, minHeight: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 6 },
+  viewOption: { flex: 1, minHeight: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center', borderRadius: 6 },
   viewLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
-  // Anchored over the name it explains, and inert — the tap belongs to the row underneath.
   rank: { flexShrink: 0, minWidth: 16, fontSize: 12, fontWeight: '800' },
   rowCopy: { flex: 1, minWidth: 0 },
   rowNameLine: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
   rowName: { flexShrink: 1, minWidth: 0, fontSize: 13, fontWeight: '800' },
-  newBadge: { flexShrink: 0, fontSize: 9, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase', borderWidth: 1, borderRadius: 20, paddingHorizontal: 6, paddingVertical: 1 },
+  // Was 9pt, the smallest type in the app, and tracked out on top of that. Uppercase at
+  // this size needs the room back more than it needs the tracking.
+  newBadge: { flexShrink: 0, fontSize: 10, fontWeight: '800', letterSpacing: 0.4, textTransform: 'uppercase', borderWidth: 1, borderRadius: 20, paddingHorizontal: 6, paddingVertical: 1 },
   rowDetail: { fontSize: 10, marginTop: 2 },
   rowPoints: { flexShrink: 0, flexDirection: 'row', alignItems: 'center', gap: 4 },
   points: { fontSize: 15, fontWeight: '800' },
-  removeButton: { flexShrink: 0, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  removeButton: { flexShrink: 0, width: REMOVE_BUTTON_SIZE, height: REMOVE_BUTTON_SIZE, alignItems: 'center', justifyContent: 'center' },
 });

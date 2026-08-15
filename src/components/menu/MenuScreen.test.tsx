@@ -5,7 +5,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { translate } from '@/i18n/messages';
 import { MONTHLY_TARGET, WEEKLY_TARGET, type GoalProgress } from '@/game/goals';
 import { getIslandJourney } from '@/game/islands';
+import { useAppearanceStore } from '@/state/appearanceStore';
 import { useProgressStore } from '@/state/progressStore';
+import { THEMES } from '@/theme/themes';
 import { MenuScreen } from './MenuScreen';
 
 // The account pill reads the auth store, which reaches expo-secure-store through the auth
@@ -71,9 +73,16 @@ function renderMenu(overrides: Partial<React.ComponentProps<typeof MenuScreen>> 
   );
 }
 
+/** What jsdom answers with, so an expectation can be written as the token it came from. */
+function rgb(hex: string): string {
+  const at = (i: number) => parseInt(hex.slice(i, i + 2), 16);
+  return `rgb(${at(1)}, ${at(3)}, ${at(5)})`;
+}
+
 describe('MenuScreen', () => {
   beforeEach(() => {
     useProgressStore.setState({ dailyCompletionDates: [] });
+    useAppearanceStore.setState({ preference: 'auto' });
   });
 
   it('states both goals with their counts and their rewards', () => {
@@ -158,5 +167,47 @@ describe('MenuScreen', () => {
     renderMenu();
 
     expect(screen.getByText(t('menu.islands', { completed: 2, total: 13 }))).toBeTruthy();
+  });
+
+  // Every line on the campaign button used to be white, two of them at 0.72 and 0.75 alpha,
+  // which on a dark theme's accent measured under 2:1. There is one foreground for an accent
+  // fill and all three lines take it, undimmed.
+  it('paints the whole campaign button in the foreground the accent owns', () => {
+    useAppearanceStore.setState({ preference: 'dark' });
+    renderMenu();
+
+    const onAccent = rgb(THEMES.classic.dark.onAccent);
+    for (const label of [
+      t('menu.continueLevel', { level: 13 }),
+      t('menu.levelsExplore', { count: 488 }),
+    ]) {
+      expect(getComputedStyle(screen.getByText(label)).color, label).toBe(onAccent);
+    }
+  });
+
+  // The island bar carries a percentage that appears nowhere else on the screen, so without a
+  // role and a value a reader is told nothing about it at all.
+  it('gives every bar a value a reader can hear', () => {
+    const { container } = renderMenu();
+
+    const bars = Array.from(container.querySelectorAll('[role="progressbar"]'));
+    // Levels solved, gold medals and both goals, at least — the menu also mounts every sheet
+    // it can open, and their bars land in the same tree.
+    expect(bars.length).toBeGreaterThanOrEqual(4);
+    expect(bars.every(bar => bar.getAttribute('aria-valuenow') !== null)).toBe(true);
+
+    // And the one that matters most, which says how far into the current island the player is
+    // and is the only place on the screen that says it.
+    const campaignButton = screen.getByText(t('menu.continueLevel', { level: 13 })).closest('[role="button"]');
+    expect(campaignButton?.querySelector('[role="progressbar"]')).toBeTruthy();
+  });
+
+  // A 20pt row is the height of its own text. It opens the map, so it is a control, and the
+  // row is already full width — the height was free to take.
+  it('gives the island row a full touch target', () => {
+    renderMenu();
+
+    const row = screen.getByText(t('menu.islands', { completed: 2, total: 13 })).parentElement;
+    expect(getComputedStyle(row as HTMLElement).minHeight).toBe('44px');
   });
 });
