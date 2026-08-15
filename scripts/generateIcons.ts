@@ -83,6 +83,24 @@ const TARGETS: { file: string; size: number; source: string; flatten?: boolean }
   { file: 'assets/images/play-feature-graphic.png', size: 1024, source: FEATURE_GRAPHIC, flatten: true },
 ];
 
+/**
+ * Checked once, before the first file is written. Only the flattened targets shell out, and they
+ * are late in the list, so without this the script writes seven good PNGs and then dies on a bare
+ * `spawnSync ENOENT` naming neither the binary nor how to get it — leaving a half-generated icon
+ * set behind that looks like a completed run.
+ */
+if (TARGETS.some(target => target.flatten)) {
+  try {
+    execFileSync('magick', ['-version'], { stdio: 'ignore' });
+  } catch {
+    console.error(
+      'ImageMagick is required to flatten the iOS icon and the Play feature graphic, and `magick` ' +
+        'is not on PATH. Install it with `brew install imagemagick`.',
+    );
+    process.exit(1);
+  }
+}
+
 for (const target of TARGETS) {
   const path = resolve(target.file);
   const png = new Resvg(target.source, { fitTo: { mode: 'width', value: target.size } }).render().asPng();

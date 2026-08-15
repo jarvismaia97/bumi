@@ -11,6 +11,20 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char);
 }
 
+/**
+ * A string literal safe to drop inside a `<script>` block. JSON.stringify quotes and escapes for
+ * a JavaScript parser, but the HTML tokeniser gets there first and ends the script at the first
+ * `</script>` in the text, whatever it is quoted inside. `<` is the same character to the
+ * JavaScript parser and not a tag opener to the tokeniser, so escaping every `<` closes that.
+ *
+ * Today the only thing serialised here is APP_URL plus a validated level number or date key, so
+ * nothing can carry a tag through. That is a property of the two callers above, not of this
+ * function, and it is not the kind of property worth relying on from a distance.
+ */
+function scriptLiteral(value: string): string {
+  return JSON.stringify(value).replace(/</g, '\\u003C');
+}
+
 function formatDailyDate(dateKey: string, language: SupportedLanguage): string {
   const date = new Date(Number(dateKey.slice(0, 4)), Number(dateKey.slice(4, 6)) - 1, Number(dateKey.slice(6, 8)));
   return date.toLocaleDateString(language, { day: 'numeric', month: 'long' });
@@ -22,6 +36,16 @@ function first(value: unknown): string | undefined {
 }
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
+  // A share link is a link: it is followed, previewed and crawled, and nothing else. HEAD is
+  // allowed because scrapers lead with it; anything that writes has no business here at all.
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.status(405)
+      .setHeader('content-type', 'application/json')
+      .setHeader('allow', 'GET, HEAD')
+      .send(JSON.stringify({ error: 'Method not allowed' }));
+    return;
+  }
+
   const kind = first(req.query.kind);
   const value = first(req.query.value);
   // `lang` is stamped on the URL by whoever shared it: the card is rendered once, server
@@ -73,7 +97,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 <meta name="twitter:description" content="${escapeHtml(description)}" />
 <meta name="twitter:image" content="${escapeHtml(cardUrl)}" />
 <meta http-equiv="refresh" content="0;url=${escapeHtml(destination)}" />
-</head><body><p>${escapeHtml(translate(language, 'card.opening'))}</p><script>location.replace(${JSON.stringify(destination)});</script></body></html>`;
+</head><body><p>${escapeHtml(translate(language, 'card.opening'))}</p><script>location.replace(${scriptLiteral(destination)});</script></body></html>`;
 
   res.status(200)
     .setHeader('content-type', 'text/html; charset=utf-8')

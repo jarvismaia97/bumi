@@ -27,9 +27,20 @@ type Stage = {
   duration: number;
 };
 
+/**
+ * The value after `name`, or undefined. A value that itself starts with `--` is refused rather
+ * than returned: `--date --lang pt` would otherwise read as the date `"--lang"`, and a date that
+ * nonsensical is silently accepted downstream — the flag reads as present and the run produces a
+ * clip for the wrong day.
+ */
 function parseArgument(name: string): string | undefined {
   const index = process.argv.indexOf(name);
-  return index === -1 ? undefined : process.argv[index + 1];
+  if (index === -1) return undefined;
+  const value = process.argv[index + 1];
+  if (value === undefined || value.startsWith('--')) {
+    throw new Error(`${name} needs a value`);
+  }
+  return value;
 }
 
 function toDate(dateKey: string): Date {
