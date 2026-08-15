@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 import { neon } from '@neondatabase/serverless';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuth } from '../src/lib/auth';
@@ -13,7 +13,9 @@ import { resolveLanguage, translate } from '../src/i18n/messages';
  * recognises "Michelangelo" as their brother. The nickname stays as the fallback for accounts
  * with no name — Apple Sign In lets people withhold it — so every row still reads as somebody.
  *
- * What still never leaves: account ids and email addresses. The name reaches only the accounts
+ * What still never leaves: account ids, email addresses, and — since the board is the one place
+ * a code would otherwise be handed to people who never needed it — anybody else's friend code.
+ * Rows carry a removal handle instead (see `removalHandle`). The name reaches only the accounts
  * on the other side of a mutual friendship, which is only ever made by someone typing a code
  * its owner gave them. A player who wants that undone rotates the code and removes the row.
  *
@@ -28,7 +30,6 @@ type PostBody = { action?: 'add' | 'remove' | 'rotate'; code?: string };
 type CodeRow = { user_id: string; friend_code: string | null };
 type StatsRow = {
   user_id: string;
-  friend_code: string | null;
   name: string | null;
   daily_ms: number | string | null;
   daily_hints: number | string | null;
@@ -52,15 +53,40 @@ function displayName(name: string | null | undefined): string | null {
   return trimmed ? trimmed.slice(0, MAX_NAME_LENGTH) : null;
 }
 
-const databaseUrl = process.env.DATABASE_URL;
+/**
+ * Both of these are guaranteed by the time this module finishes loading: importing
+ * `../src/lib/auth` above throws when either is missing, so a handler-level "not configured"
+ * branch could never run. The non-null assertions say that out loud instead of pretending
+ * there is a fallback path.
+ */
+const databaseUrl = process.env.DATABASE_URL as string;
+const authSecret = process.env.BETTER_AUTH_SECRET as string;
+
 /** A board of friends, not a social network: past this the screen stops being readable. */
 const MAX_FRIENDS = 30;
 /**
  * Guessing a code is 729 million tries by hand and an afternoon to a script, and a hit puts a
  * stranger on someone's board looking at their numbers. Nobody adds twenty friends in an hour,
- * so the ceiling costs a real player nothing.
+ * so the ceiling costs a real player nothing. Every code-shaped POST spends from it — removing
+ * used to be exempt, which made `action: 'remove'` an unmetered way to ask the same question.
  */
 const MAX_ATTEMPTS_PER_HOUR = 20;
+
+/**
+ * Where a browser may read a response from, mirroring `trustedOrigins` in src/lib/auth.ts.
+ *
+ * This used to reflect whatever `Origin` arrived, which was never useful to anyone: the web
+ * build is served from the same origin as this function and React Native does not implement
+ * CORS at all, so the reflection only ever widened who could read a reply. The `bumi://` entries
+ * from the auth list are deliberately absent — a native app is not a browser and never asks.
+ */
+const ALLOWED_ORIGINS = new Set([
+  process.env.BETTER_AUTH_URL ?? 'https://www.jogarbumi.pt',
+  'https://jogarbumi.pt',
+  'https://www.jogarbumi.pt',
+  'http://localhost:3000',
+  'http://localhost:8081',
+]);
 
 function sendJson(res: VercelResponse, status: number, body: unknown) {
   res.status(status).setHeader('content-type', 'application/json');
@@ -69,10 +95,28 @@ function sendJson(res: VercelResponse, status: number, body: unknown) {
 
 function setCors(req: VercelRequest, res: VercelResponse) {
   const origin = req.headers.origin;
-  if (origin) res.setHeader('access-control-allow-origin', origin);
+  if (origin && ALLOWED_ORIGINS.has(origin)) res.setHeader('access-control-allow-origin', origin);
   res.setHeader('vary', 'origin');
   res.setHeader('access-control-allow-methods', 'GET,POST,OPTIONS');
   res.setHeader('access-control-allow-headers', 'content-type');
+}
+
+/**
+ * How a board names one of its own rows for removal, and nothing else.
+ *
+ * The row used to carry the friend's own add-code, which handed every friend the one thing that
+ * puts a stranger on that player's board — and rotating, the only revocation, throws away the
+ * code they had already given to people they actually wanted. This is an HMAC over the pair
+ * under the server secret, so it is meaningless to anyone but this server, different for every
+ * viewer looking at the same friend, and useless as an add-code because adding still takes a
+ * real one. Deriving it needs no column: it is a pure function of two ids the row already has.
+ *
+ * The secret is BETTER_AUTH_SECRET, the same one better-auth signs sessions with. Handles are
+ * therefore stable for as long as sessions are, and rotating that secret invalidates both
+ * together — a player whose board is stale reloads it, which is what a 404 here tells them.
+ */
+function removalHandle(viewerId: string, friendId: string): string {
+  return createHmac('sha256', authSecret).update(`friend-removal ${viewerId} ${friendId}`).digest('hex').slice(0, 32);
 }
 
 function parseBody(req: VercelRequest): PostBody {
@@ -90,6 +134,15 @@ async function getUserId(req: VercelRequest): Promise<string | null> {
 
 type Sql = ReturnType<typeof neon<false, false>>;
 
+/**
+ * A code already taken by somebody else. `profiles_friend_code_idx` is unique, so the draw that
+ * lost the race raises SQLSTATE 23505 — which is the one failure worth another turn of the loop
+ * rather than a 500, because the next draw is from 729 million codes and almost certainly free.
+ */
+function isDuplicateCode(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && (error as { code?: unknown }).code === '23505';
+}
+
 /** Codes are assigned on first read, so no migration has to backfill them. */
 async function ensureFriendCode(sql: Sql, userId: string): Promise<string> {
   const existing = (await sql`
@@ -97,16 +150,22 @@ async function ensureFriendCode(sql: Sql, userId: string): Promise<string> {
   `) as CodeRow[];
   if (existing[0]?.friend_code) return existing[0].friend_code;
 
-  // A collision is a unique-violation, not a lost write, so retrying a few times is enough.
+  // The upsert always returns a row, so this loop runs once in practice. The retry is for the
+  // one case that does not return: a `friend_code` already held by another account raises a
+  // unique violation, and the answer to a collision is a different code, not a 500.
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = friendCodeFromBytes(randomBytes(FRIEND_CODE_LENGTH));
-    const inserted = (await sql`
-      insert into profiles (user_id, friend_code)
-      values (${userId}, ${code})
-      on conflict (user_id) do update set friend_code = coalesce(profiles.friend_code, excluded.friend_code)
-      returning friend_code
-    `) as { friend_code: string }[];
-    if (inserted[0]?.friend_code) return inserted[0].friend_code;
+    try {
+      const inserted = (await sql`
+        insert into profiles (user_id, friend_code)
+        values (${userId}, ${code})
+        on conflict (user_id) do update set friend_code = coalesce(profiles.friend_code, excluded.friend_code)
+        returning friend_code
+      `) as { friend_code: string }[];
+      if (inserted[0]?.friend_code) return inserted[0].friend_code;
+    } catch (error) {
+      if (!isDuplicateCode(error)) throw error;
+    }
   }
   throw new Error('Could not assign a friend code');
 }
@@ -114,12 +173,18 @@ async function ensureFriendCode(sql: Sql, userId: string): Promise<string> {
 async function rotateFriendCode(sql: Sql, userId: string): Promise<string> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = friendCodeFromBytes(randomBytes(FRIEND_CODE_LENGTH));
-    const rows = (await sql`
-      update profiles set friend_code = ${code} where user_id = ${userId} returning friend_code
-    `) as { friend_code: string }[];
-    if (rows[0]?.friend_code) return rows[0].friend_code;
-    // No profile row yet: create one and let the caller read it back.
-    await sql`insert into profiles (user_id) values (${userId}) on conflict (user_id) do nothing`;
+    try {
+      const rows = (await sql`
+        update profiles set friend_code = ${code} where user_id = ${userId} returning friend_code
+      `) as { friend_code: string }[];
+      if (rows[0]?.friend_code) return rows[0].friend_code;
+      // No profile row yet: create one so the next pass of the loop has something to update.
+      await sql`insert into profiles (user_id) values (${userId}) on conflict (user_id) do nothing`;
+    } catch (error) {
+      // Same collision as above, and the same answer: draw again. Rotating is the player's only
+      // revocation, so it must not fail on a coincidence they can neither see nor retry past.
+      if (!isDuplicateCode(error)) throw error;
+    }
   }
   throw new Error('Could not rotate the friend code');
 }
@@ -227,7 +292,8 @@ async function statsFor(sql: Sql, userIds: string[], viewerId: string): Promise<
         and daily_completions.completed_date = viewer_day.day
     )
     select wanted.user_id,
-      profiles.friend_code,
+      -- No friend_code here on purpose: a board is read by every friend, and the code is the
+      -- capability that puts somebody on a board. Rows are named by removalHandle instead.
       -- better-auth's own table, double-quoted because user is a reserved word in Postgres.
       -- Left joined: a missing account row must not drop a player off their friends' boards.
       accounts.name,
@@ -244,7 +310,6 @@ async function statsFor(sql: Sql, userIds: string[], viewerId: string): Promise<
       -- with nothing to show, which is not the same as a day not started.
       (daily.user_id is not null) as daily_done
     from wanted
-    left join profiles on profiles.user_id = wanted.user_id
     left join "user" as accounts on accounts.id = wanted.user_id
     left join medals on medals.user_id = wanted.user_id
     left join solved on solved.user_id = wanted.user_id
@@ -260,8 +325,11 @@ function toEntry(row: StatsRow, selfId: string, addedAt?: string | null) {
     bronze: Number(row.bronze),
   };
   return {
-    // The code identifies a row to the client for removal; the account id never leaves here.
-    code: row.friend_code,
+    // How the client names a row to remove; the account id never leaves here. This used to be
+    // the friend's own add-code, which handed every friend the one thing that puts a stranger on
+    // their board. It is now a handle only this viewer's removals can use, and the player's own
+    // row has none: there is nothing there to remove.
+    code: row.user_id === selfId ? null : removalHandle(selfId, row.user_id),
     // When the pair was made, so the board can mark the ones the player has not seen yet.
     addedAt: addedAt ?? null,
     name: displayName(row.name),
@@ -291,10 +359,60 @@ async function board(sql: Sql, userId: string) {
 
   return {
     code,
+    // Rows past MAX_FRIENDS are dropped above, and silently dropping them is how a player ends
+    // up with friends they cannot see or remove: the add ceiling counts each side's own rows,
+    // but the insert writes both, so being popular is enough to go over. Say so instead, and
+    // hand over the totals, so the client can tell them which is which.
+    friendCount: friendRows.length,
+    truncated: friendRows.length > friendIds.length,
     entries: rows
       .map(row => toEntry(row, userId, addedAt.get(row.user_id)))
       .sort((a, b) => b.points - a.points || b.solved - a.solved),
   };
+}
+
+/**
+ * Spends one attempt against the hourly ceiling and records what it was for. Answers whether the
+ * caller was under the ceiling; the caller must not act on its lookup when this says no.
+ *
+ * Misses only, as before. Enumeration is a run of codes that do not exist; somebody working
+ * through four codes from a group chat is not, and counting their hits would spend the same
+ * budget on them. The row still goes in either way — the outcome is what the ceiling ignores.
+ *
+ * The count and the insert are one statement because two were a race anybody could win: the
+ * count came back over one round trip and the insert went out over the next, so twenty parallel
+ * requests all read the same number and all passed. One statement narrows that to the snapshot
+ * Postgres takes when it starts — under READ COMMITTED two requests landing in the same instant
+ * can still both see the pre-insert count, so this is a ceiling with microseconds of give rather
+ * than a network round trip of it. Closing that last gap needs an interactive transaction, which
+ * the neon HTTP driver does not give a single handler.
+ */
+async function meterAttempt(sql: Sql, userId: string, succeeded: boolean): Promise<boolean> {
+  const rows = (await sql`
+    with recent as (
+      select count(*)::int as misses
+      from friend_code_attempts
+      where user_id = ${userId}::text
+        and attempted_at > now() - interval '1 hour'
+        and not succeeded
+    ),
+    spent as (
+      insert into friend_code_attempts (user_id, succeeded)
+      select ${userId}::text, ${succeeded}::boolean
+      from recent
+      where recent.misses < ${MAX_ATTEMPTS_PER_HOUR}::int
+      returning 1 as written
+    ),
+    -- Older rows go with it, so the table stays the size of a day of use. A data-modifying CTE
+    -- runs whether or not the outer query reads it, which is why nothing selects from this one.
+    pruned as (
+      delete from friend_code_attempts
+      where user_id = ${userId}::text and attempted_at < now() - interval '1 day'
+      returning 1
+    )
+    select exists (select 1 from spent) as allowed
+  `) as { allowed: boolean }[];
+  return rows[0]?.allowed ?? false;
 }
 
 /**
@@ -326,7 +444,7 @@ async function notifyAdded(sql: Sql, targetId: string, adderId: string) {
     `) as { name: string | null }[];
     const name = displayName(adder[0]?.name) ?? ARTISTS[artistIndexFor(adderId)].name;
 
-    await fetch('https://exp.host/--/api/v2/push/send', {
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(
@@ -338,8 +456,20 @@ async function notifyAdded(sql: Sql, targetId: string, adderId: string) {
         })),
       ),
     });
+
+    // Expo answers with one ticket per message, in the order they were sent, and the reply used
+    // to be dropped on the floor. DeviceNotRegistered is the app deleted or the token reissued:
+    // that token will never deliver again, and left in the table it is sent to on every add
+    // forever, which is how a row nobody can see slowly becomes most of the push traffic.
+    // Anything else — a rate limit, a bad message — is transient or ours, so the token stays.
+    const payload = (await response.json()) as { data?: ({ details?: { error?: string } } | null)[] };
+    const dead = (payload.data ?? [])
+      .map((ticket, index) => (ticket?.details?.error === 'DeviceNotRegistered' ? tokens[index]?.token : null))
+      .filter((token): token is string => Boolean(token));
+    if (dead.length) await sql`delete from push_tokens where token = any(${dead}::text[])`;
   } catch {
-    // A push that could not be sent is not a reason to fail the add.
+    // A push that could not be sent — or a reply that could not be read — is not a reason to
+    // fail the add. A token left behind here is caught by the next add to the same account.
   }
 }
 
@@ -348,11 +478,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'OPTIONS') {
     res.status(204).end();
-    return;
-  }
-
-  if (!databaseUrl) {
-    sendJson(res, 500, { error: 'DATABASE_URL is not configured' });
     return;
   }
 
@@ -379,28 +504,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    if (body.action === 'remove') {
+      // Removing never looks a code up. It used to: it ran the same global
+      // `where friend_code = ?` as adding and answered the same 404 on a miss, while sitting
+      // outside the ceiling — an unmetered oracle over all 729 million codes, and a hit put the
+      // asker on a stranger's board. Now the only thing that resolves here is a handle this
+      // board handed this viewer, matched against this viewer's own rows, so the question
+      // "does this code exist" can no longer be asked at all.
+      const handle = typeof body.code === 'string' ? body.code.trim() : '';
+      const mine = (await sql`
+        select friend_id from friendships where user_id = ${userId}
+      `) as { friend_id: string }[];
+      const targetId = mine.find(row => removalHandle(userId, row.friend_id) === handle)?.friend_id ?? null;
+
+      // A miss is metered like any other: a handle nobody holds costs the same as a code nobody
+      // has, so there is nothing left to learn by guessing either. A hit is let through even
+      // when the budget is spent, because a matching handle proves the caller already holds the
+      // row and so teaches them nothing — and the alternative is worse than the leak it would
+      // prevent: an hour of add typos would lock someone out of removing anyone, and removal is
+      // the only way off a full board.
+      if (targetId) {
+        await meterAttempt(sql, userId, true);
+      } else if (!(await meterAttempt(sql, userId, false))) {
+        sendJson(res, 429, { error: 'too_many_attempts' });
+        return;
+      }
+      if (!targetId) {
+        // Says only "not on your board", which for a handle means a stale one — reload and it
+        // is gone or it is removable. It says nothing about anybody's code, because none was read.
+        sendJson(res, 404, { error: 'unknown_code' });
+        return;
+      }
+
+      // Removal is mutual as well; a board neither side can leave alone is worse than none.
+      await sql`
+        delete from friendships
+        where (user_id = ${userId} and friend_id = ${targetId})
+           or (user_id = ${targetId} and friend_id = ${userId})
+      `;
+      sendJson(res, 200, await board(sql, userId));
+      return;
+    }
+
+    // Adding, and only adding, takes a real code.
     const code = normalizeFriendCode(body.code ?? '');
     if (!code) {
       sendJson(res, 400, { error: 'invalid_code' });
       return;
-    }
-
-    // Removing takes a code the player already has, so only adding is worth rate limiting.
-    const limited = body.action !== 'remove';
-
-    if (limited) {
-      // Misses only. Enumeration is a run of codes that do not exist; somebody working through
-      // four codes from a group chat is not, and counting their hits spent the same budget on
-      // them. The row still goes in either way — the outcome is what the ceiling ignores.
-      const recent = (await sql`
-        select count(*)::int as count
-        from friend_code_attempts
-        where user_id = ${userId} and attempted_at > now() - interval '1 hour' and not succeeded
-      `) as { count: number }[];
-      if ((recent[0]?.count ?? 0) >= MAX_ATTEMPTS_PER_HOUR) {
-        sendJson(res, 429, { error: 'too_many_attempts' });
-        return;
-      }
     }
 
     const matches = (await sql`
@@ -408,15 +558,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `) as CodeRow[];
     const targetId = matches[0]?.user_id;
 
-    if (limited) {
-      // Written after the lookup, so the row can carry what happened. Older rows go with it, so
-      // the table stays the size of a day of use.
-      await sql`
-        insert into friend_code_attempts (user_id, succeeded) values (${userId}, ${!!targetId})
-      `;
-      await sql`
-        delete from friend_code_attempts where user_id = ${userId} and attempted_at < now() - interval '1 day'
-      `;
+    // The lookup already happened, so the row can carry what it found; nothing about it reaches
+    // the caller until the ceiling has said yes.
+    if (!(await meterAttempt(sql, userId, Boolean(targetId)))) {
+      sendJson(res, 429, { error: 'too_many_attempts' });
+      return;
     }
 
     if (!targetId) {
@@ -428,34 +574,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    if (body.action === 'remove') {
-      // Removal is mutual as well; a board neither side can leave alone is worse than none.
-      await sql`
-        delete from friendships
-        where (user_id = ${userId} and friend_id = ${targetId})
-           or (user_id = ${targetId} and friend_id = ${userId})
-      `;
-      sendJson(res, 200, await board(sql, userId));
-      return;
-    }
+    /**
+     * Both ceilings and the insert in one statement. Two statements meant N parallel adds all
+     * read the same count and all passed, and the count only ever covered the adder's own rows
+     * while the insert wrote both directions — so a player whose code was circulating could be
+     * pushed past MAX_FRIENDS by other people, and the board then dropped the overflow silently.
+     * Checking both sides here is what stops that at the source; `friendCount` on the board is
+     * what tells whoever is already over.
+     *
+     * A pair that already exists is exempt: re-entering a code someone has must stay a quiet
+     * no-op, not a 409 that reads as "you have too many friends".
+     */
+    const seats = (await sql`
+      with existing as (
+        select 1 from friendships where user_id = ${userId}::text and friend_id = ${targetId}::text
+      ),
+      room as (
+        select (
+          exists (select 1 from existing)
+          or (
+            (select count(*) from friendships where user_id = ${userId}::text) < ${MAX_FRIENDS}::int
+            and (select count(*) from friendships where user_id = ${targetId}::text) < ${MAX_FRIENDS}::int
+          )
+        ) as ok
+      ),
+      paired as (
+        insert into friendships (user_id, friend_id)
+        select pair.a, pair.b
+        from (values (${userId}::text, ${targetId}::text), (${targetId}::text, ${userId}::text)) as pair(a, b)
+        cross join room
+        where room.ok
+        on conflict (user_id, friend_id) do nothing
+        returning user_id
+      )
+      select (select ok from room) as ok, (select count(*)::int from paired) as inserted
+    `) as { ok: boolean; inserted: number }[];
 
-    const mine = (await sql`
-      select count(*)::int as count from friendships where user_id = ${userId}
-    `) as { count: number }[];
-    if ((mine[0]?.count ?? 0) >= MAX_FRIENDS) {
+    if (!seats[0]?.ok) {
       sendJson(res, 409, { error: 'too_many_friends' });
       return;
     }
 
-    const inserted = (await sql`
-      insert into friendships (user_id, friend_id)
-      values (${userId}, ${targetId}), (${targetId}, ${userId})
-      on conflict (user_id, friend_id) do nothing
-      returning user_id
-    `) as { user_id: string }[];
-
     // Only on a pair that did not already exist, so re-entering a code stays quiet.
-    if (inserted.length) await notifyAdded(sql, targetId, userId);
+    if ((seats[0]?.inserted ?? 0) > 0) await notifyAdded(sql, targetId, userId);
 
     sendJson(res, 200, await board(sql, userId));
     return;

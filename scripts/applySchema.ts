@@ -29,6 +29,10 @@ async function main() {
 }
 
 main().catch(error => {
-  console.error(error instanceof Error ? error.message : error);
+  // The whole error, not `error.message`. The file is applied as one statement, so a failure
+  // reports as a single message with no line number; `position` is the character offset into that
+  // text and `detail`/`hint` are usually the actual diagnosis. Printing only the message throws
+  // away the only two fields that locate the failure in a file this size.
+  console.error(error);
   process.exit(1);
 });
