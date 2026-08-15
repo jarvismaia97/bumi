@@ -66,6 +66,16 @@ describe('paying out on the transition', () => {
     expect(goalRewardHints(closing)).toBeGreaterThan(goalRewardHints({ weekly: true, monthly: false }));
   });
 
+  it('finishes nothing with a day the list already holds', () => {
+    // Replaying from the archive: the week is on target only because this day is already in
+    // it, and reading a transition out of that paid the bonus again on every replay.
+    const week = ['20260713', '20260714', '20260715'];
+    expect(goalsCompletedBy(week, '20260715', WEDNESDAY)).toEqual({ weekly: false, monthly: false });
+
+    const month = Array.from({ length: MONTHLY_TARGET }, (_, i) => `202607${String(i + 1).padStart(2, '0')}`);
+    expect(goalsCompletedBy(month, '20260704', WEDNESDAY).monthly).toBe(false);
+  });
+
   it('rewards nothing when nothing completed', () => {
     expect(goalRewardHints({ weekly: false, monthly: false })).toBe(0);
   });

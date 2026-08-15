@@ -78,9 +78,28 @@ export function getDailyStreak(completedDates: readonly string[], now: Date = ne
   return streak;
 }
 
+/**
+ * The day's puzzle: the date key is the seed, and the board size rotates through DAILY_SIZES on
+ * the day of the year so consecutive days do not all feel alike.
+ *
+ * Both halves read nothing but the local year, month and day, so the level is a function of the
+ * date key alone — that is the guarantee the whole daily rests on. The archive replays a day by
+ * passing its local midnight and a shared link rebuilds one from the key it carries, while today
+ * arrives as `new Date()` at whatever hour the player opened the app; all three have to land on
+ * the same board, and friends comparing times on the leaderboard have to have solved it too.
+ *
+ * The day number used to be elapsed milliseconds since 31 December floored to days, which is not
+ * the calendar day number: across a DST shift the elapsed total is off by an hour, so a single
+ * local date gave one index before 01:00 and another after it, and the size — the whole level —
+ * turned on the time of day. Lisbon on 2026-04-01 was 7x7 at midnight and 5x5 at noon under one
+ * date key, and so was every date between the spring-forward and the fall-back. Differencing two
+ * `Date.UTC` values keeps the subtraction in a zone that never shifts, so the count is calendar
+ * days by construction; `Date.UTC(y, 0, 0)` is 31 December of the year before, which makes 1
+ * January day 1.
+ */
 export function getDailyLevel(d: Date = new Date()): Level {
   const seed = parseInt(getDailyDateKey(d), 10);
-  const doy = Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86400000);
+  const doy = (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 86400000;
   const size = DAILY_SIZES[doy % DAILY_SIZES.length];
   return genUniqueLevel(seed, size, 9);
 }

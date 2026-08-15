@@ -88,4 +88,56 @@ describe('opening the app with no network', () => {
 
     expect(getSession).toHaveBeenCalledTimes(1);
   });
+
+  it('joins the request already in flight instead of starting another', async () => {
+    // The guard only closed once an answer had arrived, so a request still on its way was no
+    // guard at all: `init` runs on every resume, and a flapping connection started one per
+    // foreground. They then landed in whatever order they liked, and the last to land won.
+    let answer: ((session: unknown) => void) | undefined;
+    getSession.mockReturnValue(
+      new Promise(resolve => {
+        answer = resolve;
+      }),
+    );
+
+    useAuthStore.getState().init();
+    useAuthStore.getState().init();
+    useAuthStore.getState().init();
+
+    expect(getSession).toHaveBeenCalledTimes(1);
+
+    answer?.({ data: null, error: null });
+    await vi.waitFor(() => expect(useAuthStore.getState().loading).toBe(false));
+  });
+
+  it('hands every caller the same answer to wait on', async () => {
+    let answer: ((session: unknown) => void) | undefined;
+    getSession.mockReturnValue(
+      new Promise(resolve => {
+        answer = resolve;
+      }),
+    );
+
+    const first = useAuthStore.getState().init();
+    const second = useAuthStore.getState().init();
+    answer?.({
+      data: { session: { id: 's', userId: 'u', expiresAt: new Date() }, user: { id: 'u', name: 'Ana', email: 'a@b.c' } },
+      error: null,
+    });
+    await Promise.all([first, second]);
+
+    expect(useAuthStore.getState().user?.name).toBe('Ana');
+  });
+
+  it('asks again after a failure, once that request is out of the way', async () => {
+    // The in-flight guard must not become the permanent one: a launch whose request failed has
+    // no answer, and the next resume is exactly when it should ask again.
+    getSession.mockRejectedValueOnce(new Error('Network request failed'));
+    await useAuthStore.getState().init();
+
+    getSession.mockResolvedValueOnce({ data: null, error: null });
+    await useAuthStore.getState().init();
+
+    expect(getSession).toHaveBeenCalledTimes(2);
+  });
 });

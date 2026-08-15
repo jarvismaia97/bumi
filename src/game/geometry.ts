@@ -1,6 +1,8 @@
 import type { Level, PlacedRect, SolutionRect } from './types';
 
-// A rect is "ok" if it contains exactly one clue and its area matches that clue's value.
+// A rect is "ok" if it contains exactly one clue and its area matches that clue's value. The
+// tutorial levels additionally set `requiresExactSolution`, which refuses any rectangle that is
+// not the one the lesson is teaching, even when it satisfies the rule above.
 export function rectOk(rect: SolutionRect, lvl: Level): boolean {
   const { r1, c1, r2, c2 } = rect;
   const area = (r2 - r1) * (c2 - c1);

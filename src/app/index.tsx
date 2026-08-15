@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PixelRatio, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { AppState, PixelRatio, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,10 +14,10 @@ import { WinSheet, type WinSheetHandle } from '@/components/overlays/WinSheet';
 import { IOSInstallPromptSheet, type IOSInstallPromptSheetHandle } from '@/components/overlays/IOSInstallPromptSheet';
 import { TrainingSheet, type TrainingSheetHandle } from '@/components/overlays/TrainingSheet';
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
-import { getDailyDateKey, getDailyLevel, getDailyStreak } from '@/game/daily';
+import { getDailyDateKey, getDailyLevel, getDailyStreak, getNextDailyInMs } from '@/game/daily';
 import { isFreezeProtecting } from '@/game/streakFreeze';
-import { getMonthlyProgress, getWeeklyProgress, goalsCompletedBy, isStreakMilestone } from '@/game/goals';
-import { getChallengeLevelIndex, getDailyChallengeDateKey } from '@/game/challenge';
+import { getMonthlyProgress, getWeeklyProgress } from '@/game/goals';
+import { getChallengeLevelIndex, getDailyChallengeDateKey, resolveDailySolve, showsMilestoneHintReward } from '@/game/challenge';
 import { isCampaignLevelUnlocked, requiresCampaignLogin } from '@/game/access';
 import { formatResultDuration, getMedalForResult, getMistakeBudget, type Medal } from '@/game/medals';
 import { resolveCampaignSolve } from '@/game/results';
@@ -88,12 +88,44 @@ export default function GameScreen() {
   // Actions never change identity, so they are read once rather than subscribed to.
   const progressActions = useProgressStore.getState();
 
+  /**
+   * Today, as state rather than as a call made during render, because nothing else on this
+   * screen re-renders at midnight. The key was read once at mount and every "is this today"
+   * comparison was made against it, so a phone left open overnight still called yesterday's
+   * daily today's, still showed it as done, and kept counting the old streak until some
+   * unrelated render happened to refresh it.
+   *
+   * Two triggers, because neither covers the other. `_layout.tsx` re-claims the streak freeze
+   * on resume for the app that was backgrounded across midnight; a board left face-up on a
+   * desk all night never resumes, so a timer fires on the boundary itself and re-arms from
+   * there. It waits a second past `getNextDailyInMs`, which lands exactly on midnight: a timer
+   * a tick early reads the day it is still in and would re-arm for a boundary already passed.
+   */
+  const [todayKey, setTodayKey] = useState(getDailyDateKey());
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const readTheClock = () => {
+      setTodayKey(getDailyDateKey());
+      timer = setTimeout(readTheClock, getNextDailyInMs() + 1000);
+    };
+    readTheClock();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state !== 'active') return;
+      clearTimeout(timer);
+      readTheClock();
+    });
+    return () => {
+      clearTimeout(timer);
+      subscription.remove();
+    };
+  }, []);
+
   const solvedCount = Object.keys(solvedMap).length;
   // Frozen days count towards the run and towards nothing else, so the weekly and monthly
   // goals below still read only the days that were actually played.
   const dailyStreak = getDailyStreak([...dailyCompletionDates, ...streakFreezes]);
   const freezeHeld = isFreezeProtecting(dailyCompletionDates, streakFreezes);
-  const dailyDoneToday = dailyCompletedDate === getDailyDateKey();
+  const dailyDoneToday = dailyCompletedDate === todayKey;
   const isSolvedByIndex = (idx: number) => !!solvedMap[idx];
   const getLevelMedalByIndex = (idx: number) => levelMedals[idx];
   const user = useAuthStore(s => s.user);
@@ -125,7 +157,9 @@ export default function GameScreen() {
   const [trainingSummary, setTrainingSummary] = useState<string | null>(null);
   const [tutorialWon, setTutorialWon] = useState(false);
   const [tutorialLevelIndex, setTutorialLevelIndex] = useState(0);
-  const [campaignResult, setCampaignResult] = useState<{ medal: Medal; summary: string; pointsGained: number; unlockedIslandName?: string } | null>(null);
+  // `wasNewSolve` is `markSolved`'s answer, kept because it is unrecoverable afterwards: once
+  // the level is marked, a first solve and a replay look identical from anywhere else.
+  const [campaignResult, setCampaignResult] = useState<{ medal: Medal; summary: string; pointsGained: number; unlockedIslandName?: string; wasNewSolve: boolean } | null>(null);
   const [celebrationTier, setCelebrationTier] = useState<CelebrationTier>('normal');
   const [dailyResult, setDailyResult] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
@@ -134,11 +168,10 @@ export default function GameScreen() {
   const cellSize = useGridCellSize(level?.size ?? 6);
   const levelRows = level?.rows ?? level?.size ?? 6;
   const levelColumns = level?.columns ?? level?.size ?? 6;
-  const nextCampaignIndex = LEVEL_META.findIndex((_, idx) => !!!solvedMap[idx]);
+  const nextCampaignIndex = LEVEL_META.findIndex((_, idx) => !solvedMap[idx]);
   const campaignComplete = nextCampaignIndex === -1;
   const campaignIndex = campaignComplete ? LEVEL_META.length - 1 : nextCampaignIndex;
 
-  // ── Level loading per mode ──────────────────────────────────────────────
   function startCampaign(idx: number): boolean {
     if (!isCampaignLevelUnlocked(idx, solvedMap)) return false;
     if (requiresCampaignLogin(idx, !!user)) {
@@ -241,10 +274,25 @@ export default function GameScreen() {
     }
   }
 
-  // ── Win handling ─────────────────────────────────────────────────────────
+  /**
+   * What a solved board is worth, and how loudly to say so.
+   *
+   * It runs on the `won` edge alone. Everything it reads is therefore either fetched from a
+   * store inside the handler, where it cannot be a render behind, or was written by the very
+   * call that loaded this board: `loadLevel` clears `won`, so a board that is won was loaded by
+   * an earlier commit, and `dailyChallengeDate`, `tutorialLevelIndex` and `mode` were all set
+   * beside it. That is the whole of the dependency claim, and it is now checkable by reading it.
+   *
+   * The previous version leaned on the closure for progress as well, and both bugs it carried
+   * were exactly that: it celebrated the streak from before the day was recorded, and asked
+   * whether the level was solved after having just marked it solved. The two decisions those
+   * questions were meant to answer are now `resolveDailySolve` and `markSolved`'s own return.
+   */
   useEffect(() => {
     if (!won) return;
     const timer = setTimeout(() => {
+      const progress = useProgressStore.getState();
+
       if (mode === 'tutorial') {
         // Assembling the Bumi mark is the most thematic moment in the game and happens once
         // per player, so it cannot fatigue: it gets the largest celebration there is.
@@ -264,40 +312,44 @@ export default function GameScreen() {
         const durationMs = elapsedMs();
         setDailyResult(formatSummary(durationMs, hintsUsed, mistakes, t));
 
-        let tier: CelebrationTier = 'normal';
-        {
-          // Read before marking: afterwards today is already in the list and the transition
-          // that earned the reward is gone.
-          const closed = goalsCompletedBy(dailyCompletionDates, dailyChallengeDate);
-          progressActions.markDailyDone(dailyChallengeDate, durationMs, hintsUsed);
-          tier = highestTier(
-            closed.monthly ? 'island' : null,
-            closed.weekly ? 'gold' : null,
-            isStreakMilestone(dailyStreak) ? 'gold' : null,
-          );
-        }
+        // Resolved from the lists as they stand before the write, with this day appended, so
+        // the streak counts today and the answer owes nothing to when the store's write lands.
+        const outcome = resolveDailySolve({
+          dateKey: dailyChallengeDate,
+          recordedDates: progress.dailyCompletionDates,
+          freezeDates: progress.streakFreezes,
+        });
+        progress.markDailyDone(dailyChallengeDate, durationMs, hintsUsed);
+        const tier = highestTier(
+          outcome.monthlyClosed ? 'island' : null,
+          outcome.weeklyClosed ? 'gold' : null,
+          outcome.streakMilestone ? 'gold' : null,
+        );
         setCelebrationTier(tier);
         presentWinSheet(tier);
         return;
       }
       if (mode === 'campaign') {
         const durationMs = elapsedMs();
-        const unlockedIslandIndex = getNewlyCompletedIslandIndex(curLvl, solvedMap);
+        const unlockedIslandIndex = getNewlyCompletedIslandIndex(curLvl, progress.solvedMap);
         const outcome = resolveCampaignSolve({
           hintsUsed,
           mistakes,
           rects: level?.solution.length ?? 1,
-          bestMedal: levelMedals[curLvl],
+          bestMedal: progress.levelMedals[curLvl],
           milestone: !!LEVEL_META[curLvl]?.milestone,
           unlockedIsland: unlockedIslandIndex != null,
         });
-        progressActions.markSolved(curLvl);
-        progressActions.setLevelMedal(curLvl, outcome.medal);
+        // Marking has to happen after the island and the medal are read and before anything
+        // asks whether this was new, because it is the only thing that can still tell.
+        const wasNewSolve = progress.markSolved(curLvl);
+        progress.setLevelMedal(curLvl, outcome.medal);
         setCampaignResult({
           medal: outcome.displayedMedal,
           summary: formatSummary(durationMs, hintsUsed, mistakes, t),
           pointsGained: outcome.pointsGained,
           unlockedIslandName: unlockedIslandIndex == null ? undefined : t(`island.${ISLANDS[unlockedIslandIndex].id}.name`),
+          wasNewSolve,
         });
         setCelebrationTier(outcome.tier);
         presentWinSheet(outcome.tier);
@@ -309,10 +361,18 @@ export default function GameScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [won]);
 
+  // A link can arrive while the auth guard is redirecting to login; in that case the persisted
+  // pending challenge is what carries it, and it is consumed once authentication lands.
   useEffect(() => {
     const timer = setTimeout(() => {
       const params = linkingUrl ? Linking.parse(linkingUrl).queryParams : undefined;
-      const sharedDailyDate = getDailyChallengeDateKey(params?.daily) ?? pendingDailyChallengeDate;
+      // A `daily` the guard turns down — malformed, or a day that has not happened — still came
+      // from someone tapping a daily link, so it opens today's puzzle. Left to fall through it
+      // landed on the menu instead, which is the same nothing a broken link gives and tells the
+      // player their tap did not work.
+      const linkedDaily =
+        params?.daily === undefined ? null : getDailyChallengeDateKey(params.daily) ?? getDailyDateKey();
+      const sharedDailyDate = linkedDaily ?? pendingDailyChallengeDate;
       if (sharedDailyDate) {
         startDaily(new Date(Number(sharedDailyDate.slice(0, 4)), Number(sharedDailyDate.slice(4, 6)) - 1, Number(sharedDailyDate.slice(6, 8))));
         clearPendingDailyChallenge();
@@ -323,8 +383,6 @@ export default function GameScreen() {
       if (challenge == null) return;
       if (startCampaign(challenge)) clearPendingChallenge();
     }, 0);
-    // A link can arrive while the auth guard is redirecting to login; in that
-    // case the persisted pending challenge is consumed after authentication.
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkingUrl, pendingChallengeIndex, pendingDailyChallengeDate, user]);
@@ -383,7 +441,7 @@ export default function GameScreen() {
   if (!level) return null;
 
   const meta = mode === 'campaign' ? LEVEL_META[curLvl] : null;
-  const isTodayDaily = mode === 'daily' && dailyChallengeDate === getDailyDateKey();
+  const isTodayDaily = mode === 'daily' && dailyChallengeDate === todayKey;
   const labels: LabelContext = {
     mode,
     levelIndex: curLvl,
@@ -395,7 +453,6 @@ export default function GameScreen() {
     hints: hints,
     trainingLabel: t(`difficulty.${trainingTier.label}`),
   };
-  const isNewSolve = mode === 'campaign' && !!solvedMap[curLvl];
   const mistakeStatus = campaignMistakeStatus();
 
   /**
@@ -517,7 +574,7 @@ export default function GameScreen() {
               ? t('win.levelSubtitle', { level: curLvl + 1, difficulty: t(`difficulty.${meta.label}`) })
               : ''
         }
-        showHintReward={mode === 'campaign' && isNewSolve && !!meta?.milestone}
+        showHintReward={mode === 'campaign' && showsMilestoneHintReward(curLvl, !!campaignResult?.wasNewSolve)}
         isDaily={isTodayDaily}
         campaignMedal={mode === 'campaign' ? campaignResult?.medal : undefined}
         campaignPoints={mode === 'campaign' ? campaignResult?.pointsGained : undefined}

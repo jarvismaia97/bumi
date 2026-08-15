@@ -1,6 +1,8 @@
+import { Platform } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getLastNotificationResponseAsync = vi.fn();
+const setNotificationChannelAsync = vi.fn();
 const addNotificationResponseReceivedListener = vi.fn();
 const scheduleNotificationAsync = vi.fn();
 const cancelScheduledNotificationAsync = vi.fn();
@@ -15,7 +17,7 @@ vi.mock('expo-notifications', () => ({
   cancelScheduledNotificationAsync,
   getPermissionsAsync,
   requestPermissionsAsync,
-  setNotificationChannelAsync: vi.fn(),
+  setNotificationChannelAsync,
   AndroidImportance: { DEFAULT: 3 },
   SchedulableTriggerInputTypes: { DATE: 'date' },
 }));
@@ -32,6 +34,8 @@ function response(data: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Every test but the Android ones runs as iOS; those set their own and this puts it back.
+  Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true });
   getLastNotificationResponseAsync.mockResolvedValue(null);
   addNotificationResponseReceivedListener.mockReturnValue({ remove });
   getPermissionsAsync.mockResolvedValue({ granted: true });
@@ -48,6 +52,15 @@ afterEach(() => {
 /** The identifiers actually handed to expo-notifications this run. */
 function scheduled(): string[] {
   return scheduleNotificationAsync.mock.calls.map(call => call[0].identifier);
+}
+
+/** Every trigger scheduled this run, which is where the channel has to be named. */
+function triggers(): { type: string; date: Date; channelId?: string }[] {
+  return scheduleNotificationAsync.mock.calls.map(call => call[0].trigger);
+}
+
+function onAndroid(): void {
+  Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true });
 }
 
 async function refresh(overrides: Partial<Parameters<typeof import('./dailyReminder').refreshDailyReminders>[0]> = {}) {
@@ -107,6 +120,24 @@ describe('what gets scheduled', () => {
     expect(scheduleNotificationAsync).not.toHaveBeenCalled();
   });
 
+  it('cancels the whole week when the reminder is turned off, rather than just not re-arming', async () => {
+    // Turning it off has to reach the notifications already armed: seven days of them plus the
+    // streak warning were sitting on the device, and nothing else ever cancels them.
+    await refresh({ enabled: false });
+
+    const cancelled = cancelScheduledNotificationAsync.mock.calls.map(call => call[0]);
+    expect(cancelled).toContain('bumi-streak-at-risk');
+    for (let day = 0; day < 7; day++) expect(cancelled).toContain(`bumi-daily-reminder-${day}`);
+  });
+
+  it('clears everything on cancelDailyReminders, for an account that is being deleted', async () => {
+    const { cancelDailyReminders } = await import('./dailyReminder');
+    await cancelDailyReminders();
+
+    expect(cancelScheduledNotificationAsync).toHaveBeenCalledTimes(8);
+    expect(scheduleNotificationAsync).not.toHaveBeenCalled();
+  });
+
   it('reports failure rather than scheduling when permission is refused', async () => {
     getPermissionsAsync.mockResolvedValue({ granted: false });
     requestPermissionsAsync.mockResolvedValue({ granted: false });
@@ -120,6 +151,29 @@ describe('what gets scheduled', () => {
 
     expect(await refresh({ promptForPermission: false })).toBe(false);
     expect(requestPermissionsAsync).not.toHaveBeenCalled();
+  });
+});
+
+describe('the Android channel', () => {
+  it('names the channel on every trigger, so the reminder is mutable on its own', async () => {
+    // The channel was created with a translated name and then never asked for. `channelId` is a
+    // property of the trigger, not of the content, so every reminder was delivered on the
+    // "Miscellaneous" channel expo-notifications creates for notifications that name none —
+    // which a player cannot recognise, let alone mute without muting the whole app.
+    onAndroid();
+
+    await refresh({ dailyStreak: 5 });
+
+    expect(setNotificationChannelAsync).toHaveBeenCalledWith('daily-reminder', expect.anything());
+    expect(triggers()).not.toHaveLength(0);
+    for (const trigger of triggers()) expect(trigger.channelId).toBe('daily-reminder');
+  });
+
+  it('leaves the trigger alone off Android, which has no channels to name', async () => {
+    await refresh({ dailyStreak: 5 });
+
+    expect(setNotificationChannelAsync).not.toHaveBeenCalled();
+    for (const trigger of triggers()) expect(trigger).not.toHaveProperty('channelId');
   });
 });
 

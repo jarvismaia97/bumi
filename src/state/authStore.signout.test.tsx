@@ -3,11 +3,13 @@ import { Platform } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { authClient } from '@/lib/auth-client';
+import { cancelDailyReminders } from '@/lib/dailyReminder';
 import { resetAuthStoreForTests, useAuthStore } from '@/state/authStore';
 import { useProgressStore } from '@/state/progressStore';
 
 vi.mock('@/lib/haptics', () => ({ playHaptic: vi.fn() }));
 vi.mock('@/lib/pushToken', () => ({ unregisterPushToken: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('@/lib/dailyReminder', () => ({ cancelDailyReminders: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@react-native-google-signin/google-signin', () => ({
   GoogleSignin: { configure: vi.fn(), signOut: vi.fn().mockResolvedValue(undefined) },
 }));
@@ -102,6 +104,16 @@ describe('signOut on a device', () => {
     expect(progress.iosInstallPromptSeen).toBe(true);
   });
 
+  it('leaves the reminders alone: signing out is not leaving for good', async () => {
+    // The schedule belongs to the phone and survives a change of account, which is why only
+    // deleting takes it. `signOut` keeps `dailyReminderEnabled` for the same reason.
+    useProgressStore.setState({ dailyReminderEnabled: true });
+
+    await useAuthStore.getState().signOut();
+
+    expect(cancelDailyReminders).not.toHaveBeenCalled();
+  });
+
   it('still reports success when the keychain refuses', async () => {
     // The server has already accepted the sign-out by this point. Failing here would tell the
     // player they are still signed in when they are not.
@@ -109,5 +121,52 @@ describe('signOut on a device', () => {
 
     await expect(useAuthStore.getState().signOut()).resolves.toBeUndefined();
     expect(useAuthStore.getState().user).toBeNull();
+  });
+});
+
+describe('deleting the account', () => {
+  beforeEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true });
+    vi.clearAllMocks();
+    resetAuthStoreForTests();
+    useAuthStore.setState({ session: null, user: null, loading: false, error: null });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: realOS, configurable: true });
+  });
+
+  it('takes the notifications with it, rather than leaving eight armed for nobody', async () => {
+    // `reset` turns the setting off, but the only code that cancels anything used to sit behind
+    // a check on that same setting — so turning it off was precisely what stopped the cancel
+    // from running. Seven daily reminders and the streak warning went on firing for an account
+    // that no longer existed, each one opening an app with nothing left to show.
+    useProgressStore.setState({ dailyReminderEnabled: true });
+
+    await useAuthStore.getState().deleteAccount();
+
+    expect(cancelDailyReminders).toHaveBeenCalledOnce();
+    expect(useProgressStore.getState().dailyReminderEnabled).toBe(false);
+  });
+
+  it('cancels before the local state that would explain why is thrown away', async () => {
+    const order: string[] = [];
+    vi.mocked(cancelDailyReminders).mockImplementation(async () => void order.push('cancel'));
+    vi.mocked(authClient.deleteUser).mockImplementation(async () => {
+      order.push('delete');
+      return { error: null } as Awaited<ReturnType<typeof authClient.deleteUser>>;
+    });
+
+    await useAuthStore.getState().deleteAccount();
+
+    expect(order).toEqual(['delete', 'cancel']);
+  });
+
+  it('leaves nothing scheduled even when the account was never signed in on this device', async () => {
+    // No session, no reminder setting: cancelling by name is unconditional, so there is no
+    // state to get wrong.
+    await useAuthStore.getState().deleteAccount();
+
+    expect(cancelDailyReminders).toHaveBeenCalledOnce();
   });
 });

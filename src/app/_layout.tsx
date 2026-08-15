@@ -37,6 +37,7 @@ export default function RootLayout() {
   const init = useAuthStore(s => s.init);
   const loading = useAuthStore(s => s.loading);
   const user = useAuthStore(s => s.user);
+  const session = useAuthStore(s => s.session);
   const linkingUrl = Linking.useLinkingURL();
   const setPendingChallenge = useChallengeStore(s => s.setPendingChallenge);
   const setPendingDailyChallenge = useChallengeStore(s => s.setPendingDailyChallenge);
@@ -89,16 +90,16 @@ export default function RootLayout() {
   // Registered per signed-in session, since the token is what a friend's add is delivered to.
   // It asks for no permission of its own: a player who never allowed notifications simply is
   // not reachable, which is the quieter half of the trade.
+  //
+  // On `session` as well as on `user`, because the request needs the session and only `user` is
+  // persisted: a launch that could not reach the server had a user, no session, and registered
+  // nothing — and with nothing to depend on when the session finally arrived, that device stayed
+  // unreachable until it was restarted.
   useEffect(() => {
-    if (!user) return;
+    if (!user || !session) return;
     registerPushToken().catch(() => {});
-  }, [user]);
+  }, [user, session]);
 
-  // The reminder is scheduled once with its text baked in, so a language change would
-  // otherwise leave the player with a notification in the language they just left.
-  // Re-armed on launch and whenever the day's state changes: the schedule depends on
-  // whether today is already played and on how long the streak is, and iOS only lets the
-  // app schedule while it is running.
   /**
    * A missed day is covered before anything else reads the streak, so the reminder below and
    * every screen agree on one number. Idempotent, and it runs again when the app comes back:
@@ -112,10 +113,19 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, [claimStreakFreeze]);
 
+  // The reminder is scheduled once with its text baked in, so a language change would otherwise
+  // leave the player with a notification in the language they just left. Re-armed on launch and
+  // whenever the day's state changes: the schedule depends on whether today is already played
+  // and on how long the streak is, and iOS only lets the app schedule while it is running.
+  //
+  // It runs when the reminder is off as well, and that is the point: `refreshDailyReminders`
+  // cancels before it schedules, so this is the one thing that reaches notifications already
+  // armed. The early return that used to stand here meant nothing ever did — turning the
+  // reminder off, or deleting the account, left the whole week of them firing, because the only
+  // code that cancels was behind the flag that had just been cleared.
   useEffect(() => {
-    if (!dailyReminderEnabled) return;
     refreshDailyReminders({
-      enabled: true,
+      enabled: dailyReminderEnabled,
       language,
       dailyDoneToday: dailyCompletedDate === getDailyDateKey(),
       dailyStreak: getDailyStreak([...dailyCompletionDates, ...streakFreezes]),

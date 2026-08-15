@@ -24,10 +24,14 @@ interface GameState {
 
 /**
  * Every mutation stops at `won`. The win sheet leaves the top of the board uncovered, so a
- * solved puzzle used to accept fresh rectangles: taking one apart flipped `won` back to
- * false, and re-solving it ran the win flow again — which paid the weekly and monthly goal
- * bonus a second time, since `goalsCompletedBy` reports the transition regardless of whether
- * that day was already recorded. Locking the board is the fix; the level ends with the solve.
+ * solved puzzle used to accept fresh rectangles: taking one apart flipped `won` back to false,
+ * and re-solving it ran the win flow a second time.
+ *
+ * The double-paid goal bonus that made that expensive is now refused at its source — a date key
+ * already in the completion list earns nothing, in `goalsCompletedBy` and again in
+ * `markDailyDone`. This lock is still worth keeping on its own terms: a level that stays solved
+ * once solved is the honest reading of a puzzle, and it keeps the win flow a single event
+ * rather than something the board can re-enter.
  */
 export const useGameStore = create<GameState>((set, get) => ({
   level: null,

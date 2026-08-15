@@ -2,7 +2,6 @@ import { getCampaignLevelMeta } from './difficulty';
 import { CAMPAIGN_LEVELS } from './levels.data';
 import type { Level, LevelMeta } from './types';
 
-// Build level metadata array (0-indexed), one entry per campaign level across all tiers.
 export const LEVEL_META: LevelMeta[] = getCampaignLevelMeta();
 
 // Hardcoded clean puzzle to avoid a bad generated seed at level 1.

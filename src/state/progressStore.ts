@@ -6,9 +6,11 @@ import { INITIAL_HINTS, isMilestoneLevel, MAX_HINTS, normalizeHintCount } from '
 import { goalRewardHints, goalsCompletedBy } from '@/game/goals';
 import { claimFreeze } from '@/game/streakFreeze';
 import { isBetterMedal, type Medal } from '@/game/medals';
+import { hintBalance } from './progressMerge';
 
 const CAMPAIGN_CATALOG_VERSION = 3;
-const PROGRESS_STORE_VERSION = 4;
+const HINT_COUNTER_VERSION = 5;
+const PROGRESS_STORE_VERSION = 5;
 
 function migrateCampaignProgress(persistedState: unknown, version: number): unknown {
   if (version >= CAMPAIGN_CATALOG_VERSION || !persistedState || typeof persistedState !== 'object') return persistedState;
@@ -20,6 +22,53 @@ function migrateCampaignProgress(persistedState: unknown, version: number): unkn
   // The puzzles changed, but a player's campaign position should remain intact.
   // Medals depend on the exact puzzle and are reset for the new catalogue.
   return { ...state, solvedMap, levelMedals: {} };
+}
+
+/**
+ * Turns the balance already on the device into the two counters that replaced it.
+ *
+ * Nothing on the device ever recorded what a balance cost to reach, so the whole of it is carried
+ * over as earned and nothing as spent. That is the only reading with the property this has to
+ * have — `hintsEarned - hintsSpent` is exactly the number the player had before the upgrade, so
+ * nobody loses a hint and nobody gains one. It is also the reading `neon/schema.sql` backfills the
+ * server's own column with, and the one the merge falls back to for a server answering without
+ * counters, so a device and its account agree about the same number however they meet.
+ *
+ * A stored state with no `hints` at all is one that never got as far as writing it; the starting
+ * grant is what that player would have been given anyway.
+ */
+function migrateHintCounters(persistedState: unknown, version: number): unknown {
+  if (version >= HINT_COUNTER_VERSION || !persistedState || typeof persistedState !== 'object') return persistedState;
+
+  const state = persistedState as { hints?: unknown };
+  const hints = normalizeHintCount(typeof state.hints === 'number' ? state.hints : INITIAL_HINTS);
+  return { ...state, hints, hintsEarned: hints, hintsSpent: 0 };
+}
+
+/** Every migration this store has, in the order a device that skipped both needs them. */
+function migrateProgress(persistedState: unknown, version: number): unknown {
+  return migrateHintCounters(migrateCampaignProgress(persistedState, version), version);
+}
+
+/**
+ * The two counters and the balance they describe, as one patch. This is the only place the
+ * balance is computed on this side, so the three cannot drift apart.
+ *
+ * Earned is capped at `hintsSpent + MAX_HINTS` rather than left to run, and that is the cap's
+ * behaviour rather than an accident of it: a grant made at the ceiling has always been forfeited
+ * (`Math.min(MAX_HINTS, s.hints + 1)` did exactly this), and banking it in the counter instead
+ * would hand it back later, one hint per spend, until the ceiling stopped meaning anything — the
+ * ceiling being the whole reason the goals are worth finishing.
+ *
+ * It is also what keeps the merge sound. Every device holds `hintsEarned - hintsSpent <=
+ * MAX_HINTS`, and a merge takes the larger of each: the larger spend is at least the spend that
+ * belongs to the larger earn, so the merged pair keeps the same bound. Without the cap here two
+ * devices could merge into a balance that the ceiling then silently swallowed, and the next spend
+ * would cost the player nothing.
+ */
+function hintCounters(earned: number, spent: number): { hints: number; hintsEarned: number; hintsSpent: number } {
+  const granted = Math.min(spent + MAX_HINTS, earned);
+  return { hints: hintBalance(granted, spent), hintsEarned: granted, hintsSpent: spent };
 }
 
 interface ProgressState {
@@ -35,7 +84,21 @@ interface ProgressState {
   progressOwnerId: string | null;
   solvedMap: Record<number, true>;
   solvedDateMap: Record<number, string>;
+  /**
+   * The balance the game spends. Derived from the two counters below and stored beside them, so
+   * the screens and the sync subscription can go on reading one number — but it is never the
+   * thing that is merged, because a number that moves both ways cannot be.
+   */
   hints: number;
+  /**
+   * Every hint this account has ever been granted, and every one it has ever spent. Two counters
+   * rather than the balance because of what syncing has to do with them: a balance merged by the
+   * higher side resurrects whatever was spent elsewhere, and merged by the later write discards
+   * whatever was earned elsewhere. Counters only grow, `max` is the only merge either admits, and
+   * neither failure can be expressed. See `mergeHintCounters` in progressMerge.ts.
+   */
+  hintsEarned: number;
+  hintsSpent: number;
   dailyCompletedDate: string | null;
   dailyCompletionDates: string[];
   /**
@@ -87,6 +150,8 @@ export const useProgressStore = create<ProgressState>()(
       solvedMap: {},
       solvedDateMap: {},
       hints: INITIAL_HINTS,
+      hintsEarned: INITIAL_HINTS,
+      hintsSpent: 0,
       dailyCompletedDate: null,
       dailyCompletionDates: [],
       dailyDurations: {},
@@ -96,18 +161,27 @@ export const useProgressStore = create<ProgressState>()(
       iosInstallPromptSeen: false,
       dailyReminderEnabled: false,
 
+      // The early return is the grant's only guard: a level already solved pays nothing, and it
+      // has to be answered before the counter moves, because a milestone replayed is a milestone
+      // that would otherwise mint a hint every time the board was cleared again.
       markSolved: idx => {
         const alreadySolved = !!get().solvedMap[idx];
         if (alreadySolved) return false;
         set(s => ({
           solvedMap: { ...s.solvedMap, [idx]: true },
           solvedDateMap: { ...s.solvedDateMap, [idx]: getDailyDateKey() },
-          hints: isMilestoneLevel(idx) ? Math.min(MAX_HINTS, s.hints + 1) : s.hints,
+          ...hintCounters(s.hintsEarned + (isMilestoneLevel(idx) ? 1 : 0), s.hintsSpent),
         }));
         return true;
       },
 
-      spendHint: () => set(s => ({ hints: normalizeHintCount(s.hints - 1) })),
+      /**
+       * Refused at an empty balance rather than floored at it. The old line took
+       * `normalizeHintCount(hints - 1)`, which quietly answered 0 with 0; a counter cannot be
+       * quiet about it — a spend recorded with nothing to spend is permanent, and it would go on
+       * eating the next hint this account earned, on every device, forever.
+       */
+      spendHint: () => set(s => (s.hints <= 0 ? {} : hintCounters(s.hintsEarned, s.hintsSpent + 1))),
 
 
       /**
@@ -115,12 +189,20 @@ export const useProgressStore = create<ProgressState>()(
        * to the day it solves. Catching up on a missed daily from the archive therefore counts
        * towards the month and can close a gap in the streak — the streak asks whether each
        * day's puzzle is done, not whether the app was opened that day.
+       *
+       * Safe to call again for a day already on file, and the archive means it will be: only a
+       * date the list has never held can be paid for. The callers cannot see this rule and so
+       * cannot be trusted with it — the win flow marks the daily done every time a board is
+       * solved, and a replay is a fresh `loadLevel`, so nothing before this point knows the day
+       * was finished months ago. A better time is another matter; that is the point of a replay
+       * and is taken below whichever call sets it.
        */
       markDailyDone: (dateKey = getDailyDateKey(), durationMs?: number, hintsUsed?: number) => {
         set(s => {
           // Paid on the transition, like a milestone level, so no record of which goals were
           // already rewarded has to be kept or synced.
-          const reward = goalRewardHints(goalsCompletedBy(s.dailyCompletionDates, dateKey));
+          const alreadyRecorded = s.dailyCompletionDates.includes(dateKey);
+          const reward = alreadyRecorded ? 0 : goalRewardHints(goalsCompletedBy(s.dailyCompletionDates, dateKey));
           return {
             // Only today's puzzle changes what "done today" means.
             dailyCompletedDate: dateKey === getDailyDateKey() ? dateKey : s.dailyCompletedDate,
@@ -129,7 +211,9 @@ export const useProgressStore = create<ProgressState>()(
             // the one whose count to keep, and the line below is about to replace it.
             dailyHints: hintsForBest(s.dailyDurations, s.dailyHints, dateKey, durationMs, hintsUsed),
             dailyDurations: bestDuration(s.dailyDurations, dateKey, durationMs),
-            hints: normalizeHintCount(s.hints + reward),
+            // A reward of zero still goes through here, and lands on the same numbers: the
+            // counters are what decide whether anything was paid, not the call.
+            ...hintCounters(s.hintsEarned + reward, s.hintsSpent),
           };
         });
       },
@@ -174,7 +258,11 @@ export const useProgressStore = create<ProgressState>()(
       clearAccountProgress: () => set({
         solvedMap: {},
         solvedDateMap: {},
+        // Back to the starting grant, counters included: a lifetime total left behind would be
+        // merged straight into the next account to sign in here, which is what these two clear.
         hints: INITIAL_HINTS,
+        hintsEarned: INITIAL_HINTS,
+        hintsSpent: 0,
         dailyCompletedDate: null,
         dailyCompletionDates: [],
         dailyDurations: {},
@@ -192,6 +280,8 @@ export const useProgressStore = create<ProgressState>()(
         solvedMap: {},
         solvedDateMap: {},
         hints: INITIAL_HINTS,
+        hintsEarned: INITIAL_HINTS,
+        hintsSpent: 0,
         dailyCompletedDate: null,
         dailyCompletionDates: [],
         dailyDurations: {},
@@ -207,7 +297,7 @@ export const useProgressStore = create<ProgressState>()(
       name: 'bumi-progress-store',
       storage: createJSONStorage(() => AsyncStorage),
       version: PROGRESS_STORE_VERSION,
-      migrate: migrateCampaignProgress,
+      migrate: migrateProgress,
     },
   ),
 );

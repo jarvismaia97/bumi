@@ -117,6 +117,97 @@ describe('friends store', () => {
     expect(useFriendsStore.getState().loading).toBe(false);
   });
 
+  it('does not let a load in flight paint over the board an add just returned', async () => {
+    // The two are guarded by different flags, so they overlap freely. The load went out first
+    // and landed last, and the friend the player had just added disappeared off the board until
+    // the sheet was closed and opened again.
+    const before = { code: 'MYCODE', entries: [entry({ code: 'OLD' })] };
+    const after = { code: 'MYCODE', entries: [entry({ code: 'OLD' }), entry({ code: 'ADDED' })] };
+    let releaseLoad: (() => void) | undefined;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init?: { method?: string }) => {
+        if (init?.method === 'POST') return { ok: true, status: 200, json: async () => after };
+        await new Promise<void>(resolve => {
+          releaseLoad = resolve;
+        });
+        return { ok: true, status: 200, json: async () => before };
+      }),
+    );
+
+    const loading = useFriendsStore.getState().load();
+    await vi.waitFor(() => expect(releaseLoad).toBeDefined());
+    await useFriendsStore.getState().addFriend('AAAAAA');
+    releaseLoad?.();
+    await loading;
+
+    expect(useFriendsStore.getState().entries.map(row => row.code)).toEqual(['OLD', 'ADDED']);
+    // The overtaken request still has to let go of its own flag, or nothing can load again.
+    expect(useFriendsStore.getState().loading).toBe(false);
+  });
+
+  it('does not let a load in flight bring back a friend the player removed', async () => {
+    const before = { code: 'MYCODE', entries: [entry({ code: 'KEPT' }), entry({ code: 'GONE' })] };
+    const after = { code: 'MYCODE', entries: [entry({ code: 'KEPT' })] };
+    let releaseLoad: (() => void) | undefined;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init?: { method?: string }) => {
+        if (init?.method === 'POST') return { ok: true, status: 200, json: async () => after };
+        await new Promise<void>(resolve => {
+          releaseLoad = resolve;
+        });
+        return { ok: true, status: 200, json: async () => before };
+      }),
+    );
+
+    const loading = useFriendsStore.getState().load();
+    await vi.waitFor(() => expect(releaseLoad).toBeDefined());
+    await useFriendsStore.getState().removeFriend('GONE');
+    releaseLoad?.();
+    await loading;
+
+    expect(useFriendsStore.getState().entries.map(row => row.code)).toEqual(['KEPT']);
+  });
+
+  it('names a row for removal by its handle, and sends it as the server reads it', async () => {
+    // The board no longer carries anybody's friend code: a row is named by an opaque per-viewer
+    // handle, which is not normalised or validated here because only the server can read it.
+    const handle = 'a3f19c04b8e7d2610f5a8c94d17be265';
+    const fetchMock = respond({ code: 'MYCODE', entries: [] });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await useFriendsStore.getState().removeFriend(handle);
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body).toEqual({ action: 'remove', code: handle });
+  });
+
+  it('ignores a board that arrives after the account has gone', async () => {
+    // Signing out mid-request: the answer belongs to the account that just left.
+    let releaseLoad: (() => void) | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        await new Promise<void>(resolve => {
+          releaseLoad = resolve;
+        });
+        return { ok: true, status: 200, json: async () => ({ code: 'MYCODE', entries: [entry()] }) };
+      }),
+    );
+
+    const loading = useFriendsStore.getState().load();
+    await vi.waitFor(() => expect(releaseLoad).toBeDefined());
+    useFriendsStore.getState().reset();
+    releaseLoad?.();
+    await loading;
+
+    expect(useFriendsStore.getState().entries).toEqual([]);
+    expect(useFriendsStore.getState().code).toBeNull();
+  });
+
   it('drops the board on reset, so the next account starts empty', async () => {
     vi.stubGlobal('fetch', respond({ code: 'MYCODE', entries: [entry()] }));
     await useFriendsStore.getState().load();
