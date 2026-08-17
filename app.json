@@ -93,7 +93,14 @@
           }
         }
       ],
-      "@sentry/react-native"
+      [
+        "@sentry/react-native",
+        {
+          "organization": "luismaia",
+          "project": "react-native",
+          "url": "https://de.sentry.io/"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
