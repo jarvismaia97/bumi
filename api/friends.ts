@@ -2,6 +2,7 @@ import { createHmac, randomBytes } from 'node:crypto';
 import { neon } from '@neondatabase/serverless';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuth } from '../src/lib/auth';
+import { reportServerError } from '../src/lib/serverObservability';
 import { FRIEND_CODE_LENGTH, friendCodeFromBytes, normalizeFriendCode } from '../src/lib/friendCode';
 import { artistIndexFor, ARTISTS } from '../src/lib/playerName';
 import { pointsFromCounts } from '../src/game/points';
@@ -487,6 +488,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  // The routing below had no catch of its own, so anything it threw — a query that failed, a
+  // friend code that ran out of retries — left the promise rejected and Vercel answered with a
+  // generic 500 nobody could read afterwards. `progress.ts` was given this treatment during the
+  // audit and this file was missed; the two now fail the same way.
+  try {
+    await route(req, res, userId);
+  } catch (error) {
+    reportServerError(error, 'friends', { method: req.method });
+    sendJson(res, 500, { error: 'internal_error' });
+  }
+}
+
+async function route(req: VercelRequest, res: VercelResponse, userId: string) {
   const sql = neon(databaseUrl);
 
   if (req.method === 'GET') {
