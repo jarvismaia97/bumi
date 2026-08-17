@@ -21,6 +21,7 @@ import { configureNotificationHandler, onNotificationOpened, refreshDailyReminde
 import { registerPushToken } from '@/lib/pushToken';
 import { useProgressStore } from '@/state/progressStore';
 import { markHydrated } from '@/lib/hydration';
+import { initErrorReporting, wrapRootComponent } from '@/lib/observability';
 import { useI18n } from '@/i18n';
 
 // The static document is rendered once and pinned to Portuguese by the hydration gate (see
@@ -33,7 +34,11 @@ const SITE_DESCRIPTION =
 // layout, so it covers every screen the app has.
 export { AppErrorBoundary as ErrorBoundary };
 
-export default function RootLayout() {
+// Before the component, not inside it: an error thrown while the tree first mounts is exactly
+// the one worth having, and an init that runs in an effect would miss it. Inert without a DSN.
+initErrorReporting();
+
+function RootLayout() {
   const init = useAuthStore(s => s.init);
   const loading = useAuthStore(s => s.loading);
   const user = useAuthStore(s => s.user);
@@ -227,3 +232,5 @@ export default function RootLayout() {
     </>
   );
 }
+
+export default wrapRootComponent(RootLayout);

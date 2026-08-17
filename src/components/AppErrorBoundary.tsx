@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { Logo } from '@/components/Logo';
@@ -5,6 +6,7 @@ import { useThemeTokens } from '@/state/themeStore';
 import { useGameStore } from '@/state/gameStore';
 import { useUIStore } from '@/state/uiStore';
 import { useI18n } from '@/i18n';
+import { reportError } from '@/lib/observability';
 
 /**
  * What a render that throws looks like. Expo Router calls this with the error and a way to try
@@ -17,6 +19,14 @@ import { useI18n } from '@/i18n';
 export function AppErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
   const theme = useThemeTokens();
   const { t } = useI18n();
+
+  // Reported from here rather than from a handler higher up, because this component is the
+  // only place that knows the render actually failed — Expo Router catches the throw and calls
+  // it, so nothing above ever sees the error. Keyed on the error so a re-render of the same
+  // failure does not send it twice, while a genuinely different one still gets through.
+  useEffect(() => {
+    reportError(error, 'render', { screen: 'root' });
+  }, [error]);
 
   function backToMenu() {
     // Dropping the level is the point: whatever the board was holding is what threw.

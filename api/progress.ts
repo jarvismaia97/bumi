@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuth } from '../src/lib/auth';
+import { reportServerError } from '../src/lib/serverObservability';
 import type { Medal } from '../src/game/medals';
 import { MAX_HINTS } from '../src/game/hints';
 import { formatResultDuration } from '../src/game/medals';
@@ -857,7 +858,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       sendJson(res, 400, { error: error.message });
       return;
     }
-    console.error('[progress] request failed', error);
+    reportServerError(error, 'progress', { method: req.method });
     sendJson(res, 500, { error: 'internal_error' });
   }
 }
