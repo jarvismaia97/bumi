@@ -113,11 +113,19 @@ Invoke it as `npx eas-cli`; plain `npx eas` cannot resolve the binary.
 
 ## Blocked on
 
-1. **Disable the old Google client secret.** A new secret was added alongside it, so
-   both currently authenticate. Until the old one is disabled in Google Auth Platform >
-   Clients, the value leaked into a chat transcript still works.
+Nothing. The last item — disabling an old Google client secret that had leaked into a chat
+transcript — was checked in the console on 2026-08-17 and no longer exists: the `bumi web`
+client carries exactly one secret, created 2026-07-25 and active, with no second one to
+disable. Whatever the leaked value was, it is not among the client's keys, so it cannot
+authenticate. This entry stayed open here long after the fact was no longer true, which is
+the argument for reading the console rather than the note about it.
 
-Everything else on this list is closed. Sign in with Apple works on a real device, so the
+Worth a look while you are there: the project holds **three** Android OAuth clients
+(`Bumi Android 1`, `Cliente Android 2`, `Cliente Android 3`, all 2026-08-11) where the two
+certificates below need only two. One is likely redundant, and an OAuth client nobody can
+account for is worth removing rather than leaving.
+
+Sign in with Apple works on a real device, so the
 App ID carries the capability — that could only ever be checked at runtime, since EAS syncs
 Push Notifications but never reports the Apple capability either way. `suporte@jogarbumi.pt`
 is live and receiving mail; the support URL stays pointed at the privacy page on purpose,

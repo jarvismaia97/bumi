@@ -1,7 +1,24 @@
 # Google Play release
 
 The iOS side is written up in `app-store.md`; this covers only what Android needs on top.
-Nothing here is done yet beyond what the repo already carries.
+
+**State on 2026-08-17, read from the console rather than inferred.** The app exists as
+`Bumi: Puzzle de Lógica`, a draft on the internal testing track with no installs. App content
+is **finished** — all ten forms pass, including data safety and the content rating. One item
+in the setup remains, `Configurar a ficha da loja`, and it is the only thing standing between
+here and a closed test.
+
+That matters more than its size suggests, because the closed test is locked until setup is
+complete and then runs on a clock that cannot be shortened:
+
+| Requirement | State |
+| --- | --- |
+| A published closed-test release | not yet |
+| At least **12 testers** opted in | **0** |
+| Run for at least **14 continuous days** | not started |
+
+So the store listing is the critical path, and the listing is blocked on screenshots. Nothing
+else on Play is waiting on anything.
 
 ## Identifiers
 
@@ -21,6 +38,13 @@ Nothing here is done yet beyond what the repo already carries.
   covering the friends board and the notification token
 
 ## Blocked on, in order
+
+Written before any of it was done, and kept because the reasoning still explains *why* each
+piece exists. Checked against the console on 2026-08-17: **1 is done** (sign-in works on
+Android since 2026-08-11), **3 is done** (`eas submit` uploads without a browser), and
+**4, 5 and 6 are done** — the store listing's remaining half is screenshots, not copy or
+forms. **2 is the only one still open**, and it decides whether a friend's notification ever
+reaches an Android phone.
 
 1. **An Android OAuth client.** Google sign-in on Android checks the certificate the app was
    signed with, and under Play App Signing that is Google's own certificate, not the keystore
@@ -205,6 +229,11 @@ it knows sign-in will fail until it is.
 
 Google requires personal developer accounts opened after November 2023 to run a closed test
 with a minimum number of testers for a continuous period before production access is granted.
-Both the count and the duration have changed more than once, and they are stated in the
-console against this specific account — read them there rather than trusting a number written
-here. It is the item most likely to decide when the app can actually ship.
+Read against this account on 2026-08-17, the console states **12 testers for 14 continuous
+days**, with 0 currently participating.
+
+Both numbers have changed more than once and are stated per account, so re-read them in the
+console rather than trusting the pair written here — the point of recording them is to make
+the shape of the wait concrete, not to save the trip. It is still the item most likely to
+decide when the app can actually ship: two weeks that cannot start until the listing is done,
+and cannot be compressed once it has.
