@@ -97,8 +97,7 @@
         "@sentry/react-native",
         {
           "organization": "luismaia",
-          "project": "react-native",
-          "url": "https://de.sentry.io/"
+          "project": "bumi-app"
         }
       ]
     ],
