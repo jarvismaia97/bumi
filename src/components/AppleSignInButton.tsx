@@ -1,6 +1,7 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
+import { AppleMark } from '@/components/AppleMark';
 import { useAppleSignInAvailable } from '@/lib/appleSignIn';
 import { useAppearance } from '@/state/appearanceStore';
 import { useI18n } from '@/i18n';
@@ -59,7 +60,7 @@ export function AppleSignInButton({
       accessibilityLabel={t('auth.signInApple')}
     >
       <View style={styles.content}>
-        <Text style={[styles.mark, { color: ink, fontSize: height * 0.46 }]}></Text>
+        <AppleMark size={height * 0.44} color={ink} />
         <Text style={[styles.label, { color: ink }]} numberOfLines={1}>{t('auth.signInApple')}</Text>
       </View>
     </AnimatedPressable>
@@ -69,7 +70,5 @@ export function AppleSignInButton({
 const styles = StyleSheet.create({
   button: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
   content: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  // Nudged up because the glyph's own bounding box sits low against cap height.
-  mark: { marginTop: -3 },
   label: { fontSize: 17, fontWeight: '600', letterSpacing: -0.2 },
 });
