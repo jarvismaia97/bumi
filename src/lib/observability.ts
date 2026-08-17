@@ -27,6 +27,21 @@ export function initErrorReporting(): void {
     // Errors are the reason this exists. Tracing is a separate quota on the free tier and a
     // separate decision; turn it on deliberately, with a sample rate, if it is ever wanted.
     tracesSampleRate: 0,
+    // Never record a session just because somebody opened the app: the free tier allows fifty
+    // replays a month, and a game gets opened far more often than it breaks.
+    replaysSessionSampleRate: 0,
+    // A crash, on the other hand, is worth its last minute. The board is built from plain views,
+    // so what survives masking is exactly the geometry and the drag — which is where the races
+    // in this app have actually been. The numbers do not need to survive: the daily is
+    // deterministic per date key and the campaign levels are static, so any board in a report
+    // can be regenerated from the key beside it.
+    replaysOnErrorSampleRate: 1.0,
+    integrations: [
+      // Defaults left alone on purpose. `maskAllText` is what keeps a player's name, a friend's
+      // name and the friend code — a capability, whoever reads it can add its owner — out of a
+      // recording. Turning it off would put back exactly what `beforeSend` below takes out.
+      Sentry.mobileReplayIntegration(),
+    ],
     beforeSend(event) {
       // The friend code is a capability — whoever reads it can add its owner. It travels in
       // request bodies and can end up in a breadcrumb, so it is removed on the way out.

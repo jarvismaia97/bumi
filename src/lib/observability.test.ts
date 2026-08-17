@@ -7,6 +7,7 @@ const sentry = vi.hoisted(() => ({
   wrap: vi.fn((component: unknown) => component),
   withScope: vi.fn((fn: (scope: unknown) => void) => fn({ setTag: vi.fn(), setContext: vi.fn() })),
   captureException: vi.fn(),
+  mobileReplayIntegration: vi.fn(() => ({ name: 'MobileReplay' })),
 }));
 vi.mock('@sentry/react-native', () => sentry);
 
@@ -43,6 +44,15 @@ describe('error reporting without a DSN', () => {
     expect(sentry.captureException).not.toHaveBeenCalled();
   });
 
+  // The replay integration is native and starts a recorder. Without a DSN there is nowhere for
+  // it to go, so it must not be built at all rather than built and left idle.
+  it('does not build the replay integration', async () => {
+    const { initErrorReporting } = await loadWith(undefined);
+    initErrorReporting();
+
+    expect(sentry.mobileReplayIntegration).not.toHaveBeenCalled();
+  });
+
   // Identity rather than a wrapper that reports nowhere: every test in this repo mounts the
   // tree this sits on, and they should exercise the shape the app ships without a DSN.
   it('leaves the root component exactly as it was', async () => {
@@ -66,6 +76,28 @@ describe('error reporting with a DSN', () => {
     // their friends' names and their board into an error report.
     expect(config.tracesSampleRate).toBe(0);
     expect(config.sendDefaultPii).toBe(false);
+  });
+
+  // Fifty replays a month on the free tier, and a game is opened far more often than it breaks.
+  // Recording continuously would spend the month in a day and tell us nothing.
+  it('records a replay only when something actually broke', async () => {
+    const { initErrorReporting } = await loadWith(DSN);
+    initErrorReporting();
+
+    const config = sentry.init.mock.calls[0][0] as Record<string, unknown>;
+    expect(config.replaysSessionSampleRate).toBe(0);
+    expect(config.replaysOnErrorSampleRate).toBe(1.0);
+    expect(sentry.mobileReplayIntegration).toHaveBeenCalled();
+  });
+
+  // The masking defaults are the whole privacy story for replays: text covers the player's name,
+  // their friends' names and the friend code, which is a capability. Passing options here at all
+  // is how that gets weakened by accident, so the call is asserted to pass none.
+  it('leaves the replay masking defaults untouched', async () => {
+    const { initErrorReporting } = await loadWith(DSN);
+    initErrorReporting();
+
+    expect(sentry.mobileReplayIntegration).toHaveBeenCalledWith();
   });
 
   it('reports a caught error and tags where it came from', async () => {
