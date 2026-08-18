@@ -1,3 +1,5 @@
+# Prioritised over .gitignore when EAS uploads the project, so it has to repeat it.
+# Kept in step with .gitignore by hand: anything added there belongs here too.
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
 # dependencies
@@ -50,9 +52,6 @@ example
 
 # local browser-automation debug output
 .playwright-cli/
-
-# The Playwright MCP writes snapshots, logs and *downloads* here, and a downloaded credential
-# inside a tracked directory is one `git add .` away from being public. Only the scripts stay.
 .playwright-mcp/*
 !.playwright-mcp/*.js
 
@@ -63,3 +62,7 @@ example
 content/social/
 .env*.local
 .planning/
+# The one exception, and the reason this file exists: `android.googleServicesFile` points at
+# google-services.json, which stays out of git because the repo is public — but the Android
+# build cannot register with FCM without it. The `!` has to come last to win.
+!google-services.json
