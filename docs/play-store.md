@@ -66,9 +66,8 @@ The Play listing uses the `android-phone` set; `ios-6.9` is for App Store Connec
 Written before any of it was done, and kept because the reasoning still explains *why* each
 piece exists. Checked against the console on 2026-08-17: **1 is done** (sign-in works on
 Android since 2026-08-11), **3 is done** (`eas submit` uploads without a browser), and
-**4, 5 and 6 are done** — the store listing is filled in as a draft. **2 is all but done**:
-Firebase is set up and the only thing left is uploading the FCM key to EAS, which is an
-interactive command.
+**4, 5 and 6 are done** — the store listing is filled in as a draft. **2 is done** as of
+2026-08-18: Firebase, the Android app and the FCM key on EAS.
 
 1. **An Android OAuth client.** Google sign-in on Android checks the certificate the app was
    signed with, and under Play App Signing that is Google's own certificate, not the keystore
@@ -101,12 +100,17 @@ interactive command.
      public. EAS reads `.gitignore` when it uploads, so `.easignore` repeats it and ends with
      `!google-services.json` — the `!` has to be last to win. `android.googleServicesFile` in
      `app.json` points at it.
-   - **Still to do**, and it is interactive so it cannot be scripted:
-     `npx eas-cli credentials -p android` > *Google Service Account Key for Push Notifications
-     (FCM V1)* > *Set up a Google Service Account Key*, pointed at
-     `~/.config/bumi/fcm-service-account.json`. That file is a real private key, was generated
-     once, cannot be re-downloaded, and is deliberately outside the repo. Until it is uploaded,
-     nothing sends push on Android.
+   - The FCM V1 service account key is uploaded to EAS against `pt.jogarbumi.app`: project
+     `jarvis-485711`, client `firebase-adminsdk-fbsvc@jarvis-485711.iam.gserviceaccount.com`.
+     The key itself lives at `~/.config/bumi/fcm-service-account.json`, mode 600, outside the
+     repo. Firebase issues it once and will not show it again, so back that file up; if it is
+     lost, generate a new one and re-upload rather than hunting for it.
+   - `eas credentials` is interactive and cannot be driven from a non-tty, which is worth
+     knowing before trying to script it. The upload went through expo.dev instead:
+     *Credentials > Android > pt.jogarbumi.app > FCM V1 service account key*.
+
+   The next Android build registers for push. Nothing before it does, including build v5 on
+   the store.
 
    The daily reminder is scheduled on the device and needs none of this.
 3. **A Play service account** for `eas submit` to upload without a browser: Play Console >
