@@ -1,6 +1,7 @@
 // Pure message catalogue: no React, no React Native, no Expo. The server-side share
 // renderer and the game modules import this; only `useI18n` in ./index.ts needs a runtime.
-export type SupportedLanguage = 'pt-PT' | 'en' | 'es';
+export const SUPPORTED_LANGUAGES = ['pt-PT', 'en', 'es'] as const;
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 type Variables = Record<string, number | string>;
 
 const messages: Record<SupportedLanguage, Record<string, string>> = {
@@ -1092,8 +1093,15 @@ export function resolveLanguage(languageCode: string | null | undefined): Suppor
   return code.startsWith('es') ? 'es' : 'en';
 }
 
+/** Whether a value names a catalogue, for anything read back out of storage. */
+export function isSupportedLanguage(value: unknown): value is SupportedLanguage {
+  return typeof value === 'string' && (SUPPORTED_LANGUAGES as readonly string[]).includes(value);
+}
+
 export function translate(language: SupportedLanguage, key: string, variables: Variables = {}): string {
-  const template = messages[language][key] ?? messages['pt-PT'][key] ?? key;
+  // Indexed rather than accessed: `language` has come from stored state before, and a value with
+  // no catalogue threw here — which on the web meant a blank page instead of a wrong language.
+  const template = messages[language]?.[key] ?? messages['pt-PT'][key] ?? key;
   return template.replace(/\{(\w+)\}/g, (_, name: string) => String(variables[name] ?? `{${name}}`));
 }
 
@@ -1101,6 +1109,6 @@ export type Translate = (key: string, variables?: Variables) => string;
 
 /** The keys of the message catalogue, for tests that check both languages agree. */
 export function messageKeys(language: SupportedLanguage): string[] {
-  return Object.keys(messages[language]);
+  return Object.keys(messages[language] ?? messages['pt-PT']);
 }
 

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { messageKeys, resolveLanguage, translate, type SupportedLanguage } from './messages';
+import {
+  isSupportedLanguage,
+  messageKeys,
+  resolveLanguage,
+  SUPPORTED_LANGUAGES,
+  translate,
+  type SupportedLanguage,
+} from './messages';
 
 /** Portuguese is the source catalogue; every other language is checked against it. */
 const TRANSLATED: SupportedLanguage[] = ['en', 'es'];
@@ -36,6 +43,22 @@ describe('message catalogue', () => {
 
   it('falls back to Portuguese for an unknown key rather than throwing', () => {
     expect(translate('en', 'does.not.exist')).toBe('does.not.exist');
+  });
+
+  it('falls back to Portuguese for a language with no catalogue rather than throwing', () => {
+    // Reached when a stored preference names a language the catalogue does not have — 'pt'
+    // instead of 'pt-PT', say. This used to throw and blank the whole web app.
+    const unknown = 'pt' as SupportedLanguage;
+    expect(() => translate(unknown, 'menu.daily')).not.toThrow();
+    expect(translate(unknown, 'menu.daily')).toBe(translate('pt-PT', 'menu.daily'));
+  });
+
+  it('knows which values name a catalogue', () => {
+    expect(SUPPORTED_LANGUAGES).toEqual(['pt-PT', 'en', 'es']);
+    for (const language of SUPPORTED_LANGUAGES) expect(isSupportedLanguage(language)).toBe(true);
+    for (const value of ['pt', 'en-GB', 'auto', '', null, undefined, 7]) {
+      expect(isSupportedLanguage(value), String(value)).toBe(false);
+    }
   });
 
   it('substitutes variables', () => {
