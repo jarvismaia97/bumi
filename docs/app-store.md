@@ -61,6 +61,32 @@ own ratio, which is 1 — so a 3x shot needs a context built by hand with
 `newContext({ viewport, deviceScaleFactor: 3, storageState })`, seeded from the signed-in
 page's storage state. `.playwright-mcp/capture.js` is that script.
 
+**Uploaded 2026-08-18** to version 1.0, one set per localization. Two things about the console
+that cost time: the 6.9" slot is hidden behind *Ver todos os tamanhos em Gestor de multimédia*
+— the page shows 6.5" by default, which rejects 1320x2868 — and a multi-file upload lands in an
+arbitrary order, so the five go up one at a time. The other sizes then read *A utilizar Ecrã de
+6,9"*, so 6.9" is the only set that has to exist.
+
+## Store listing state, 2026-08-18
+
+The listing was empty on Apple's side — description, keywords and support URL were blank in
+every language, including Portuguese. Now filled and saved (nothing submitted for review):
+
+| Localization | Name | Subtitle | Description | Keywords | Screenshots |
+| --- | --- | --- | --- | --- | --- |
+| pt-PT (primary) | Bumi: Puzzle de Lógica | Puzzle de retângulos | 1954 chars | 54 | own set |
+| en-US | Bumi: Logic Puzzle | Rectangle logic puzzle | 1992 | 59 | own set |
+| es-ES | Bumi: Puzle de Lógica | Lógica con rectángulos | 2021 | 60 | own set |
+
+The descriptions are the long ones from `play-store.md`, not the three-sentence versions written
+above — the same app deserves the same copy on both stores, and the short one reads thin on a
+product page. The Spanish subtitle is *Lógica con rectángulos* rather than the one drafted here,
+which was 31 characters against Apple's limit of 30. Support URL is the privacy page in all
+three, for the reason given below.
+
+Not done: en-GB, es-MX and the other variants. Apple falls back to the primary language, so a
+British visitor sees Portuguese unless en-GB exists; add it if that matters.
+
 ## Apple identifiers
 
 | Item | Value |
