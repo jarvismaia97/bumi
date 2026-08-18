@@ -271,6 +271,15 @@ being true the day the monetisation work lands, and Play treats a listing that m
 the app as a policy problem rather than stale copy — so that line comes out in the same
 release that puts an ad in, not afterwards.
 
+## Uploaded to Play
+
+| Version code | Version | Date | Track | Notes |
+| --- | --- | --- | --- | --- |
+| 9 | 1.0.0 | 2026-08-18 | internal | First upload through `eas submit`, which reported `Release status: COMPLETED`. First build carrying FCM, so it is the first that can receive a friend's notification — worth confirming on a device rather than assuming. |
+
+The closed test needs this promoted to that track; landing on internal testing does not start the
+14 days.
+
 ## Before the first build
 
 `npx eas-cli build --profile production --platform android` produces an `.aab`, which is what

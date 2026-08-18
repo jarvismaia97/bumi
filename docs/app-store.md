@@ -204,6 +204,7 @@ subject identifiers, which is why `sub` survived the change — checked rather t
 | Build | Version | Date | Notes |
 | --- | --- | --- | --- |
 | 29 | 1.0.0 | 2026-08-01 | First TestFlight upload. Carries Spanish, the mistake-based medals, the friends board and its notifications, the error boundary, and SDK 57 patch alignment. |
+| 48 | 1.0.0 | 2026-08-18 | Carries the stored-language fix, so a bad language preference no longer blanks the app. First build since 29, and the one the 6.9" screenshots were taken against. |
 
 ## Maintenance
 
