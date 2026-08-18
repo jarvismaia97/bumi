@@ -66,9 +66,9 @@ The Play listing uses the `android-phone` set; `ios-6.9` is for App Store Connec
 Written before any of it was done, and kept because the reasoning still explains *why* each
 piece exists. Checked against the console on 2026-08-17: **1 is done** (sign-in works on
 Android since 2026-08-11), **3 is done** (`eas submit` uploads without a browser), and
-**4, 5 and 6 are done** — the store listing's remaining half is screenshots, not copy or
-forms. **2 is the only one still open**, and it decides whether a friend's notification ever
-reaches an Android phone.
+**4, 5 and 6 are done** — the store listing is filled in as a draft. **2 is all but done**:
+Firebase is set up and the only thing left is uploading the FCM key to EAS, which is an
+interactive command.
 
 1. **An Android OAuth client.** Google sign-in on Android checks the certificate the app was
    signed with, and under Play App Signing that is Google's own certificate, not the keystore
@@ -87,8 +87,27 @@ reaches an Android phone.
    Nothing in the app references these. `authStore.ts` passes only `webClientId`, and Google
    matches the Android client by package and certificate at request time — so creating the
    client fixes sign-in on builds that are already installed, with no rebuild.
-2. **FCM credentials**, if the friends notification is to arrive on Android. Firebase project,
-   `google-services.json` into the repo, and the FCM v1 service account key uploaded to EAS.
+2. **FCM credentials**, if the friends notification is to arrive on Android. Set up on
+   2026-08-18, bar one step:
+
+   - Firebase now sits on `jarvis-485711`, the project that already holds the OAuth clients,
+     rather than a project of its own. Analytics was declined on the way in — FCM does not need
+     it, and the listing says the app tracks nobody. Note the warning that came with it: the
+     Firebase and Cloud projects are now one, so deleting either deletes both.
+   - Android app `pt.jogarbumi.app`, app id `1:606345526586:android:bb2599a28423ffe86f6403`,
+     sender id `606345526586`. The **Firebase Cloud Messaging API (V1)** is enabled; the legacy
+     API is off, which is correct.
+   - `google-services.json` sits in the repo root but stays out of git, because this repo is
+     public. EAS reads `.gitignore` when it uploads, so `.easignore` repeats it and ends with
+     `!google-services.json` — the `!` has to be last to win. `android.googleServicesFile` in
+     `app.json` points at it.
+   - **Still to do**, and it is interactive so it cannot be scripted:
+     `npx eas-cli credentials -p android` > *Google Service Account Key for Push Notifications
+     (FCM V1)* > *Set up a Google Service Account Key*, pointed at
+     `~/.config/bumi/fcm-service-account.json`. That file is a real private key, was generated
+     once, cannot be re-downloaded, and is deliberately outside the repo. Until it is uploaded,
+     nothing sends push on Android.
+
    The daily reminder is scheduled on the device and needs none of this.
 3. **A Play service account** for `eas submit` to upload without a browser: Play Console >
    Setup > API access, a service account in Google Cloud with the Release Manager role, and
