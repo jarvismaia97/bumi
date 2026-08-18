@@ -42,17 +42,24 @@ single 100-character field, comma separated, no spaces.
   el progreso guardado entre dispositivos.
 - Keywords: `puzle,logica,rectangulos,shikaku,cerebro,reto,diario,numeros`
 
-## Screenshots to capture
+## Screenshots
 
-Apple's required size is the 6.9" set — 1320x2868, which is what the iPhone 17 Pro Max
-simulator produces. `supportsTablet` is false, so there is no iPad set. Each language with
-a listing wants its own set, so capture with the app in that language.
+Apple's required size is the 6.9" set — 1320x2868. `supportsTablet` is false, so there is no
+iPad set. Each language with a listing wants its own set.
 
-1. Nivel em jogo com uma selecao em curso.
-2. Menu da campanha com progresso e medalhas.
-3. Desafio diario concluido.
-4. Mapa de niveis e ilhas desbloqueadas.
-5. Escolha de tema e definicoes.
+Captured 2026-08-18 from the production web build rather than a simulator, at
+`assets/store/ios-6.9/<lang>/` for `pt`, `en` and `es`:
+
+1. `01-menu` — menu with progress, medals and the daily.
+2. `02-mapa-ilhas` — island map with unlocked levels.
+3. `03-tabuleiro` — a 12x12 mid-solve.
+4. `04-vitoria` — the win sheet.
+5. `05-amigos` — the friends board, invite code masked.
+
+The Playwright MCP has no deviceScaleFactor option, and `scale: "device"` follows the browser's
+own ratio, which is 1 — so a 3x shot needs a context built by hand with
+`newContext({ viewport, deviceScaleFactor: 3, storageState })`, seeded from the signed-in
+page's storage state. `.playwright-mcp/capture.js` is that script.
 
 ## Apple identifiers
 
@@ -159,7 +166,7 @@ subject identifiers, which is why `sub` survived the change — checked rather t
    the Sign in with Apple key and is a different thing entirely — it cannot authenticate a
    submission.) Apple then processes the binary for 5-10 minutes and emails when it lands;
    internal TestFlight is immediate after that, external testing needs Apple's review.
-8. Capture the 6.9" screenshots described above, one set per listing language.
+8. Upload the 6.9" screenshots above, one set per listing language.
 9. Privacy questionnaire: email and name (Google/Apple sign-in) plus game progress,
    linked to identity. The friends board shares progress *between players* — a painter
    nickname, points, level count and streak, never a name, email or account id — so the

@@ -2,11 +2,16 @@
 
 The iOS side is written up in `app-store.md`; this covers only what Android needs on top.
 
-**State on 2026-08-17, read from the console rather than inferred.** The app exists as
+**State on 2026-08-18, read from the console rather than inferred.** The app exists as
 `Bumi: Puzzle de Lógica`, a draft on the internal testing track with no installs. App content
-is **finished** — all ten forms pass, including data safety and the content rating. One item
-in the setup remains, `Configurar a ficha da loja`, and it is the only thing standing between
-here and a closed test.
+is **finished** — all ten forms pass, including data safety and the content rating.
+
+The store listing is now **filled in and saved as a draft** in five languages: pt-PT (the
+default), en-US, en-GB, es-ES and es-419. Each carries the copy below verbatim, five phone
+screenshots, and the shared icon and feature graphic. Nothing has been sent for review — every
+change sits under *Alterações ainda não enviadas para revisão* in the publication overview, and
+that page still reports the lock: *para enviar alterações para revisão, conclua os passos
+necessários no painel de controlo*. So the next move is a decision, not a form.
 
 That matters more than its size suggests, because the closed test is locked until setup is
 complete and then runs on a clock that cannot be shortened:
@@ -17,8 +22,27 @@ complete and then runs on a clock that cannot be shortened:
 | At least **12 testers** opted in | **0** |
 | Run for at least **14 continuous days** | not started |
 
-So the store listing is the critical path, and the listing is blocked on screenshots. Nothing
-else on Play is waiting on anything.
+The listing is no longer the critical path — the 14 days are. Nothing else on Play is waiting
+on anything.
+
+## Screenshots
+
+Captured 2026-08-18 from production (`https://www.jogarbumi.pt`) with Playwright, at
+`assets/store/<size>/<lang>/`, five per set: `01-menu`, `02-mapa-ilhas`, `03-tabuleiro`,
+`04-vitoria`, `05-amigos`.
+
+| Set | Size | Why |
+| --- | --- | --- |
+| `android-phone` | 1242x2208 | Play wants 9:16..16:9; Apple's 1320x2868 is ~9:19.6 and Play rejects it |
+| `ios-6.9` | 1320x2868 | Apple's required 6.9" set, for `app-store.md` |
+
+Three languages each (`pt`, `en`, `es`), shot against the signed-in account, so the board, the
+map and the win sheet show real progress rather than a seeded fake. Two things on the friends
+screen are masked before the shutter: the invite code, which is live, and the display name of a
+friend, which the row reveals **on hover** — a mouse resting over a row is enough, so the
+pointer is parked off the board before each capture.
+
+The Play listing uses the `android-phone` set; `ios-6.9` is for App Store Connect.
 
 ## Identifiers
 
@@ -69,10 +93,16 @@ reaches an Android phone.
 3. **A Play service account** for `eas submit` to upload without a browser: Play Console >
    Setup > API access, a service account in Google Cloud with the Release Manager role, and
    its JSON key referenced from `eas.json` under `submit.production.android`.
-4. **Store listing.** Title, short description (80 characters), full description (4000), the
-   feature graphic above, at least two phone screenshots, and a category. The three
-   descriptions are already written in `app-store.md` under the localised listings and read
-   the same on Play.
+4. **Store listing.** Done as a draft on 2026-08-18: title, short and full descriptions in all
+   five languages, the feature graphic, a 512x512 icon cut from `bumi-icon.png`, five phone
+   screenshots per language, and the category (Jogo / Puzzle, already set). The name is
+   translated rather than carried across:
+
+   | Listing | Name |
+   | --- | --- |
+   | pt-PT | `Bumi: Puzzle de Lógica` |
+   | en-US, en-GB | `Bumi: Logic Puzzle` |
+   | es-ES, es-419 | `Bumi: Puzle de Lógica` |
 5. **Data safety form.** The same answers as Apple's privacy questionnaire: account name and
    email from sign-in, game progress linked to identity, no tracking, no advertising. The
    friends board shares the account name between players, and never an email or account id.
