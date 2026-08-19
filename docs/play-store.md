@@ -271,6 +271,25 @@ being true the day the monetisation work lands, and Play treats a listing that m
 the app as a policy problem rather than stale copy — so that line comes out in the same
 release that puts an ad in, not afterwards.
 
+## The advertising ID declaration
+
+Blocked the first submission outright: *1 problema afeta todas as suas alterações*, and the send
+button stays disabled until it is answered. Every app targeting Android 13+ has to declare
+whether it uses the advertising ID, and this one had never been asked.
+
+Answered **No** on 2026-08-19, and checked rather than assumed — the build 9 `.aab` was pulled
+from EAS and its manifest read:
+
+    unzip -p bumi9.aab base/manifest/AndroidManifest.xml | strings | grep -i ad_id
+
+No `com.google.android.gms.permission.AD_ID`, no ads SDK anywhere in the bundle, which is what
+the listing's "no ads" line already claims. If an ad SDK ever lands, this answer has to change
+in the same release — Play blocks a release whose manifest carries the permission while the
+declaration says No, and the reverse is a policy problem rather than a build error.
+
+The console hides this under *Conteúdo da app > ID de publicidade*, not under anything to do
+with releases, which is why the publishing page reports it only as "1 problem".
+
 ## Uploaded to Play
 
 | Version code | Version | Date | Track | Notes |
@@ -279,6 +298,20 @@ release that puts an ad in, not afterwards.
 
 The closed test needs this promoted to that track; landing on internal testing does not start the
 14 days.
+
+## Closed test, sent for review 2026-08-19
+
+Track *Testes fechados - Alpha*: mailing list `Teste fechado 2026-08` with 12 addresses, every
+country, release 9 (1.0.0) with notes in all five languages, feedback channel
+`suporte@jogarbumi.pt`. Sent together with the store listing and the app-content declarations —
+20 changes in one submission, and managed publishing is **off**, so each publishes as it is
+approved.
+
+Two things to watch when the testers arrive. `vinicius.bilar@gmail.com` and
+`vinicius.bilar.pt@gmail.com` look like one person's two accounts, and the developer account is
+on the list as well — Play counts testers who opt in and keep the app installed, so the twelve
+addresses may not be twelve counted testers. And the count is read per day, not cumulative: an
+uninstall part-way through can drop it below twelve and restart the clock.
 
 ## Before the first build
 
