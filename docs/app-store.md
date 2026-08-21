@@ -199,12 +199,45 @@ subject identifiers, which is why `sub` survived the change — checked rather t
    questionnaire's "data used to track you" stays No while progress remains linked to
    identity. The policy paragraph covering it is `privacy.friends*` in the catalogue.
 
+## What an App Store submission actually needs
+
+Version 1.0.0 went in for review on 2026-08-21, and the console refused it five times first. None
+of these were listed anywhere; each one only appears as a line in *Não é possível adicionar para
+revisão* after pressing the button:
+
+| Blocker | What it was |
+| --- | --- |
+| No build | The version had no build attached at all. TestFlight having build 48 is not the same thing — it has to be added to the version under *Compilação*. |
+| Privacy policy URL | Empty. The address had been put in *URL das seleções de privacidade do utilizador*, which is optional and a different field. And it is **per localization** — filling pt-PT leaves en-US and es-ES still empty and still blocking. |
+| App privacy not published | The answers existed but were never published, and publishing is an explicit affirmation that they are accurate. |
+| Age rating | Never answered. Seven steps; every answer is the first column for a Shikaku puzzle, and it lands on 4+ in 172 countries. |
+| Content rights | Never answered. No third-party content. |
+| Price and availability | Never set. Free, all 175 countries. Apple will not review an app that has no price. |
+
+Two more that block review without being errors: the App Review contact (name, phone, email) and,
+if *Necessário iniciar sessão* is ticked, demo credentials. Bumi signs in through Apple and Google
+only, so there is no username and password to give — the box is unticked and the notes tell the
+reviewer to use Sign in with Apple with their own account, and that the tutorial, the first ten
+levels, the daily and training all run with no account at all.
+
+**Release is set to manual.** It was on *automatic after approval*, which would have put 1.0.0 on
+the App Store the day it passed — weeks before the Android closed test finishes. Manual keeps the
+date a decision.
+
+### App privacy, as declared
+
+Three data types, all *App Functionality*, all linked to identity, none used for tracking: Name,
+Email Address, and Gameplay Content — which is Apple's category for game progress, and the one
+this app's whole sync feature is about. The email entry had *Marketing or Developer Advertising*
+ticked, which contradicts the listing's "no ads" line and the ad-ID declaration on Play; it was
+wrong and is now off. It has to go back on the day any newsletter starts.
+
 ## Submitted
 
 | Build | Version | Date | Notes |
 | --- | --- | --- | --- |
 | 29 | 1.0.0 | 2026-08-01 | First TestFlight upload. Carries Spanish, the mistake-based medals, the friends board and its notifications, the error boundary, and SDK 57 patch alignment. |
-| 48 | 1.0.0 | 2026-08-18 | Carries the stored-language fix, so a bad language preference no longer blanks the app. First build since 29, and the one the 6.9" screenshots were taken against. |
+| 48 | 1.0.0 | 2026-08-18 | Carries the stored-language fix, so a bad language preference no longer blanks the app. First build since 29, and the one the 6.9" screenshots were taken against. Submitted for App Review on 2026-08-21 from commit `e5fa2ad`, the same commit as Android version code 9. Not yet tested on a device against FCM — which is the argument for the manual release. |
 
 ## Maintenance
 
