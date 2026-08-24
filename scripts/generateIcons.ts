@@ -76,6 +76,12 @@ const TARGETS: { file: string; size: number; source: string; flatten?: boolean }
   { file: 'assets/images/android-icon-foreground.png', size: 512, source: adaptive() },
   { file: 'assets/images/android-icon-monochrome.png', size: 432, source: adaptive('#000000') },
   { file: 'assets/images/favicon.png', size: 48, source: rounded },
+  // The native launch screen, which is the very first thing anyone sees. It was still the Expo
+  // template's own chevron on Expo blue — every other icon here was regenerated from the mark
+  // and this one was not, so the app opened on somebody else's logo. Drawn rounded because the
+  // splash shows the file as-is, and sized to meet `loading.tsx`, which centres `Logo` at 58 on
+  // the same background: the handoff from native to JS then has nothing to move.
+  { file: 'assets/images/splash-icon.png', size: 512, source: rounded },
   { file: 'public/icon-512.png', size: 512, source: fullBleed },
   { file: 'public/icon-192.png', size: 192, source: fullBleed },
   { file: 'public/apple-touch-icon.png', size: 180, source: fullBleed },
