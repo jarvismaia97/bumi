@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
-import Animated, { Easing, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 
 interface BrandMarkProps {
   size?: number;
@@ -25,7 +25,12 @@ const PIECES = [
  * the pieces drop into place while the screen is already fading in, so it costs no waiting.
  */
 export function BrandMark({ size = 28, assemble = false }: BrandMarkProps) {
-  const progress = useSharedValue(assemble ? 1 : 0);
+  // Rest is 0, never 1. At 1 the pieces sit outside the clipped box, so a mark that starts
+  // there is a blank square until an animation carries it home — and the menu unmounts and
+  // remounts on every navigation, so that animation is started over and over on a screen that
+  // is also running its own fade-in. One interrupted run and the logo stays blank for the rest
+  // of the session: it did, on a device, from the first return out of the friends board.
+  const progress = useSharedValue(0);
   const reduceMotion = useReducedMotion();
   const unit = size / VIEWBOX;
 
@@ -35,10 +40,17 @@ export function BrandMark({ size = 28, assemble = false }: BrandMarkProps) {
       return;
     }
     // Starts scattered and settles; the small hold keeps it from reading as a twitch.
-    progress.value = withSequence(
-      withTiming(1, { duration: 0, reduceMotion: ReduceMotion.Never }),
-      withDelay(40, withTiming(0, { duration: ASSEMBLE_IN_MS, easing: Easing.out(Easing.back(1.4)), reduceMotion: ReduceMotion.Never })),
+    progress.value = 1;
+    progress.value = withDelay(
+      40,
+      withTiming(0, { duration: ASSEMBLE_IN_MS, easing: Easing.out(Easing.back(1.4)), reduceMotion: ReduceMotion.Never }),
     );
+    // The floor under the animation, not a second animation: whatever happened to the timing,
+    // the mark is a mark again a breath after it should have been.
+    const settle = setTimeout(() => {
+      progress.value = 0;
+    }, 40 + ASSEMBLE_IN_MS + 400);
+    return () => clearTimeout(settle);
   }, [assemble, progress, reduceMotion]);
 
   return (
