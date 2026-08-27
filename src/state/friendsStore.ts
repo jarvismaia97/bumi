@@ -62,6 +62,20 @@ export function sortForView(entries: LeaderboardEntry[], view: BoardView): Leade
 /** The reasons an add can fail that the player can do something about. */
 export type FriendsError = 'invalid_code' | 'unknown_code' | 'own_code' | 'too_many_friends' | 'too_many_attempts' | 'offline' | 'stale_row';
 
+/**
+ * Which mutation the board is waiting on, and — for a removal — which row it belongs to.
+ *
+ * A single `busy` flag was enough to stop a second tap, but it could not say where the wait
+ * was happening: adding a friend on a slow connection disabled the button and then nothing
+ * moved for as long as the round trip took, with no sign the tap had even registered. Naming
+ * the row lets the one control that started the wait carry the spinner, and leaves the rest of
+ * the board reading as itself rather than as five things that stopped working at once.
+ */
+export type FriendsPending =
+  | { action: 'add' }
+  | { action: 'rotate' }
+  | { action: 'remove'; handle: RemovalHandle };
+
 interface FriendsState {
   code: string | null;
   entries: LeaderboardEntry[];
@@ -74,7 +88,8 @@ interface FriendsState {
   friendCount: number;
   truncated: boolean;
   loading: boolean;
-  busy: boolean;
+  /** The mutation in flight, or null when the board is only showing what it already has. */
+  pending: FriendsPending | null;
   error: FriendsError | null;
   load: () => Promise<void>;
   addFriend: (code: string) => Promise<boolean>;
@@ -119,7 +134,7 @@ function toFriendsError(error: unknown): FriendsError {
  * Which answer the board is allowed to believe.
  *
  * Every call here returns a whole board and writes it over the one on screen, and they were
- * guarded by two separate flags — `loading` for the fetch, `busy` for the three mutations — so
+ * guarded by two separate flags — `loading` for the fetch, `pending` for the three mutations — so
  * the two could always be in flight together. A `load` that went out before an add and came back
  * after it painted the pre-add board over the post-add one, and the friend the player had just
  * added vanished until they closed the sheet and opened it again. Removals came back the same
@@ -148,7 +163,7 @@ export const useFriendsStore = create<FriendsState>()((set, get) => ({
   friendCount: 0,
   truncated: false,
   loading: false,
-  busy: false,
+  pending: null,
   error: null,
 
   load: async () => {
@@ -181,42 +196,42 @@ export const useFriendsStore = create<FriendsState>()((set, get) => ({
     }
 
     const token = claimRequest();
-    set({ busy: true, error: null });
+    set({ pending: { action: 'add' }, error: null });
     try {
       const board = await apiRequest<BoardResponse>('/api/friends', 'POST', { action: 'add', code });
-      set({ ...(isNewest(token) ? board : {}), busy: false });
+      set({ ...(isNewest(token) ? board : {}), pending: null });
       return true;
     } catch (error) {
-      set({ busy: false, ...(isNewest(token) ? { error: toFriendsError(error) } : {}) });
+      set({ pending: null, ...(isNewest(token) ? { error: toFriendsError(error) } : {}) });
       return false;
     }
   },
 
   removeFriend: async handle => {
     const token = claimRequest();
-    set({ busy: true, error: null });
+    set({ pending: { action: 'remove', handle }, error: null });
     try {
       // `code` is the wire's name for it, and the server reads it as a handle for `remove`.
       const board = await apiRequest<BoardResponse>('/api/friends', 'POST', { action: 'remove', code: handle });
-      set({ ...(isNewest(token) ? board : {}), busy: false });
+      set({ ...(isNewest(token) ? board : {}), pending: null });
     } catch (error) {
       // The server answers a handle it cannot place with `unknown_code`, which reads as "nobody
       // has that code" — nonsense to someone who just tapped a trash icon and typed nothing. On
       // this path it means the row is gone from under them: removed from the other side, or the
       // secret rotated and every handle with it. Both are fixed by reloading the board.
       const failure = toFriendsError(error);
-      set({ busy: false, ...(isNewest(token) ? { error: failure === 'unknown_code' ? 'stale_row' : failure } : {}) });
+      set({ pending: null, ...(isNewest(token) ? { error: failure === 'unknown_code' ? 'stale_row' : failure } : {}) });
     }
   },
 
   rotateCode: async () => {
     const token = claimRequest();
-    set({ busy: true, error: null });
+    set({ pending: { action: 'rotate' }, error: null });
     try {
       const board = await apiRequest<BoardResponse>('/api/friends', 'POST', { action: 'rotate' });
-      set({ ...(isNewest(token) ? board : {}), busy: false });
+      set({ ...(isNewest(token) ? board : {}), pending: null });
     } catch (error) {
-      set({ busy: false, ...(isNewest(token) ? { error: toFriendsError(error) } : {}) });
+      set({ pending: null, ...(isNewest(token) ? { error: toFriendsError(error) } : {}) });
     }
   },
 
@@ -227,6 +242,6 @@ export const useFriendsStore = create<FriendsState>()((set, get) => ({
   // the answer that must not be believed, and it is still on its way.
   reset: () => {
     claimRequest();
-    set({ code: null, entries: [], friendCount: 0, truncated: false, loading: false, busy: false, error: null });
+    set({ code: null, entries: [], friendCount: 0, truncated: false, loading: false, pending: null, error: null });
   },
 }));

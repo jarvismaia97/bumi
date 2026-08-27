@@ -1,6 +1,6 @@
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
-import { Alert, Linking, Platform, StyleSheet, Switch, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Platform, StyleSheet, Switch, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Cloud from 'lucide-react-native/icons/cloud';
@@ -54,6 +54,9 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
   const error = useAuthStore(s => s.error);
   const signOut = useAuthStore(s => s.signOut);
   const deleteAccount = useAuthStore(s => s.deleteAccount);
+  // Both of these take several requests, and until they said so the sheet just sat there with
+  // the row looking untapped for the whole wait — long enough on a phone to read as a hang.
+  const accountAction = useAuthStore(s => s.accountAction);
   const status = useSyncStore(s => s.status);
   const hasPendingChanges = useSyncStore(s => s.hasPendingChanges);
   const languagePreference = useLanguageStore(state => state.preference);
@@ -167,9 +170,20 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
                   )}
                 </View>
               </View>
-              <AnimatedPressable accessibilityRole="button" style={[styles.accountSignOut, { borderColor: theme.gridSep }]} onPress={() => signOut().then(() => sheetRef.current?.dismiss()).catch(() => {})}>
-                <LogOut size={17} color={theme.text} strokeWidth={2.2} />
-                <Text style={[styles.accountSignOutText, { color: theme.text }]}>{t('settings.signOut')}</Text>
+              <AnimatedPressable
+                accessibilityRole="button"
+                style={[styles.accountSignOut, { borderColor: theme.gridSep }]}
+                disabled={accountAction !== null}
+                onPress={() => signOut().then(() => sheetRef.current?.dismiss()).catch(() => {})}
+              >
+                {accountAction === 'signOut' ? (
+                  <ActivityIndicator size="small" color={theme.text} style={styles.rowSpinner} />
+                ) : (
+                  <LogOut size={17} color={theme.text} strokeWidth={2.2} />
+                )}
+                <Text style={[styles.accountSignOutText, { color: theme.text }]}>
+                  {t(accountAction === 'signOut' ? 'settings.signingOut' : 'settings.signOut')}
+                </Text>
               </AnimatedPressable>
             </View>
 
@@ -258,9 +272,25 @@ export const SettingsSheet = forwardRef<SettingsSheetHandle, SettingsSheetProps>
         {user ? (
           <>
             <Text style={[styles.sectionLabel, { color: theme.sub }]}>{t('settings.account')}</Text>
-            <AnimatedPressable accessibilityRole="button" style={[styles.row, { borderColor: theme.gridSep }]} onPress={confirmDeleteAccount}>
-              <View style={styles.rowCopy}><Trash2 size={18} color={semantic.danger} strokeWidth={2.2} /><Text style={[styles.dangerText, { color: semantic.danger }]}>{t('settings.delete')}</Text></View>
-              <ChevronRight size={18} color={semantic.danger} />
+            <AnimatedPressable
+              accessibilityRole="button"
+              style={[styles.row, { borderColor: theme.gridSep }]}
+              disabled={accountAction !== null}
+              onPress={confirmDeleteAccount}
+            >
+              <View style={styles.rowCopy}>
+                <Trash2 size={18} color={semantic.danger} strokeWidth={2.2} />
+                <Text style={[styles.dangerText, { color: semantic.danger }]}>
+                  {t(accountAction === 'delete' ? 'settings.deleting' : 'settings.delete')}
+                </Text>
+              </View>
+              {/* The chevron says "there is more here"; while the deletion runs there is
+                  nothing more to go to, only a wait, so the spinner takes its place. */}
+              {accountAction === 'delete' ? (
+                <ActivityIndicator size="small" color={semantic.danger} />
+              ) : (
+                <ChevronRight size={18} color={semantic.danger} />
+              )}
             </AnimatedPressable>
             {error ? <Text style={[styles.error, { color: semantic.danger }]}>{error}</Text> : null}
           </>
@@ -294,6 +324,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   accountSignOutText: { flexShrink: 1, minWidth: 0, fontSize: 13, fontWeight: '700' },
+  // The spinner is narrower than the 17pt icon it stands in for, and without this the label
+  // beside it slid left every time one of these rows started waiting.
+  rowSpinner: { width: 17 },
   syncRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 2, paddingVertical: 4 },
   syncCopy: { flex: 1, fontSize: 12, lineHeight: 17 },
   // Binds to the rows below it: 8 down (the container gap), 28 up from the previous group.

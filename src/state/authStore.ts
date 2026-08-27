@@ -26,10 +26,21 @@ type AuthSession = {
   expiresAt: Date;
 };
 
+/**
+ * The account-wide action in flight, if any. Both of these are several requests deep — the push
+ * token is handed back, the session is ended, the stored copy and the Google account are
+ * forgotten — and deleting also cancels the armed reminders. On a phone that took most of seven
+ * seconds, during which the settings sheet sat there looking untouched. Naming the action lets
+ * the row that started it say what it is waiting for.
+ */
+export type AccountAction = 'signOut' | 'delete';
+
 interface AuthState {
   session: AuthSession | null;
   user: AuthUser | null;
   loading: boolean;
+  /** Which of the two account actions is running, or null when neither is. */
+  accountAction: AccountAction | null;
   error: string | null;
   /** Resolves when the question has been answered, or when the answer failed to arrive. */
   init: () => Promise<void>;
@@ -164,6 +175,7 @@ export const useAuthStore = create<AuthState>()(persist((set) => ({
   session: null,
   user: null,
   loading: true,
+  accountAction: null,
   error: null,
 
   /**
@@ -315,59 +327,70 @@ export const useAuthStore = create<AuthState>()(persist((set) => ({
   },
 
   signOut: async () => {
-    // Before the session goes: the request that hands the token back needs it, and a device
-    // left registered keeps receiving notifications for an account nobody is using on it.
-    await unregisterPushToken();
-    const { error } = await authClient.signOut();
-    if (error) {
-      set({ error: error.message });
-      playHaptic('error');
-      throw error;
+    set({ accountAction: 'signOut', error: null });
+    try {
+      // Before the session goes: the request that hands the token back needs it, and a device
+      // left registered keeps receiving notifications for an account nobody is using on it.
+      await unregisterPushToken();
+      const { error } = await authClient.signOut();
+      if (error) {
+        set({ error: error.message });
+        playHaptic('error');
+        throw error;
+      }
+      // Only now that the request carrying it has been answered. The plugin clears its own copy
+      // on a successful `/sign-out`, but a session that outlives the tap is the one failure worth
+      // being redundant about — the player is told they left, and the next launch reads whatever
+      // is still on the device.
+      await forgetStoredSession();
+      // Google keeps its own account attached, and the next `signIn()` would take it without
+      // asking. Someone signing out to hand the phone over, or to change account, means this too.
+      await forgetGoogleAccount();
+      // A committed account change, not an achievement: the flat thud of impact rather than
+      // the rising notification pattern that would congratulate someone for leaving.
+      playHaptic('medium');
+      // The board belongs to the account, not the device: leaving it behind would show the next
+      // person to sign in a set of friends that are not theirs. The progress is the same argument
+      // — a menu still counting 386 levels and an eight-day streak under a signed-out player is
+      // reading someone else's record. The server holds it; signing back in brings it back.
+      useFriendsStore.getState().reset();
+      useProgressStore.getState().clearAccountProgress();
+      set({ session: null, user: null, error: null });
+    } finally {
+      // Cleared however it ended: a failed sign-out leaves the player on their account, and the
+      // row has to be tappable again for the retry.
+      set({ accountAction: null });
     }
-    // Only now that the request carrying it has been answered. The plugin clears its own copy
-    // on a successful `/sign-out`, but a session that outlives the tap is the one failure worth
-    // being redundant about — the player is told they left, and the next launch reads whatever
-    // is still on the device.
-    await forgetStoredSession();
-    // Google keeps its own account attached, and the next `signIn()` would take it without
-    // asking. Someone signing out to hand the phone over, or to change account, means this too.
-    await forgetGoogleAccount();
-    // A committed account change, not an achievement: the flat thud of impact rather than
-    // the rising notification pattern that would congratulate someone for leaving.
-    playHaptic('medium');
-    // The board belongs to the account, not the device: leaving it behind would show the next
-    // person to sign in a set of friends that are not theirs. The progress is the same argument
-    // — a menu still counting 386 levels and an eight-day streak under a signed-out player is
-    // reading someone else's record. The server holds it; signing back in brings it back.
-    useFriendsStore.getState().reset();
-    useProgressStore.getState().clearAccountProgress();
-    set({ session: null, user: null, error: null });
   },
 
   deleteAccount: async () => {
-    set({ error: null });
-    await unregisterPushToken();
-    const { error } = await authClient.deleteUser({});
-    if (error) {
-      set({ error: error.message });
-      playHaptic('error');
-      throw error;
+    set({ accountAction: 'delete', error: null });
+    try {
+      await unregisterPushToken();
+      const { error } = await authClient.deleteUser({});
+      if (error) {
+        set({ error: error.message });
+        playHaptic('error');
+        throw error;
+      }
+      // The account no longer exists, so anything still on the device points at nothing.
+      await forgetStoredSession();
+      await forgetGoogleAccount();
+      // Deliberately silent on success: the confirmation tap already fired `warning`, and the
+      // sheet closing onto a signed-out menu says the rest.
+      //
+      // The reminders go by name. `reset` below turns the setting off, and the root layout cancels
+      // whatever is armed whenever it does — but a schedule that outlives its account is not
+      // something to leave to a mounted effect. Seven daily reminders and a streak warning were
+      // going on firing for an account that no longer existed, each one opening an app that had
+      // nothing left to show.
+      await cancelDailyReminders();
+      useProgressStore.getState().reset();
+      useFriendsStore.getState().reset();
+      set({ session: null, user: null, error: null });
+    } finally {
+      set({ accountAction: null });
     }
-    // The account no longer exists, so anything still on the device points at nothing.
-    await forgetStoredSession();
-    await forgetGoogleAccount();
-    // Deliberately silent on success: the confirmation tap already fired `warning`, and the
-    // sheet closing onto a signed-out menu says the rest.
-    //
-    // The reminders go by name. `reset` below turns the setting off, and the root layout cancels
-    // whatever is armed whenever it does — but a schedule that outlives its account is not
-    // something to leave to a mounted effect. Seven daily reminders and a streak warning were
-    // going on firing for an account that no longer existed, each one opening an app that had
-    // nothing left to show.
-    await cancelDailyReminders();
-    useProgressStore.getState().reset();
-    useFriendsStore.getState().reset();
-    set({ session: null, user: null, error: null });
   },
 }), {
   name: 'bumi-auth-store',
@@ -383,5 +406,5 @@ export function resetAuthStoreForTests(): void {
   // Per-process in the app, so a test that asserts the SDK is configured before it is used has
   // to be able to put it back to how a fresh launch finds it.
   googleConfigured = false;
-  useAuthStore.setState({ session: null, user: null, loading: true, error: null });
+  useAuthStore.setState({ session: null, user: null, loading: true, accountAction: null, error: null });
 }

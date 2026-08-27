@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 import Copy from 'lucide-react-native/icons/copy';
 import RefreshCw from 'lucide-react-native/icons/refresh-cw';
 import Trash2 from 'lucide-react-native/icons/trash-2';
@@ -64,7 +64,10 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
   const semantic = useSemanticTokens();
   const { t, language } = useI18n();
   const user = useAuthStore(state => state.user);
-  const { code, entries, friendCount, truncated, loading, busy, error, load, addFriend, removeFriend, rotateCode, clearError } = useFriendsStore();
+  const { code, entries, friendCount, truncated, loading, pending, error, load, addFriend, removeFriend, rotateCode, clearError } = useFriendsStore();
+  // One mutation at a time, so anything that would start a second one is shut while it runs —
+  // but only the control that started this one says so, which is what `pending` names.
+  const busy = pending !== null;
   const arrived = new Set(newFriends(entries).map(entry => entry.code));
   const [input, setInput] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
@@ -76,6 +79,8 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
   const [revealed, setRevealed] = useState<string | null>(null);
   const [view, setView] = useState<BoardView>('points');
   const ordered = sortForView(entries, view);
+  const adding = pending?.action === 'add';
+  const removing = pending?.action === 'remove' ? pending.handle : null;
 
   useImperativeHandle(ref, () => ({
     // Opening on a reveal left over from last time would answer a question nobody just asked.
@@ -141,7 +146,11 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                 disabled={busy || !code}
                 accessibilityLabel={t('leaderboard.rotateCode')}
               >
-                <RefreshCw size={17} color={theme.text} strokeWidth={2.2} />
+                {pending?.action === 'rotate' ? (
+                  <ActivityIndicator size="small" color={theme.text} />
+                ) : (
+                  <RefreshCw size={17} color={theme.text} strokeWidth={2.2} />
+                )}
               </AnimatedPressable>
             </View>
           </View>
@@ -169,9 +178,17 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
               disabled={busy}
               accessibilityLabel={t('leaderboard.addFriend')}
             >
-              <UserPlus size={18} color={theme.onAccent} strokeWidth={2.3} />
+              {adding ? (
+                <ActivityIndicator size="small" color={theme.onAccent} />
+              ) : (
+                <UserPlus size={18} color={theme.onAccent} strokeWidth={2.3} />
+              )}
             </AnimatedPressable>
           </View>
+          {/* The wait is a server round trip on someone else's connection, and until it was
+              named the button simply stopped responding for the length of it. The line goes
+              where the error would, so the answer — either answer — arrives in one place. */}
+          {adding && <Text style={[styles.waiting, { color: theme.sub }]}>{t('leaderboard.adding')}</Text>}
           {!!error && <Text style={[styles.error, { color: semantic.danger }]}>{t(`leaderboard.error.${error}`)}</Text>}
 
           <Text style={[styles.sectionTitle, { color: theme.sub }]}>{t('leaderboard.board')}</Text>
@@ -301,9 +318,13 @@ export const LeaderboardSheet = forwardRef<LeaderboardSheetHandle>(function Lead
                     removeFriend(entry.code as string);
                   }}
                   disabled={busy}
-                  accessibilityLabel={t('leaderboard.remove')}
+                  accessibilityLabel={removing === entry.code ? t('leaderboard.removing') : t('leaderboard.remove')}
                 >
-                  <Trash2 size={16} color={theme.sub} strokeWidth={2.2} />
+                  {removing === entry.code ? (
+                    <ActivityIndicator size="small" color={theme.sub} />
+                  ) : (
+                    <Trash2 size={16} color={theme.sub} strokeWidth={2.2} />
+                  )}
                 </AnimatedPressable>
               )}
             </AnimatedPressable>
@@ -341,6 +362,7 @@ const styles = StyleSheet.create({
   input: { flex: 1, minWidth: 0, minHeight: 44, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, fontSize: 16, fontWeight: '700', letterSpacing: 2 },
   addButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 8, flexShrink: 0 },
   error: { fontSize: 11, fontWeight: '700', marginTop: 8 },
+  waiting: { fontSize: 11, fontWeight: '700', marginTop: 8 },
   empty: { fontSize: 12, lineHeight: 17, marginTop: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8 },
   rowDetailRevealed: { fontSize: 12, fontWeight: '800' },
