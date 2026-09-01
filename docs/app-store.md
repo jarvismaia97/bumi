@@ -238,6 +238,40 @@ wrong and is now off. It has to go back on the day any newsletter starts.
 | --- | --- | --- | --- |
 | 29 | 1.0.0 | 2026-08-01 | First TestFlight upload. Carries Spanish, the mistake-based medals, the friends board and its notifications, the error boundary, and SDK 57 patch alignment. |
 | 48 | 1.0.0 | 2026-08-18 | Carries the stored-language fix, so a bad language preference no longer blanks the app. First build since 29, and the one the 6.9" screenshots were taken against. Submitted for App Review on 2026-08-21 from commit `e5fa2ad`, the same commit as Android version code 9. Not yet tested on a device against FCM — which is the argument for the manual release. |
+| 49 | 1.0.0 | 2026-08-25 | `a6c8f10` — the launch screen was still the Expo template's logo. |
+| 50 | 1.0.0 | 2026-08-26 | `89fbb6e` — the menu brand mark stayed a blank square after the first navigation. |
+| 51 | 1.0.0 | 2026-08-27 | `e7890e9` — four taps that went quiet for the length of a round trip. **This is the build attached to version 1.0.0 today**, and the one the review screen recording was taken against. |
+
+## Review, read from the console on 2026-09-01
+
+The 21 August submission was **rejected on 2026-08-22 01:27**, under
+*2.1.0 Performance: App Completeness* — Apple's *Guideline 2.1 - Information Needed - New App
+Submission*, which is a request for information rather than a fault found in the app. Seven
+things were asked for: a screen recording on a physical device covering the core flow
+(registration, login, account deletion, purchases, user content, permission prompts), the device
+models and OS versions tested, a description of the app and its audience, setup and access
+instructions, the external services behind the core functionality, any regional differences, and
+documentation for regulated industries or third-party material.
+
+Answered on **2026-08-30 18:10**: all seven in the *Notas* field of App Review Information, plus
+`bumi_review_v3_h264.mp4` — one take, no cuts, iPhone 16 Pro Max on iOS 27, from the home screen
+through the tutorial, campaign, win sheet, island map, daily, training, Sign in with Apple, the
+friends board (add by code, remove), the reminder permission prompt, and account deletion ending
+on a signed-out menu at zero progress. Point 4 was answered by saying there are no demo
+credentials to give: the app has no username-and-password sign-up, so the reviewer signs in with
+their own Apple Account (Hide My Email works) or plays signed out.
+
+Apple replied **2026-08-31 09:28** with the boilerplate *"Please resubmit the app for review in
+App Store Connect once any necessary adjustments have been made"*. That is not a re-review: a
+rejected submission stays rejected until it is sent again. On 2026-09-01 the version reads
+**Preparar para envio** with build 51 attached, and the submission page reads *Problemas por
+resolver*.
+
+**So the ball is here, not at Apple.** The action is *Enviar novamente para a equipa de revisão de
+apps* on the submission page — the button renders grey but carries no `disabled` attribute. Note
+that the reply and the recording live on the old submission thread; the Notes field is what
+travels with a new submission, which is why the seven answers were put there rather than only in
+the message.
 
 ## Maintenance
 
