@@ -2,28 +2,19 @@
 
 The iOS side is written up in `app-store.md`; this covers only what Android needs on top.
 
-**State on 2026-08-18, read from the console rather than inferred.** The app exists as
-`Bumi: Puzzle de Lógica`, a draft on the internal testing track with no installs. App content
-is **finished** — all ten forms pass, including data safety and the content rating.
+**State on 2026-09-01, read from the console rather than inferred.** Everything Play needed is
+done and published; what remains is other people's behaviour.
 
-The store listing is now **filled in and saved as a draft** in five languages: pt-PT (the
-default), en-US, en-GB, es-ES and es-419. Each carries the copy below verbatim, five phone
-screenshots, and the shared icon and feature graphic. Nothing has been sent for review — every
-change sits under *Alterações ainda não enviadas para revisão* in the publication overview, and
-that page still reports the lock: *para enviar alterações para revisão, conclua os passos
-necessários no painel de controlo*. So the next move is a decision, not a form.
+- Store listing: live in five languages (pt-PT default, en-US, en-GB, es-ES, es-419), each with
+  its own copy and five phone screenshots. App content: all ten forms pass, including data safety,
+  the content rating and the advertising-ID declaration.
+- Closed test *alpha*: release **9 (1.0.0) published 19/08 13:57**. The publication overview
+  reports *Não tem alterações não publicadas*, last publish 19 August. Nothing is queued for
+  review.
+- Internal test: 1.0.0, 18/08 18:42. Production: **Inativo**.
+- Testers taking part: **0**. The 14-day clock has not started.
 
-That matters more than its size suggests, because the closed test is locked until setup is
-complete and then runs on a clock that cannot be shortened:
-
-| Requirement | State |
-| --- | --- |
-| A published closed-test release | not yet |
-| At least **12 testers** opted in | **0** |
-| Run for at least **14 continuous days** | not started |
-
-The listing is no longer the critical path — the 14 days are. Nothing else on Play is waiting
-on anything.
+The 14 days were never the risk; the twelve people are. See *Closed test* below.
 
 ## Screenshots
 
@@ -299,7 +290,7 @@ with releases, which is why the publishing page reports it only as "1 problem".
 The closed test needs this promoted to that track; landing on internal testing does not start the
 14 days.
 
-## Closed test, sent for review 2026-08-19
+## Closed test, published 2026-08-19 — and stalled since
 
 Track *Testes fechados - Alpha*: mailing list `Teste fechado 2026-08` with 12 addresses, every
 country, release 9 (1.0.0) with notes in all five languages, feedback channel
@@ -307,11 +298,54 @@ country, release 9 (1.0.0) with notes in all five languages, feedback channel
 20 changes in one submission, and managed publishing is **off**, so each publishes as it is
 approved.
 
-Two things to watch when the testers arrive. `vinicius.bilar@gmail.com` and
+**Read from the console on 2026-09-01.** All of it went through: the publication overview reports
+*Não tem alterações não publicadas* and *Última publicação a 19 de agosto de 2026*, and the alpha
+track shows release **9 (1.0.0) published 19/08 13:57**. Nothing is waiting on Google.
+
+The production requirement now reads:
+
+| Requirement | State on 2026-09-01 |
+| --- | --- |
+| Publish a closed-test release | **done**, struck through in the console |
+| At least 12 testers taking part | **0 testadores atualmente a participar** |
+| Run 12 testers for 14 continuous days | **not started** |
+
+So thirteen days have passed since the release went live and the fourteen have not begun. The
+twelve invited addresses never opted in — an address on the list is not a tester; each person has
+to open the opt-in link for that track and install from Play, and the console counts only those.
+*Candidatar-se à produção* stays disabled until the count holds at twelve for fourteen days
+running, and an uninstall mid-way drops the count and restarts the clock.
+
+Two things to watch when the testers do arrive. `vinicius.bilar@gmail.com` and
 `vinicius.bilar.pt@gmail.com` look like one person's two accounts, and the developer account is
-on the list as well — Play counts testers who opt in and keep the app installed, so the twelve
-addresses may not be twelve counted testers. And the count is read per day, not cumulative: an
-uninstall part-way through can drop it below twelve and restart the clock.
+on the list as well — so the twelve addresses may not be twelve counted testers, and the list
+likely needs more names rather than more chasing.
+
+### The testers tab, read on 2026-09-01
+
+Three mailing lists exist on the account, and only one is ticked against the alpha track:
+
+| List | Addresses | Attached to alpha |
+| --- | --- | --- |
+| `Luis` | 1 | no |
+| `Teste fechado 2026-08` | 12 | **yes** |
+| `Testers - 20` | 3 | no |
+
+So the invited pool is twelve, of which one is the developer account and two look like one
+person — worth ticking `Testers - 20` as well, or adding names to the 2026-08 list, before
+counting on twelve.
+
+The opt-in link is **https://play.google.com/apps/testing/pt.jogarbumi.app** — confirmed live,
+titled *Bumi: Logic Puzzle*, feedback address `suporte@jogarbumi.pt`. It works only for an
+address on an attached list, and opting in is not enough on its own: Play then has to install
+the app. The message to send is in `tester-invite.md`.
+
+### Also flagged on the same page
+
+*A sua app usa APIs ou parâmetros descontinuados para a funcionalidade de apresentação até às
+extremidades* — the edge-to-edge APIs deprecated in Android 15. A warning under *Para o seu
+próximo lançamento*, not a block on the closed test or on production access, but it is the kind
+of thing that becomes a target-SDK requirement later.
 
 ## Before the first build
 
