@@ -267,11 +267,22 @@ rejected submission stays rejected until it is sent again. On 2026-09-01 the ver
 **Preparar para envio** with build 51 attached, and the submission page reads *Problemas por
 resolver*.
 
-**So the ball is here, not at Apple.** The action is *Enviar novamente para a equipa de revisão de
-apps* on the submission page — the button renders grey but carries no `disabled` attribute. Note
-that the reply and the recording live on the old submission thread; the Notes field is what
-travels with a new submission, which is why the seven answers were put there rather than only in
-the message.
+**Resubmitted 2026-09-01.** It takes two presses, not one: *Atualizar revisão* on the version
+page moves the rejected item from *Rejeitado* to *Pronto para revisão* and only then does *Enviar
+novamente para a equipa de revisão de apps* on the submission page light up. After it, both the
+submission and the item read **A aguardar revisão**.
+
+Checked before pressing, since a resubmission carries whatever the version holds at that moment:
+build 51 attached, the seven answers in the *Notas* field (4000-character limit, 15 left),
+contact name, phone and email filled, *Necessário iniciar sessão* unticked, release still
+**Lançar manualmente esta versão**, and *Guardar* greyed out, meaning nothing was left unsaved.
+Export compliance never asks, because `usesNonExemptEncryption: false` is declared in `app.json`
+and travels in the binary.
+
+One thing to know if this comes back: the recording lives as an attachment on the old message
+thread, and the Notes text still says *"Attached to this reply"*. Notes is what travels with a
+submission; the file does not. If the next reviewer asks for the video again, attach it to the
+reply rather than assuming they can see it.
 
 ## Maintenance
 
