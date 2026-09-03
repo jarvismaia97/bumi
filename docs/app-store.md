@@ -284,6 +284,37 @@ thread, and the Notes text still says *"Attached to this reply"*. Notes is what 
 submission; the file does not. If the next reviewer asks for the video again, attach it to the
 reply rather than assuming they can see it.
 
+## Approved, read from the console on 2026-09-03
+
+Version 1.0.0 with build 51 is **approved**. The iOS history reads:
+
+| Activity | User | Date |
+| --- | --- | --- |
+| Lançamento pendente pelo programador | Apple | 2026-09-03 09:06 |
+| Em revisão | Apple | 2026-09-03 08:15 |
+| A aguardar revisão | luismsm14@gmail.com | 2026-09-01 21:26 |
+| Pronta para revisão | luismsm14@gmail.com | 2026-09-01 21:25 |
+| Preparar para envio | luismsm14@gmail.com | 2026-08-28 11:22 |
+| Rejeitada | Apple | 2026-08-22 01:27 |
+
+The second submission sat in the queue for two days and then passed review in fifty-one minutes.
+No further information was asked for, so the seven answers in the *Notas* field and the screen
+recording on the old thread were enough.
+
+**It is not on the App Store.** Release was set to manual, so the version stopped at *Lançamento
+pendente pelo programador* and waits on *Lançar esta versão* on the version page. Publishing is a
+decision, not a step — the Android closed test is the reason the date was kept in our hands.
+
+Two account-level banners stand between here and any further submission, and both are the account
+holder's to clear:
+
+- The **Apple Developer Program License Agreement** was updated and has not been accepted. Until
+  the account holder accepts it, existing apps cannot be updated and new apps cannot be sent.
+- The **trader status** required by the Digital Services Act has not been given. Without it, apps
+  are removed from the App Store in the EU.
+
+Neither blocks the button on an already-approved version, but both block the next one.
+
 ## Maintenance
 
 - `APPLE_CLIENT_SECRET` expires at most six months after generation and nothing
