@@ -329,6 +329,29 @@ also rolled the free apps agreement forward on its own: it now reads **Ativo, 3/
 stays **Novo** — unsigned, and only needed if the app ever sells anything. Signing it first
 requires the legal entity information the *Negócios* banner asks for.
 
+## Released
+
+**1.0.0 with build 51 was released on 2026-09-04 02:26**, on Jarvis's word that build 51 had been
+exercised on a device. *Lançar esta versão* takes two presses, like the resubmission did: the
+button on the version page opens a dialog listing all 175 countries, and the second *Lançar esta
+versão* inside it is the one that commits. The version then reads **Pronta para distribuição** and
+the history records it under the account's own e-mail, not Apple's — the release is our action, not
+theirs.
+
+Propagation to the store fronts is Apple's, and takes up to 24 hours; the product page may 404 for
+a while after the console says distributed. There is no un-release: the version stays in the
+history, and the only retreat is *remover da venda* under *Preço e disponibilidade*, which hides
+the app without erasing the release.
+
+| Activity | User | Date |
+| --- | --- | --- |
+| Pronta para distribuição | luismsm14@gmail.com | 2026-09-04 02:26 |
+| Lançamento pendente pelo programador | Apple | 2026-09-03 09:06 |
+
+The next version is now an update, not a first submission: it goes through *+* next to *App para
+iOS*, carries its own What's New text, and gets reviewed on its own. The Program License Agreement
+and the trader declaration are in place, so nothing at account level blocks it.
+
 ## Maintenance
 
 - `APPLE_CLIENT_SECRET` expires at most six months after generation and nothing
