@@ -315,6 +315,20 @@ holder's to clear:
 
 Neither blocks the button on an already-approved version, but both block the next one.
 
+**Both cleared on 2026-09-04.** The trader question was answered *Não sou um comerciante no âmbito
+do RSD*: Bumi is free, has no in-app purchases, and the only agreement on the account is the free
+apps one, so there is no trade to declare — and the trader path would have published the account
+holder's home address, phone and email on the App Store product page. The declaration is reversible
+and has to be revisited the day the app monetises. *Conformidade* now reads **Regulamento Serviços
+Digitais — Ativa, 27 países, 4/09/2026**.
+
+The updated **Apple Developer Program License Agreement** was accepted at
+`developer.apple.com/account` (Apple's deadline on the banner was 2 October 2026). Accepting it
+also rolled the free apps agreement forward on its own: it now reads **Ativo, 3/09/2026 –
+23/07/2027**, where before it read *Ativo (novo acordo disponível)*. The **paid apps agreement**
+stays **Novo** — unsigned, and only needed if the app ever sells anything. Signing it first
+requires the legal entity information the *Negócios* banner asks for.
+
 ## Maintenance
 
 - `APPLE_CLIENT_SECRET` expires at most six months after generation and nothing
