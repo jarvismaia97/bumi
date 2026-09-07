@@ -1,14 +1,14 @@
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import SquarePlus from 'lucide-react-native/icons/square-plus';
-import Share from 'lucide-react-native/icons/share';
+import { Linking, StyleSheet, Text, View } from 'react-native';
+import Download from 'lucide-react-native/icons/download';
 import X from 'lucide-react-native/icons/x';
 import { AnimatedPressable } from '@/components/AnimatedPressable';
 import { Logo } from '@/components/Logo';
 import { useThemeTokens } from '@/state/themeStore';
 import { hitSlopFor } from '@/lib/touchTarget';
 import { useI18n } from '@/i18n';
+import { APP_STORE_URL } from '@/lib/appStore';
 import { renderSheetBackdrop } from '@/components/overlays/SheetBackdrop';
 
 // 36 is the size every other icon button in the app is painted at — the header's two and the
@@ -27,17 +27,12 @@ export const IOSInstallPromptSheet = forwardRef<IOSInstallPromptSheetHandle>(fun
   const theme = useThemeTokens();
   const { t } = useI18n();
 
-  async function openShareMenu() {
-    if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return;
-
+  async function openAppStore() {
     try {
-      await navigator.share({
-        title: 'Bumi',
-        text: t('install.shareText'),
-        url: window.location.href,
-      });
+      await Linking.openURL(APP_STORE_URL);
     } catch {
-      // Closing the native share menu is not an error for the player.
+      // A blocked pop-up or a dismissed store sheet is not an error for the player: the
+      // sheet stays open behind it and the button can be pressed again.
     }
   }
 
@@ -61,21 +56,15 @@ export const IOSInstallPromptSheet = forwardRef<IOSInstallPromptSheetHandle>(fun
         <View style={[styles.logo, { backgroundColor: theme.surface }]}><Logo size={40} /></View>
         <Text style={[styles.title, { color: theme.text }]}>{t('install.title')}</Text>
         <Text style={[styles.subtitle, { color: theme.sub }]}>{t('install.subtitle')}</Text>
-        <View style={styles.steps}>
-          <AnimatedPressable
-            style={[styles.step, styles.shareAction, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}
-            onPress={openShareMenu}
-            accessibilityRole="button"
-            accessibilityLabel={t('a11y.openShareMenu')}
-          >
-            <Share size={19} color={theme.accent} strokeWidth={2.4} />
-            <Text style={[styles.stepText, { color: theme.text }]}>{t('install.step1')}</Text>
-          </AnimatedPressable>
-          <View style={[styles.step, { backgroundColor: theme.surface, borderColor: theme.gridSep }]}>
-            <SquarePlus size={19} color={theme.accent} strokeWidth={2.4} />
-            <Text style={[styles.stepText, { color: theme.text }]}>{t('install.step2')}</Text>
-          </View>
-        </View>
+        <AnimatedPressable
+          style={[styles.storeButton, { backgroundColor: theme.accent }]}
+          onPress={openAppStore}
+          accessibilityRole="button"
+          accessibilityLabel={t('install.appStore')}
+        >
+          <Download size={19} color={theme.onAccent} strokeWidth={2.4} />
+          <Text style={[styles.storeButtonText, { color: theme.onAccent }]}>{t('install.appStore')}</Text>
+        </AnimatedPressable>
       </BottomSheetView>
     </BottomSheetModal>
   );
@@ -88,8 +77,6 @@ const styles = StyleSheet.create({
   logo: { width: 58, height: 58, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 4, marginBottom: 12 },
   title: { fontSize: 20, fontWeight: '800' },
   subtitle: { fontSize: 14, lineHeight: 20, textAlign: 'center', marginTop: 7, maxWidth: 290 },
-  steps: { width: '100%', gap: 8, marginTop: 20 },
-  step: { minHeight: 50, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 11 },
-  shareAction: { justifyContent: 'flex-start' },
-  stepText: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: '700' },
+  storeButton: { width: '100%', minHeight: 50, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12, marginTop: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 11 },
+  storeButtonText: { fontSize: 15, fontWeight: '800' },
 });

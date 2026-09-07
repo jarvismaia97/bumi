@@ -489,8 +489,18 @@ export default function GameScreen() {
   }
 
   function onNextLevel() {
+    // Third campaign level, or any solved daily. The daily is where a shared link lands, and
+    // whoever followed one may never reach level three — without it the App Store offer never
+    // meets the players the sharing brings in. Once either fires the flag closes both.
     const shouldOfferIOSInstall =
-      mode === 'campaign' && curLvl === 2 && !iosInstallPromptSeen && canShowIOSInstallPrompt();
+      (mode === 'daily' || (mode === 'campaign' && curLvl === 2)) &&
+      !iosInstallPromptSeen &&
+      canShowIOSInstallPrompt();
+
+    function offerIOSInstall() {
+      progressActions.markIOSInstallPromptSeen();
+      setTimeout(() => iosInstallPromptRef.current?.present(), 240);
+    }
 
     winSheetRef.current?.dismiss();
     if (mode === 'training') {
@@ -499,14 +509,12 @@ export default function GameScreen() {
     }
     if (mode === 'daily') {
       goToMenu();
+      if (shouldOfferIOSInstall) offerIOSInstall();
       return;
     }
     if (mode === 'campaign' && curLvl < LEVEL_META.length - 1) {
       startCampaign(curLvl + 1);
-      if (shouldOfferIOSInstall) {
-        progressActions.markIOSInstallPromptSeen();
-        setTimeout(() => iosInstallPromptRef.current?.present(), 240);
-      }
+      if (shouldOfferIOSInstall) offerIOSInstall();
       return;
     }
     goToMenu();

@@ -1,5 +1,6 @@
 import { ScrollViewStyleReset, useServerDocumentContext } from 'expo-router/html';
 import type { ReactNode } from 'react';
+import { APP_STORE_APP_ID } from '@/lib/appStore';
 import { THEMES } from '@/theme/themes';
 
 /**
@@ -42,6 +43,15 @@ export default function Root({ children }: { children: ReactNode }) {
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        {/*
+          Safari's smart banner on iOS: a strip above the page offering the App Store listing,
+          drawn by the browser and dismissible by the player. It is the one install prompt that
+          reaches someone who followed a shared link and never gets as far as the sheet in
+          `IOSInstallPromptSheet`. No `app-argument`, since this document is static and cannot
+          know the URL it will be served at; the banner then opens the listing rather than
+          deep-linking into an installed app.
+        */}
+        <meta name="apple-itunes-app" content={`app-id=${APP_STORE_APP_ID}`} />
         {headNodes}
         <ScrollViewStyleReset />
         {/* After the reset, which sets its own background on the body. */}

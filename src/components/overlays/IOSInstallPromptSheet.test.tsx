@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { forwardRef } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { APP_STORE_URL } from '@/lib/appStore';
 import { MIN_TOUCH_TARGET } from '@/lib/touchTarget';
 import { useLanguageStore } from '@/state/languageStore';
 import { IOSInstallPromptSheet } from './IOSInstallPromptSheet';
@@ -46,5 +47,18 @@ describe('IOSInstallPromptSheet close button', () => {
     expect(width).toBe('36px');
     expect(height).toBe('36px');
     expect(parseFloat(width)).toBeLessThan(MIN_TOUCH_TARGET);
+  });
+});
+
+describe('IOSInstallPromptSheet store button', () => {
+  // The sheet exists to hand a web player the listing. Before 2026-09-04 it taught the
+  // Add to Home Screen gesture instead, and a stale copy of that is a dead end now.
+  it('sends the player to the App Store listing', () => {
+    const openURL = vi.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    render(<IOSInstallPromptSheet />);
+
+    fireEvent.click(screen.getByLabelText('Obter na App Store'));
+
+    expect(openURL).toHaveBeenCalledWith(APP_STORE_URL);
   });
 });
