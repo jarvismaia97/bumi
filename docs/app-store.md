@@ -19,11 +19,16 @@ Resolve puzzles de logica dividindo cada grelha em retangulos. Cada numero indic
 
 puzzle,logica,retangulos,numero,cerebro,desafio,diario
 
+This is what 1.0.0 shipped with. The replacement written for the next version is under *ASO for
+the next version* below, and cannot be applied before there is a version to apply it to.
+
 ## Localised listings
 
 The app ships Portuguese, English and Spanish (`CFBundleLocalizations`), so App Store
 Connect needs a listing per language or the store shows Portuguese to everyone. Portuguese
-above is the primary; these two are the other localizations to paste in. Keywords are a
+above is the primary; these two are the other localizations to paste in. All three are in place on the
+console, confirmed on 2026-09-07: *Português (Portugal)* as primary, *Espanhol (Espanha)* and
+*Inglês (EUA)*. Keywords are a
 single 100-character field, comma separated, no spaces.
 
 ### English (en-GB, en-US)
@@ -351,6 +356,77 @@ the app without erasing the release.
 The next version is now an update, not a first submission: it goes through *+* next to *App para
 iOS*, carries its own What's New text, and gets reviewed on its own. The Program License Agreement
 and the trader declaration are in place, so nothing at account level blocks it.
+
+## First numbers, read from Analytics on 2026-09-07
+
+Two full days on the store. **Eleven first-time downloads**, all but one on release day:
+
+| Day | First-time downloads |
+| --- | --- |
+| 2026-09-04 | 10 |
+| 2026-09-05 | 0 |
+| 2026-09-06 | 1 |
+
+The rest of the acquisition funnel over the same window (Analytics defaults to the last 30 days;
+everything before 2026-09-04 is empty because the app was not on the store): 96 impressions, 39
+product page views, 22% conversion. Repeat downloads and updates both read *sem dados suficientes* —
+there has been no second version yet.
+
+Two traps in these numbers. The overview card labelled **Instalações** reads 6, not 11: it counts
+only devices whose owner consented to share analytics, and the page says so in small type
+(*apenas com consentimento*), as do retention and crashes. *Descargas pela primeira vez* has no such
+filter, so that is the number to quote. And Apple closes each day at 23:59 **UTC** and publishes it
+a day or so later, so the most recent day on screen is always short.
+
+Against the database on the same date: 29 user rows, 22 with a `google` account and 7 with `apple`.
+More Apple accounts than iOS downloads, which is expected — the TestFlight and development builds
+predate the release and do not count as store downloads, and an iPhone can sign in with Google.
+Accounts are not installs in either direction: a download that never signs in leaves no row, and the
+web build at `jogarbumi.pt` creates rows with no download at all.
+
+## ASO for the next version, worked out on 2026-09-07
+
+96 impressions in thirty days is the number this section exists for. Conversion is not the
+problem — 39 product page views turned into 11 downloads — so the listing persuades; it is simply
+not being shown. What the App Store indexes for search is the app **name**, the **subtitle** and
+the **keywords** field, and nothing else: not the description, not the promotional text.
+
+**The fields are locked while 1.0.0 is *Pronta para distribuição*.** Every metadata box on the
+version page is greyed and *Guardar* is disabled. Keywords and subtitle travel with a version, so
+they change by creating 1.0.1 and submitting a build, and the change is then reviewed with it.
+The one box still editable on a released version is *Texto promocional*, and that is the one field
+that is **not** indexed — useful for news, useless for being found.
+
+Read from the console on 2026-09-07, with the character counters confirming these are the full
+values (46, 41 and 40 free of 100):
+
+| Language | Keywords now |
+| --- | --- |
+| Português | `puzzle,logica,retangulos,numero,cerebro,desafio,diario` |
+| Inglês | `puzzle,logic,rectangles,shikaku,brain,daily,numbers,offline` |
+| Espanhol | `puzle,logica,rectangulos,shikaku,cerebro,reto,diario,numeros` |
+
+English and Spanish already carry **shikaku**, the puzzle's actual genre name and the one word a
+person who wants this game types. Portuguese does not, and it has 46 characters going spare. That
+is the single clearest gap.
+
+The second waste is duplication. Name and subtitle are indexed, so a word spent in either is a
+word the keywords field should not spend again — and today Portuguese repeats *puzzle*
+(`Bumi: Puzzle de Lógica`) and *retângulos* (`Puzzle de retângulos`) across all three fields.
+
+What to paste when 1.0.1 exists, Portuguese only:
+
+- Subtitle, 28 of 30 characters: `Shikaku diário de retângulos`
+- Keywords, 82 of 100: `numeros,areas,grelha,raciocinio,quebra-cabecas,mente,treino,offline,sudoku,desafio`
+
+The subtitle takes over *shikaku*, *diário* and *retângulos*, which frees the keywords field to
+buy new ground: *sudoku* is there because it is a genre word rather than anyone's trademark, and
+people who search it want exactly this kind of grid. Accents stay off the keywords, which is what
+the field already does and what people type. English and Spanish are fine as they are.
+
+Worth knowing before spending an afternoon here: keywords move ranking, but ranking only matters
+where there is search volume to rank in. `shikaku` in Portugal is a small pool. This is the cheap
+half of the work; the other half is the Android track in `play-store.md`, still at zero testers.
 
 ## Maintenance
 
